@@ -36,6 +36,9 @@ DEFAULT_SEEDS = 20
 DEFAULT_METHODS = ("uniform", "random", "static_oracle", "myopic_oracle", "dp_oracle")
 _SCHEDULER_METHODS = ("static", "lp", "ucb", "sec", "dump", "curator")
 _BASE_CFG: dict | None = None
+# Configuration of every pre-registered gate and study from D-68 to D-94 (audit E-04): their
+# scripts load this frozen file, never the live base.yaml, so they keep reproducing.
+FROZEN_D68_D94 = REPO_ROOT / "configs" / "frozen" / "d68_d94.yaml"
 
 
 def _load_base_config():
@@ -106,9 +109,11 @@ def make_scheduler(
             return SECStyleBandit(env_ids, cfg.baselines.sec, cfg.scheduler)
         if method == "dump":
             return DUMPStyleUCB(env_ids, cfg.baselines.dump, cfg.scheduler)
+        from curator_rl.simulator.scenarios import domain_map
+
         return Curator(
             env_ids, cfg.signals, cfg.proxy, cfg.scheduler, cfg.calib, cfg.group_size,
-            prompts_per_round=prompts_per_round, cre_cfg=cfg.cre,
+            prompts_per_round=prompts_per_round, cre_cfg=cfg.cre, domain_of=domain_map(scenario),
         )
     if method == "static_oracle":
         from curator_rl.simulator.scenarios import build_world

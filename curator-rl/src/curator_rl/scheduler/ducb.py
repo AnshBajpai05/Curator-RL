@@ -44,9 +44,11 @@ class DiscountedUCB(BaseScheduler):
         *,
         prompts_per_round: int | None = None,
         cre_cfg: CreCfg | None = None,
+        domain_of: dict[str, str | None] | None = None,
     ) -> None:
         super().__init__(env_ids)
         self.cfg = scheduler_cfg
+        self._calib_cfg = calib_cfg
         self._engine = SignalEngine(
             signals_cfg, proxy_cfg, calib_cfg,
             scheduler_cfg.cost_exponent, group_size, env_ids,
@@ -61,7 +63,11 @@ class DiscountedUCB(BaseScheduler):
         self._latest_vectors: dict[str, object] = {}
         # calibration (Roadmap Part I, D-73): proxy signal accumulated per window
         self.uses_calibration = bool(calib_cfg.enabled)
-        self._calibrator = Calibrator(self.env_ids, calib_cfg) if calib_cfg.enabled else None
+        # domain_of maps an arm to the calibration slice it is scored on (None: no slice);
+        # e.g. {"noisy": "gsm8k"} on real hardware, where the noisy arm has no slice of its own
+        self._calibrator = (
+            Calibrator(self.env_ids, calib_cfg, domain_of) if calib_cfg.enabled else None
+        )
         self._win_x = {e: 0.0 for e in self.env_ids}
         self._win_u = {e: 0.0 for e in self.env_ids}
         self.last_calibration: CalibrationReport | None = None
@@ -159,10 +165,14 @@ class DiscountedUCB(BaseScheduler):
         if self._budget_total is None:
             self._budget_total = observation.budget_remaining_usd + observation.round_cost_usd
         round_log: dict[str, object] = {"round": observation.round}
+        total_prompts = sum(max(o.n_prompts, 0) for o in observation.per_env.values())
+        delivered = self.cfg.pull_unit == "delivered"
         for env_id, env_obs in observation.per_env.items():
             u = observation.weights_used.get(env_id, 0.0)
             if self.cfg.pull_unit == "prompt":
                 u = u * max(env_obs.n_prompts, 0)
+            elif delivered:  # what was actually trained this round (audit E-09)
+                u = max(env_obs.n_prompts, 0) / total_prompts if total_prompts > 0 else 0.0
             self._win_usd[env_id] += float(env_obs.cost_usd)
             r_bar = float(vectors[env_id].proxy_reward)
             source = "proxy"
@@ -178,7 +188,7 @@ class DiscountedUCB(BaseScheduler):
                 round_log[env_id] = {"r": r_bar, "src": source}
             self._n_hat[env_id] = self.cfg.gamma * self._n_hat[env_id] + u
             self._s_hat[env_id] = self.cfg.gamma * self._s_hat[env_id] + u * r_bar
-            share = observation.weights_used.get(env_id, 0.0)
+            share = u if delivered else observation.weights_used.get(env_id, 0.0)
             if share > 0.0:
                 self._win_x[env_id] += share * float(vectors[env_id].proxy_raw)
                 self._win_u[env_id] += share
@@ -212,7 +222,11 @@ class DiscountedUCB(BaseScheduler):
             self._cre.ingest(report.span_gain, proxy_x, costs, ready=report.ready,
                              window_k=report.window_k)
         if report.ready:
-            for env_id in self.env_ids:
+            # E-02: with targeted calibration an arm that was not re-evaluated keeps its old
+            # estimate; re-sending its old flag would count one evaluation as several
+            updated = (self.env_ids if self._calib_cfg.flag_scope == "all"
+                       else [e for e in self.env_ids if e in report.evaluated])
+            for env_id in updated:
                 self._engine.set_calibration_mismatch(env_id, report.mismatch.get(env_id, False))
         self._win_x = {e: 0.0 for e in self.env_ids}
         self._win_u = {e: 0.0 for e in self.env_ids}

@@ -25,7 +25,8 @@ def flip_rate(trace: list[EnvStatus], *, warmup: int = 0) -> float:
     tail = trace[warmup:]
     if len(tail) <= 1:
         return 0.0
-    transitions = sum(1 for a, b in zip(trace, trace[1:]) if a != b)
+    # count transitions inside the tail only (audit E-21: the whole trace was counted)
+    transitions = sum(1 for a, b in zip(tail, tail[1:]) if a != b)
     return transitions * 100.0 / (len(tail) - 1)
 
 

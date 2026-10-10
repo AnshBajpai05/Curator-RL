@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from experiments.analysis.common import REPO_ROOT  # noqa: E402
+from experiments.run_sim import FROZEN_D68_D94  # noqa: E402  (audit E-04: pre-registered config)
 
 from curator_rl.core.config import load_config  # noqa: E402
 from curator_rl.scheduler.baselines.uniform import UniformScheduler  # noqa: E402
@@ -84,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         if sid in wanted:
             paths.append(p)
     seeds = list(range(args.seeds))
-    base_cfg = load_config(REPO_ROOT / "configs" / "base.yaml")
+    base_cfg = load_config(FROZEN_D68_D94)
 
     # uniform reference per scenario/seed
     uniform_scores: dict[str, list[float]] = {}

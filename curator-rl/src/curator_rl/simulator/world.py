@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from curator_rl.core.advantage import group_mean_abs_advantage
+from curator_rl.core.quotas import CarryQuotas
 from curator_rl.core.types import CalibrationObservation, EnvRoundObs, RoundObservation
 from curator_rl.simulator.quotas import largest_remainder_quotas
 
@@ -72,6 +73,9 @@ class SimEnvParams:
     bench_slope: float | None = None
     bench_difficulty: float | None = None
     bench_weight: float | None = None  # pi_d; None -> uniform over domains
+    # calibration slice this arm is scored on when it has none of its own (audit E-03):
+    # e.g. the real noisy arm uses GSM8K prompts and is scored on the GSM8K slice
+    bench_domain: str | None = None
 
     def __post_init__(self) -> None:
         if self.noisy_q is not None and not (0.0 < self.noisy_q < 1.0):
@@ -102,7 +106,17 @@ class SimWorld:
         usd_per_gpu_hour: float = 1.0,
         rng: np.random.Generator | None = None,
         calib_rng: np.random.Generator | None = None,
+        learning_from: str = "requested",
+        rounding: str = "largest_remainder",
     ) -> None:
+        if learning_from not in ("requested", "delivered"):
+            raise ValueError(f"learning_from must be requested|delivered, got {learning_from!r}")
+        if rounding not in ("largest_remainder", "carry"):
+            raise ValueError(f"rounding must be largest_remainder|carry, got {rounding!r}")
+        # audit E-09: `requested` (legacy) trains on the requested weights while rollouts and
+        # costs follow the integer quotas; `delivered` trains on the quotas actually served
+        self.learning_from = learning_from
+        self._carry = CarryQuotas() if rounding == "carry" else None
         if not envs:
             raise ValueError("SimWorld needs at least one environment")
         ids = [e.env_id for e in envs]
@@ -198,8 +212,15 @@ class SimWorld:
             raise ValueError(f"weights must sum to 1 (got {validate})")
 
         round_t = self.rounds_done
-        quotas = largest_remainder_quotas(weights, self.M, tie_break_seed=round_t)
+        if self._carry is not None:
+            quotas = self._carry.next(weights, self.M)
+        else:
+            quotas = largest_remainder_quotas(weights, self.M, tie_break_seed=round_t)
         g = {i: learnability(self.true_pass(i)) for i in self._order if i not in self.noisy}
+        if self.learning_from == "delivered":
+            trained = {i: quotas.get(i, 0) / self.M for i in self._order}
+        else:
+            trained = weights
 
         # skill update for every env j: R * eta_j_eff * sum_i T_ji w_i g_i + xi
         # (T_jj = 1; each source i contributes its own allocation w_i * g_i)
@@ -207,11 +228,11 @@ class SimWorld:
             if j in self.noisy:
                 continue  # noisy envs never change skill (Roadmap F.2)
             e = self.envs[j]
-            inflow = weights.get(j, 0.0) * g.get(j, 0.0)  # T_jj = 1
+            inflow = trained.get(j, 0.0) * g.get(j, 0.0)  # T_jj = 1
             for i, t_ji in self.transfer_in[j].items():
                 if i in self.noisy:
                     continue
-                inflow += t_ji * weights.get(i, 0.0) * g.get(i, 0.0)
+                inflow += t_ji * trained.get(i, 0.0) * g.get(i, 0.0)
             delta = self.R * e.eta * self.gate_factor(j) * inflow
             xi = self.rng.normal(0.0, self.skill_noise_std) if self.skill_noise_std > 0 else 0.0
             self.skills[j] += delta + xi

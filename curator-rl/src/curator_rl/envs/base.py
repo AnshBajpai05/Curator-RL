@@ -92,3 +92,12 @@ class Environment(abc.ABC):
 
     @abc.abstractmethod
     def split_ids(self, split: str) -> list[str]: ...
+
+    # Pass-based sampling (audit E-18: SPEC section 8 asks for "without replacement within a
+    # pass"). Finite environments expose their split size and an item by position, so the
+    # trainer's prompt stream can walk a seeded permutation; procedural ones return None.
+    def split_size(self, split: str) -> int | None:
+        return None
+
+    def prompt_at(self, split: str, index: int) -> Prompt:
+        raise NotImplementedError(f"{self.env_id} is procedural: use generate_prompt")

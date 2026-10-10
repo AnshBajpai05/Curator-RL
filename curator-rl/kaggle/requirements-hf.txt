@@ -1,0 +1,7 @@
+# HF-backend training stack: the versions verified on Kaggle (docs/TRL_SPIKE.md) and in the CPU tests.
+# Used on the P100 (no vLLM: compute capability 6.0) and as a fallback on T4.
+trl==1.15.0
+transformers==5.16.1
+peft==0.20.0
+datasets==4.8.5
+accelerate==1.14.0

@@ -25,7 +25,10 @@ sys.path.insert(0, str(REPO_ROOT))
 import numpy as np  # noqa: E402
 from experiments import gate2_check  # noqa: E402
 from experiments.analysis.refit_diagnosis import variant_cfg  # noqa: E402
-from experiments.run_sim import make_scheduler  # noqa: E402
+from experiments.run_sim import (  # noqa: E402
+    FROZEN_D68_D94,  # noqa: E402  (audit E-04: pre-registered config)
+    make_scheduler,  # noqa: E402
+)
 
 from curator_rl.core.config import load_config  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
@@ -41,7 +44,7 @@ SEEDS = list(range(50))
 def cell(task):
     sid, name = task
     sc = load_scenario(REPO_ROOT / "configs" / "sim" / f"scenario_{sid}.yaml")
-    cfg = variant_cfg(VARIANTS[name]) if name in VARIANTS else load_config(REPO_ROOT / "configs" / "base.yaml")
+    cfg = variant_cfg(VARIANTS[name]) if name in VARIANTS else load_config(FROZEN_D68_D94)
     method = "curator" if name in VARIANTS else name
     rs = [run_episode(make_scheduler(method, sc, s, cfg=cfg), sc, seed=s, method=method) for s in SEEDS]
     return sid, name, [r.final_score for r in rs], float(np.mean(

@@ -23,6 +23,7 @@ Scenario suite (Roadmap F.3):
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -62,6 +63,8 @@ class SimEnvCfg(_StrictModel):
     bench_slope: float | None = None
     bench_difficulty: float | None = None
     bench_weight: float | None = None
+    # calibration slice of ANOTHER arm this arm is scored on (audit E-03), e.g. noisy -> gsm8k
+    bench_domain: str | None = None
     # Declared dataset size (D-63): the a-priori, scheduler-visible quantity the
     # Static baseline is proportional to. Never used by the world or oracles.
     nominal_size: float | None = Field(default=None, gt=0)
@@ -110,6 +113,10 @@ class SimWorldCfg(_StrictModel):
     cost_lognormal_sigma: float = Field(default=0.10, ge=0)
     rollout_concentration: float = Field(default=25.0, gt=0)
     benchmark_items: int = Field(default=200, ge=1)
+    # audit E-09: legacy scenarios train on requested weights with per-round largest-remainder
+    # rounding; `delivered` + `carry` train on the prompts actually served, as a real trainer does
+    learning_from: Literal["requested", "delivered"] = "requested"
+    rounding: Literal["largest_remainder", "carry"] = "largest_remainder"
 
 
 class OracleCfg(_StrictModel):
@@ -160,7 +167,17 @@ def load_scenario(path: Path) -> ScenarioCfg:
                 raise ValueError(f"{path}: transfer target '{target}' is not a scenario env")
             if target == env.env_id:
                 raise ValueError(f"{path}: T_ii = 1 is implicit; remove self-transfer on '{env.env_id}'")
+        if env.bench_domain is not None:
+            owner = next((o for o in cfg.envs if o.env_id == env.bench_domain), None)
+            if owner is None or owner.env_id == env.env_id or owner.bench_domain is not None:
+                raise ValueError(f"{path}: bench_domain of '{env.env_id}' must name another arm "
+                                 "that has its own slice")
     return cfg
+
+
+def domain_map(cfg: ScenarioCfg) -> dict[str, str | None]:
+    """Calibration slice of every arm (its own id unless `bench_domain` says otherwise)."""
+    return {e.env_id: (e.bench_domain or e.env_id) for e in cfg.envs}
 
 
 def scenario_env_params(cfg: ScenarioCfg) -> list[SimEnvParams]:
@@ -186,6 +203,7 @@ def scenario_env_params(cfg: ScenarioCfg) -> list[SimEnvParams]:
                 bench_slope=e.bench_slope,
                 bench_difficulty=e.bench_difficulty,
                 bench_weight=e.bench_weight,
+                bench_domain=e.bench_domain,
             )
         )
     return envs
@@ -205,6 +223,8 @@ def build_world(cfg: ScenarioCfg, seed: int) -> SimWorld:
         rollout_concentration=cfg.world.rollout_concentration,
         rng=seeds.rng("sim_world"),
         calib_rng=seeds.rng("sim_calib"),
+        learning_from=cfg.world.learning_from,
+        rounding=cfg.world.rounding,
     )
     world.set_benchmark_items(cfg.world.benchmark_items)
     return world

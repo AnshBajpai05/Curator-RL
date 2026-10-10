@@ -66,6 +66,12 @@ class NoisyRewardEnv(Environment):
     def generate_batch(self, split: str, n: int, rng, exclude: set[str] | None = None) -> list[Prompt]:
         return [self._relabel(p) for p in self._base.generate_batch(split, n, rng, exclude)]
 
+    def split_size(self, split: str) -> int | None:
+        return self._base.split_size(split)
+
+    def prompt_at(self, split: str, index: int) -> Prompt:
+        return self._relabel(self._base.prompt_at(split, index))
+
     def evaluate_response(self, prompt: Prompt, response: str) -> Verdict:
         verdict = self._base.evaluate_response(prompt, response)
         # Key by (prompt_id, response) so every rollout gets its own draw

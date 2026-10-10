@@ -46,10 +46,14 @@ class SchedulerCfg(_StrictModel):
     score_norm: Literal["none", "zscore", "rank"]
     cost_exponent: float = Field(ge=0)
     status_control: Literal["off", "soft", "hard"]
-    pull_unit: Literal["round", "prompt"]
-    s3_multiplier: float = Field(ge=0, le=1)
-    s4_multiplier: float = Field(ge=0, le=1)
-    s5_shrink: float = Field(ge=0, le=1)
+    # bandit counter increment per round: round = requested weight; prompt = weight x prompts
+    # (legacy); delivered = realised prompt share n_i / sum n (audit E-09, matches what was trained)
+    pull_unit: Literal["round", "prompt", "delivered"]
+    s3_multiplier: float = Field(ge=0, le=1)   # S3 weight multiplier (applied to the WEIGHT)
+    s4_multiplier: float = Field(ge=0, le=1)   # S4 weight multiplier
+    s5_shrink: float = Field(ge=0, le=1)       # S5 weight multiplier
+    # S5 hard response (improvement B5): none = multiplier only; floor = also cap at eps/N under `hard`
+    s5_cap: Literal["none", "floor"]
     s1_quota: float = Field(ge=0)
 
 
@@ -78,6 +82,9 @@ class DumpBaselineCfg(_StrictModel):
 
     exploration_coef: float = Field(ge=0)
     tau: float = Field(gt=0)
+    # 0 = all-time mean (D-68 legacy); W > 0 = mean over the last W rounds with prompts, as
+    # DUMP estimates learnability from recent samples (audit E-16)
+    window_rounds: int = Field(ge=0)
 
 
 class BaselinesCfg(_StrictModel):
@@ -130,6 +137,9 @@ class SignalsCfg(_StrictModel):
     lambda_slow: float = Field(gt=0, le=1)
     window_rounds: int = Field(gt=0)
     lp_method: Literal["lp_a", "lp_b", "lp_c"]
+    # LP-B standard error (audit E-01): design = per-round variance from within-round
+    # group spread (calibrated z); residual_legacy = D-37 fit (SE ~sqrt(n) too large)
+    lp_se: Literal["design", "residual_legacy"]
     lp_use: Literal["signed", "positive", "abs"]
     richness: RichnessCfg
     prior: PriorCfg
@@ -155,12 +165,18 @@ class ProxyCfg(_StrictModel):
 class CalibCfg(_StrictModel):
     enabled: bool  # Curator consumes calibration (ablation `calib.enabled: false`, Roadmap 12)
     interval_rounds: int = Field(ge=1)
-    target: Literal["domain", "global"]
     k_min: int = Field(ge=1)
-    trust_region: float = Field(gt=0, le=1)
+    trust_region: float = Field(gt=0, le=1)  # reserved for the alpha/beta fitter (not yet read)
     z_mis: float = Field(gt=0)
     mismatch_windows: int = Field(ge=1)
     mismatch_clear_windows: int = Field(ge=1)
+    # which arms receive a mismatch/clear update after a ready window (audit E-02):
+    # evaluated = only arms whose slice was re-evaluated (each flag is new evidence);
+    # all = every arm with past evidence (legacy: stale estimates re-flagged every window)
+    flag_scope: Literal["evaluated", "all"]
+    # gain credit (audit E-03): own_slice = each arm alone on its slice (C2 diagonal, legacy);
+    # transfer = arms SHARING a slice are regressed jointly on their shares (C2d per slice)
+    credit: Literal["own_slice", "transfer"]
     # which slices each calibration evaluates (D-75; claim rules D-93): exposure = most compute;
     # claim = largest budget-weighted proxy claim (share x proxy signal); claim_stale = claim x (1 + age)
     targeting: Literal["all", "exposure", "claim", "claim_stale"]
@@ -202,6 +218,8 @@ class CountdownEnvCfg(TokenLimitsCfg):
     target_min: int = Field(ge=1)
     target_max: int = Field(ge=2)
     use_all_numbers: bool
+    # the prompt allows only exact division; true enforces it in generator and verifier (E-19)
+    exact_division: bool
 
     @field_validator("numbers_max")
     @classmethod
@@ -269,10 +287,6 @@ class LoggingCfg(_StrictModel):
     schema_version: int = Field(ge=1)
 
 
-class WarmupCfg(_StrictModel):
-    total_rounds: int = Field(ge=0)
-
-
 class RootConfig(_StrictModel):
     experiment: ExperimentCfg
     budget: BudgetCfg
@@ -289,7 +303,6 @@ class RootConfig(_StrictModel):
     steps_per_round: int = Field(ge=1)
     prompts_per_step: int = Field(ge=1)
     group_size: int = Field(ge=1)
-    warmup: WarmupCfg
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -355,6 +368,24 @@ def _load_payload(path: Path) -> dict:
             base = _deep_merge(base, _load_payload(path.parent / inc))
         payload = _deep_merge(base, payload)
     return payload
+
+
+REFERENCE_PROMPTS_PER_ROUND = 80   # the simulator shape (R = 5 x P = 16) the status thresholds were tuned at
+
+
+def rescale_for_batch_shape(cfg: RootConfig, prompts_per_round: int) -> RootConfig:
+    """Scale evidence thresholds counted in prompt groups to another batch shape (audit E-28).
+
+    `signals.status.n_min` (S1 exit) was tuned at 80 prompts per round, where an arm at a uniform
+    share accumulates ~133 discounted groups. At the GPU plan's 32 prompts per round the steady state
+    is ~60 < 64, so 77% of arm-rounds stayed in S1 and its exploration quota pinned the mixture near
+    uniform. Scaling keeps the threshold's meaning (the same fraction of steady-state evidence).
+    """
+    if prompts_per_round == REFERENCE_PROMPTS_PER_ROUND:
+        return cfg
+    n_min = max(8, round(cfg.signals.status.n_min * prompts_per_round / REFERENCE_PROMPTS_PER_ROUND))
+    status = cfg.signals.status.model_copy(update={"n_min": n_min})
+    return cfg.model_copy(update={"signals": cfg.signals.model_copy(update={"status": status})})
 
 
 def config_dict_to_canonical(payload: dict) -> str:

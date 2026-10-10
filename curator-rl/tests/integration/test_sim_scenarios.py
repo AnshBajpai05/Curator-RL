@@ -25,10 +25,11 @@ def shrunk(scenario, budget_usd=0.6, max_rounds=60):
 
 
 def test_all_scenarios_present():
-    """S-A..S-J plus the three refits of S-I/S-J from measured data (D-88)."""
+    """S-A..S-J, the three refits of S-I/S-J from measured data (D-88) and their GPU-shape versions (E-05)."""
     names = [p.name for p in SCENARIOS]
-    assert len(SCENARIOS) == 13, f"expected S-A..S-J + 3 refits, found {names}"
-    assert {"scenario_si_r1.yaml", "scenario_si_r2.yaml", "scenario_sj_r.yaml"} <= set(names)
+    assert len(SCENARIOS) == 16, f"expected S-A..S-J + 3 refits + 3 GPU-shape refits, found {names}"
+    assert {"scenario_si_r1.yaml", "scenario_si_r2.yaml", "scenario_sj_r.yaml", "scenario_si_r1_gpu.yaml",
+            "scenario_si_r2_gpu.yaml", "scenario_sj_r_gpu.yaml"} <= set(names)
 
 
 def test_long_horizon_portfolio_scenarios_meet_the_horizon_rule():

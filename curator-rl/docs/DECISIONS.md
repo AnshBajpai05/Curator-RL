@@ -600,6 +600,27 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
 
 ---
 
+# Audit and Phase F runner (2026-10-10, branch `audit-fixes-and-gpu-run`) — PROPOSED, pending owner confirmation
+
+## D-96 — Audit fixes adopted as defaults; legacy behaviour kept behind switches
+
+- Date: 2026-10-10. Evidence: `../errors_found.md` (27 + 1 errors, most reproduced by `../audit/verify_errors.py`), `../CHANGES_AND_IMPACT.md`, `tests/unit/test_audit_fixes.py`.
+- `configs/base.yaml` now defaults to the corrected behaviour: `signals.lp_se: design` (E-01), `calib.flag_scope: evaluated` (E-02), `calib.credit: transfer` (E-03), `scheduler.pull_unit: delivered` (E-09), `data.envs.countdown.exact_division: true` (E-19); new switches with legacy defaults: `scheduler.s5_cap: none`, `baselines.dump.window_rounds: 0`; dead keys removed (`calib.target`, `warmup.total_rounds`, E-23). Verifier fixes (E-06, E-07, E-08) have no switch: they were wrong.
+- Every pre-registered gate/study script from D-68 to D-94 now loads `configs/frozen/d68_d94.yaml` (exact config of commit 30052e8 + legacy switches). Re-running the D-94 gate on seeds 600-699 reproduces its committed report exactly (all scores, criteria and the adoption verdict).
+- E-28 (status evidence thresholds tied to the batch shape) is fixed by `core.config.rescale_for_batch_shape`, applied by the GPU runner; `base.yaml` stays at the simulator shape.
+- Consequence for earlier decisions: D-40 and D-42 were taken with the inflated LP SE and must be re-studied; D-95's detection rates do not hold at the GPU shape (0% pre-audit; 10-28% after the fixes; `reports/analysis/audit_impact.md`). H4 is not achievable by benchmark calibration at the Level-1 budget.
+
+## D-97 — Pre-registration draft (PROPOSED, not run): GPU-shape confirmation on fresh seeds 700-799
+
+- Scenarios: `scenario_si_r1_gpu.yaml`, `scenario_si_r2_gpu.yaml`, `scenario_sj_r_gpu.yaml` (R = 2, P = 16, ~60 rounds, delivered learning, carry rounding, shared noisy slice, generation-only calibration cost).
+- Methods, each at its GPU-shape-tuned point (`reports/sweeps/tune_gpu_shape.md`, tuning seeds 0-39, equal budget, D-55 rule), all with `rescale_for_batch_shape(cfg, 32)`: Curator (gamma 1, kappa 0.1, tau 0.3, K 10), LP (tau 0.5), Standard UCB (kappa 0.25, tau 0.3), SEC-style (alpha 1, tau 0.4), DUMP-style (c 0.3, tau 0.4, window 10), Uniform, `pilot_uniform` (B10).
+- Primary metric: noiseless final score (E-10), paired by seed; 95% t-intervals (n = 100) and Holm across the co-primary comparisons.
+- Primary: (P1) Curator - LP > 0 in S-I-R1-GPU (the large-spread regime); (P2) Curator - SEC-style and - DUMP-style > 0 in S-I-R1-GPU and S-I-R2-GPU; (P3) S-J-R-GPU Curator - Uniform lower bound > -0.01. Secondary: everything else, noisy-arm budget share, detection, false flags, calibration cost.
+- Interpretation fixed now: P1 pass -> the cost lever is real at the GPU shape when the spread is large; P1 fail with P2 pass -> Curator is a learnability-robust bandit but not better than the LP curriculum, and the paper says so. Detection results are reported as measured; no claim of spurious-reward detection by calibration at this budget unless detection >= 0.5 with false flags <= 5%.
+- Run once with `experiments/analysis/audit_impact.py`-style code on seeds 700-799 after the owner confirms this entry; nothing above may change after seeing results.
+
+---
+
 # Roadmap v3 decisions (PROPOSED — pending owner confirmation; see `docs/ROADMAP_v3.md` §11)
 
 Status: proposed, not yet adopted. Each becomes final when the owner confirms it here with a date.

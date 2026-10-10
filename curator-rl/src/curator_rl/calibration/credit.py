@@ -20,6 +20,8 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 
+import numpy as np
+
 from curator_rl.core.types import CalibrationObservation
 
 _MIN_SE = 1e-6
@@ -96,3 +98,70 @@ class OwnSliceCredit:
         self._sww = {e: float(v) for e, v in state["sww"].items()}  # type: ignore[union-attr]
         self._swy = {e: float(v) for e, v in state["swy"].items()}  # type: ignore[union-attr]
         self._n = {e: int(v) for e, v in state["n"].items()}  # type: ignore[union-attr]
+
+
+# Weak ridge prior on every transfer coefficient: b ~ N(0, PRIOR_SD^2) in "gain per window of
+# full compute share". Observed coefficients are 0.0-0.15 (refit diagnosis), so a prior SD of 1.0
+# only matters when two arms' shares are collinear, where it keeps the system solvable and lets
+# the posterior SD (not a point estimate) carry the "cannot tell them apart" verdict.
+TRANSFER_PRIOR_SD = 1.0
+
+
+class SharedSliceCredit:
+    """C2d per slice (audit E-03): arms scored on the SAME slice are regressed jointly.
+
+    For slice d with member arms j in M(d), every evaluation of d gives one span gain
+        gain_{d,k} = sum_{j in M(d)} W_{j,k} * b_j + noise(SE_k),
+    W_{j,k} = compute share arm j received over the span since d was last evaluated.
+    Weighted ridge (prior b_j ~ N(0, TRANSFER_PRIOR_SD^2)) gives the posterior mean and SD of
+    every b_j. A slice with one member reduces to `OwnSliceCredit` (up to the weak prior).
+    Why it matters: on real hardware the noisy arm has no slice of its own and is scored on the
+    GSM8K slice. Own-slice credit would hand it the gains the GSM8K arm produced; joint credit
+    separates them whenever their shares vary independently across spans.
+    """
+
+    def __init__(self, members: Mapping[str, list[str]]) -> None:
+        self.members = {d: list(m) for d, m in members.items()}
+        self._xtx = {d: np.zeros((len(m), len(m))) for d, m in self.members.items()}
+        self._xty = {d: np.zeros(len(m)) for d, m in self.members.items()}
+        self._n = {e: 0 for m in self.members.values() for e in m}
+
+    def add(self, domain: str, shares: Mapping[str, float], gain: float, se: float) -> None:
+        m = self.members[domain]
+        x = np.array([max(float(shares.get(e, 0.0)), 0.0) for e in m])
+        if not np.any(x > 0.0):
+            return
+        inv = 1.0 / max(se, _MIN_SE) ** 2
+        self._xtx[domain] += inv * np.outer(x, x)
+        self._xty[domain] += inv * gain * x
+        for e, xi in zip(m, x):
+            if xi > 0.0:
+                self._n[e] += 1
+
+    def estimate(self, env_id: str) -> tuple[float, float]:
+        """Posterior (mean, sd) of b_j; (0, inf) before the arm has any evidence."""
+        if self._n.get(env_id, 0) == 0:
+            return 0.0, float("inf")
+        domain = next(d for d, m in self.members.items() if env_id in m)
+        m = self.members[domain]
+        if len(m) == 1:  # unshared slice: exactly the own-slice WLS estimate, no prior needed
+            sww, swy = float(self._xtx[domain][0, 0]), float(self._xty[domain][0])
+            return swy / sww, 1.0 / math.sqrt(sww)
+        precision = self._xtx[domain] + np.eye(len(m)) / TRANSFER_PRIOR_SD**2
+        cov = np.linalg.inv(precision)
+        mean = cov @ self._xty[domain]
+        i = m.index(env_id)
+        return float(mean[i]), float(math.sqrt(max(cov[i, i], 0.0)))
+
+    def windows(self, env_id: str) -> int:
+        return self._n.get(env_id, 0)
+
+    def get_state(self) -> dict[str, object]:
+        return {"members": self.members, "n": dict(self._n),
+                "xtx": {d: v.tolist() for d, v in self._xtx.items()},
+                "xty": {d: v.tolist() for d, v in self._xty.items()}}
+
+    def load_checkpoint(self, state: Mapping[str, object]) -> None:
+        self._n = {e: int(v) for e, v in state["n"].items()}  # type: ignore[union-attr]
+        self._xtx = {d: np.asarray(v, dtype=float) for d, v in state["xtx"].items()}  # type: ignore[union-attr]
+        self._xty = {d: np.asarray(v, dtype=float) for d, v in state["xty"].items()}  # type: ignore[union-attr]

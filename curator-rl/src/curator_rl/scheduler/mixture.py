@@ -135,6 +135,8 @@ def apply_status_constraints(
             out[e] = min(out[e], 2.0 * floor)   # E.5: S3 hard = cap at 2 x floor
         if cfg.status_control == "hard" and sv.status == EnvStatus.S4:
             out[e] = min(out[e], floor)         # E.5: S4 hard = cap at the floor
+        if cfg.status_control == "hard" and sv.status == EnvStatus.S5 and cfg.s5_cap == "floor":
+            out[e] = min(out[e], floor)         # B5: a calibration-confirmed spurious arm keeps only the floor
         if sv.status == EnvStatus.S1:
             intents[e] = "explore"
         elif sv.status in (EnvStatus.S3, EnvStatus.S4, EnvStatus.S5):

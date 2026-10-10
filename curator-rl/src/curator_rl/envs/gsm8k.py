@@ -36,25 +36,41 @@ ANSWER_INSTRUCTION = (
 
 
 def extract_boxed(text: str) -> str | None:
-    """Return the content of the LAST \\boxed{...} in the text, or None."""
-    matches = BOXED_RE.findall(text)
-    return matches[-1].strip() if matches else None
+    """Return the content of the LAST balanced \\boxed{...} in the text, or None.
+
+    Audit E-08: the old single-level regex `\\boxed\\{([^{}]*)\\}` found nothing in
+    `\\boxed{18 \\text{ dollars}}` or `\\boxed{1{,}000}` (braces inside), so correct answers in
+    these common formats scored 0. Brace-balanced extraction (shared with MATH35) fixes it.
+    """
+    from curator_rl.envs.math35 import extract_boxed as _balanced
+
+    boxed = _balanced(text)
+    return boxed.strip() if boxed is not None else None
+
+
+_LATEX_NOISE = ("\\$", "{,}", "\\,", "\\!", "\\;", "\\:", "\\ ", "\\%")
+_UNIT_TEXT_RE = re.compile(r"\\(?:text|mbox|mathrm)\{[^{}]*\}")
 
 
 def normalize_number_text(raw: str) -> str | None:
-    """Normalise a numeric strip: commas, dollar and percent signs, spaces.
+    """Normalise a numeric strip: LaTeX spacing/units, commas, dollar and percent signs, spaces.
 
     Returns None when the value is not a plain number (parse failure).
-    Exact rational semantics via Fraction; '2.50' == '2.5'.
+    Exact rational semantics via Fraction; '2.50' == '2.5'. `\\$18`, `18 \\text{ dollars}` and
+    `1{,}000` normalise like `18` and `1000` (audit E-08); words or two numbers stay a failure.
     """
-    cleaned = raw.strip().replace(",", "").replace("$", "").replace("%", "").strip()
+    cleaned = raw
+    for tok in _LATEX_NOISE:
+        cleaned = cleaned.replace(tok, "," if tok == "{,}" else "")
+    cleaned = _UNIT_TEXT_RE.sub("", cleaned)
+    cleaned = cleaned.strip().replace(",", "").replace("$", "").replace("%", "").strip()
     if not cleaned:
         return None
     try:
         dec = Decimal(cleaned)
-    except InvalidOperation:
+        frac = Fraction(dec)          # NaN / Infinity raise here: a parse failure, not a crash
+    except (InvalidOperation, ValueError, OverflowError):
         return None
-    frac = Fraction(dec)
     if frac.denominator == 1:
         return str(frac.numerator)
     return f"{frac.numerator}/{frac.denominator}"
@@ -111,8 +127,6 @@ class Gsm8kEnv(Environment):
                 for line in path.read_text(encoding="utf-8").splitlines()
                 if line.strip()
             ]
-        self._remaining = {}
-        self._passes = {}
 
     def split_ids(self, split: str) -> list[str]:
         ids = [item["problem_id"] for item in self._items.get(split, [])]
@@ -123,6 +137,14 @@ class Gsm8kEnv(Environment):
     def generate_prompt(self, split: str, rng) -> Prompt:
         item = self._draw_item(split, rng)
         return self._to_prompt(item)
+
+    def split_size(self, split: str) -> int | None:
+        self._require_split(split)
+        return len(self._items[split])
+
+    def prompt_at(self, split: str, index: int) -> Prompt:
+        self._require_split(split)
+        return self._to_prompt(self._items[split][index])
 
     def generate_batch(self, split: str, n: int, rng, exclude: set[str] | None = None) -> list[Prompt]:
         self._require_split(split)

@@ -1,0 +1,15 @@
+# vLLM-colocate training stack for T4 (installed into its own virtualenv: vLLM pins its own torch).
+# vLLM 0.31.0 is the version the cost probe ran (reports/pilot/phase_e_cost_probe.md); `run.py setup`
+# retries with the newest vLLM if this pin no longer installs.
+vllm==0.31.0
+trl==1.15.0
+peft==0.20.0
+datasets==4.8.5
+accelerate==1.14.0
+wrapt
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+pyarrow>=14
+pydantic>=2.5
+pyyaml>=6.0

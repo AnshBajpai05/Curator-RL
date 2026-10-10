@@ -47,6 +47,14 @@ class FiniteJsonlEnv(Environment):
         items = self._items[split]
         return self._to_prompt(items[int(rng.integers(len(items)))], split)
 
+    def split_size(self, split: str) -> int | None:
+        self._require_split(split)
+        return len(self._items[split])
+
+    def prompt_at(self, split: str, index: int) -> Prompt:
+        self._require_split(split)
+        return self._to_prompt(self._items[split][index], split)
+
     def generate_batch(self, split: str, n: int, rng, exclude: set[str] | None = None) -> list[Prompt]:
         self._require_split(split)
         out: list[Prompt] = []

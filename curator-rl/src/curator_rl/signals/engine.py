@@ -66,7 +66,8 @@ class SignalEngine:
             signals_cfg.lam, signals_cfg.lambda_fast, signals_cfg.lambda_slow,
             signals_cfg.prior.alpha0, signals_cfg.prior.beta0,
         )
-        self._lp = LPEstimator(signals_cfg.lp_method, signals_cfg.window_rounds)
+        self._lp = LPEstimator(signals_cfg.lp_method, signals_cfg.window_rounds, signals_cfg.lp_se)
+        self._group_size = int(group_size)
         self._richness = RichnessEstimator(signals_cfg.richness, signals_cfg.lam, group_size)
         self._proxy = ProxyReward(proxy_cfg, signals_cfg.lam, cost_exponent)
         self._classifiers: dict[str, StatusClassifier] = {
@@ -98,7 +99,8 @@ class SignalEngine:
             posterior = self._tracker.update(obs)
             posteriors[env_id] = posterior
             raw_rate = obs.k_success / obs.n_rollouts if obs.n_rollouts > 0 else None
-            self._lp.observe(env_id, posterior, obs.n_prompts, raw_rate)
+            self._lp.observe(env_id, posterior, obs.n_prompts, raw_rate,
+                             self._within_round_variance(obs, posterior.pass_rate))
             means[env_id] = obs.sum_score / obs.n_prompts if obs.n_prompts > 0 else 0.0
             if obs.n_prompts > 0 and obs.cost_usd > 0:
                 ema = self._unit_cost[env_id]
@@ -177,6 +179,25 @@ class SignalEngine:
                 status_note=note,
             )
         return out
+
+    def _within_round_variance(self, obs: EnvRoundObs, p_pooled: float) -> float | None:
+        """Between-group variance of pass rates inside one round (LP-B `design` SE, E-01).
+
+        Unbiased sample variance of the n per-prompt group rates from the round's
+        moments, floored at p(1-p)/G: the variance a group rate has even when every
+        prompt is equally hard (pure binomial sampling). One prompt: p(1-p), the
+        largest variance a rate in [0, 1] with mean p can have.
+        """
+        n = obs.n_prompts
+        if n <= 0:
+            return None
+        p = min(max(p_pooled, 1e-6), 1.0 - 1e-6)
+        floor = p * (1.0 - p) / max(self._group_size, 1)
+        if n == 1:
+            return p * (1.0 - p)
+        mean = obs.sum_score / n
+        var = max(obs.sum_score_sq / n - mean * mean, 0.0) * n / (n - 1)
+        return max(var, floor)
 
     # ------------------------------------------------------------- calibration
 

@@ -78,7 +78,8 @@ _ALLOWED_NODES = (
 )
 
 
-def safe_arith_eval(expression: str, allowed_numbers: list[int], require_all: bool) -> Fraction:
+def safe_arith_eval(expression: str, allowed_numbers: list[int], require_all: bool,
+                    exact_division: bool = False) -> Fraction:
     """Evaluate an arithmetic expression safely, exactly, and within the rules.
 
     Guarantees (contract test suite):
@@ -88,7 +89,9 @@ def safe_arith_eval(expression: str, allowed_numbers: list[int], require_all: bo
     - only the allowed numbers are used, each at most once; when
       `require_all`, every allowed number is used exactly once;
     - exact rational arithmetic (no float blowups); division by zero is a
-      CountdownError, not an exception escape.
+      CountdownError, not an exception escape;
+    - with `exact_division`, every division must give an integer, as the prompt states
+      ("Division is only allowed when it divides exactly"; audit E-19).
     """
     if len(expression) > MAX_EXPR_LEN:
         raise CountdownError("expression too long")
@@ -135,6 +138,8 @@ def safe_arith_eval(expression: str, allowed_numbers: list[int], require_all: bo
             if isinstance(node.op, ast.Div):
                 if right == 0:
                     raise CountdownError("division by zero")
+                if exact_division and (left / right).denominator != 1:
+                    raise CountdownError("inexact division")
                 return left / right
             raise CountdownError("banned binary operator")
         raise CountdownError(f"unexpected node: {ast.dump(node)[:80]}")
@@ -143,7 +148,7 @@ def safe_arith_eval(expression: str, allowed_numbers: list[int], require_all: bo
 
 
 @lru_cache(maxsize=4096)
-def _reachable_targets(numbers: tuple[int, ...]) -> dict[Fraction, str]:
+def _reachable_targets(numbers: tuple[int, ...], exact_division: bool = False) -> dict[Fraction, str]:
     """All exactly-reachable target values with one example expression each.
 
     Enumerates unordered partitions of the number multiset recursively over
@@ -168,7 +173,7 @@ def _reachable_targets(numbers: tuple[int, ...]) -> dict[Fraction, str]:
             for lv, le in rec(a).items():
                 for rv, rel in rec(b).items():
                     for sym, op in _BIN_OPS:
-                        if sym == "/" and rv == 0:
+                        if sym == "/" and (rv == 0 or (exact_division and (lv / rv).denominator != 1)):
                             continue
                         value = op(lv, rv)
                         if value not in out:
@@ -187,7 +192,7 @@ def _draw_instance(cfg, split: str, rng) -> tuple[int, list[int], int, str]:
         seed = int(rng.integers(lo, hi))
         local = np.random.default_rng(seed)
         numbers = [int(v) for v in local.integers(cfg.numbers_min, cfg.numbers_max + 1, size=cfg.n_numbers)]
-        reachable = _reachable_targets(tuple(numbers))
+        reachable = _reachable_targets(tuple(numbers), bool(cfg.exact_division))
         candidates = [
             value
             for value in reachable
@@ -204,9 +209,10 @@ def _draw_instance(cfg, split: str, rng) -> tuple[int, list[int], int, str]:
     )
 
 
-def _verify_boxed(boxed: str, numbers: list[int], target: int, require_all: bool) -> bool:
+def _verify_boxed(boxed: str, numbers: list[int], target: int, require_all: bool,
+                  exact_division: bool = False) -> bool:
     try:
-        value = safe_arith_eval(boxed, numbers, require_all)
+        value = safe_arith_eval(boxed, numbers, require_all, exact_division)
     except CountdownError:
         return False
     return value == Fraction(target)
@@ -272,6 +278,7 @@ class CountdownEnv(Environment):
                         list(prompt.meta["numbers"]),
                         int(prompt.meta["target"]),
                         self.cfg.use_all_numbers,
+                        bool(self.cfg.exact_division),
                     ),
                     self.cfg.verifier_timeout_s,
                 )

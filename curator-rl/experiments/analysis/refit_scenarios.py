@@ -144,6 +144,52 @@ HEADER = """# {sid} (D-88): refit of {base} from the Kaggle measurements (experi
 """
 
 
+# GPU shape (audit E-05): the Level-1 GPU plan is R = 2 steps x P = 16 prompts per round and about
+# 60 rounds (1,920 prompts per run), not the simulator's 80 prompts per round and ~5,600 per run.
+# Per-prompt learning is unchanged (the world's update R * eta per round over R * P prompts is eta / P
+# per prompt, independent of R), so eta is NOT rescaled. What changes: run length, per-round signal
+# noise, quota rounding (deficit carry + learning from delivered prompts, E-09), the noisy arm scored
+# on the GSM8K calibration slice as on real hardware (E-03), and calibration charged at
+# generation-only cost per item (E-15).
+GPU_STEPS_PER_ROUND = 2
+GPU_ROUNDS_UNDER_UNIFORM = 60
+# greedy calibration item = one completion: gen s/prompt / G + one verification (pooled), mean over slices
+CALIB_ITEM_SECONDS = sum((MEASURED[e][2] + MEASURED[e][3]) / G for e in ("gsm8k", "math35", "mbpp", "countdown")) / 4
+
+
+def gpu_scenario(sid: str, costs: dict[str, float], kappa: float, note: str) -> dict:
+    sc = scenario(sid, costs, kappa, note)
+    mean_cost = sum(costs.values()) / len(costs)
+    sc["budget_usd"] = float(f"{GPU_ROUNDS_UNDER_UNIFORM * GPU_STEPS_PER_ROUND * 16 * mean_cost:.6g}")
+    sc["steps_per_round"] = GPU_STEPS_PER_ROUND
+    sc["world"].update({"learning_from": "delivered", "rounding": "carry"})
+    sc["calib"] = {"enabled": True, "interval_rounds": 10, "paired": True, "churn": 0.02,
+                   "items_per_slice": 100, "cost_per_item_usd": float(f"{CALIB_ITEM_SECONDS / 3600.0:.6g}")}
+    for env in sc["envs"]:
+        if env["env_id"] == "noisy":
+            env["bench_domain"] = "gsm8k"
+    return sc
+
+
+def write_gpu_shape() -> int:
+    kappa, _ = fit_kappa()
+    r1, r2 = unit_costs(0.0), unit_costs(0.5)
+    homo = {e: sum(r1.values()) / len(r1) for e in r1}
+    header = ("# {sid} (audit E-05): GPU-shape refit = {base} at the Level-1 GPU plan's shape.\n"
+              "# GENERATED FILE - edit experiments/analysis/refit_scenarios.py (--shape gpu), not this file.\n"
+              "# R = 2, P = 16, ~60 rounds under Uniform; learning from delivered prompts with deficit-carry\n"
+              "# rounding; noisy arm scored on the GSM8K calibration slice; calibration offered at\n"
+              "# generation-only cost per item. Measured inputs as in {base}; eta and transfer still ASSUMED.\n")
+    for name, sid, base, costs in (("scenario_si_r1_gpu.yaml", "S-I-R1-GPU", "S-I-R1", r1),
+                                   ("scenario_si_r2_gpu.yaml", "S-I-R2-GPU", "S-I-R2", r2),
+                                   ("scenario_sj_r_gpu.yaml", "S-J-R-GPU", "S-J-R", homo)):
+        payload = gpu_scenario(sid, costs, kappa, f"{base} at the GPU shape (R=2, 60 rounds, shared noisy slice)")
+        (REPO_ROOT / "configs" / "sim" / name).write_text(header.format(sid=sid, base=base)
+                                                         + yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        print("wrote", name, "budget", payload["budget_usd"])
+    return 0
+
+
 def main() -> int:
     kappa, per_env_kappa = fit_kappa()
     r1 = unit_costs(0.0)
@@ -208,4 +254,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import sys
+
+    raise SystemExit(write_gpu_shape() if "--shape" in sys.argv and "gpu" in sys.argv else main())

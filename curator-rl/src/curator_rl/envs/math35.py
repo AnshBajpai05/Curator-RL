@@ -91,17 +91,42 @@ def normalize_answer(raw: str) -> str:
     return s
 
 
+_NUM = r"-?(?:\d+(?:\.\d*)?|\.\d+)"
+_PLAIN_RE = re.compile(rf"^{_NUM}$")
+_SLASH_RE = re.compile(rf"^({_NUM})/({_NUM})$")
+_FRAC_RE = re.compile(rf"^(-?)\(({_NUM})\)/\(({_NUM})\)$")          # what _sub_frac produces
+_MIXED_RE = re.compile(r"^(-?)(\d+)\((\d+)\)/\((\d+)\)$")            # 2\frac{1}{2} -> 2(1)/(2)
+_PAREN_RE = re.compile(rf"^\(({_NUM})\)$")
+
+
 def _numeric_value(s: str) -> Fraction | None:
-    """Exact rational value of a plain number / simple fraction, else None."""
+    """Exact rational value of a plain number / simple fraction / mixed number, else None.
+
+    Audit E-06: parentheses used to be deleted wholesale, so the mixed number 2\\frac{1}{2}
+    (= 5/2) became 21/2 and the product 2(3) became 23: wrong answers were accepted and
+    correct ones rejected. Parentheses are now accepted only in the exact shapes `_sub_frac`
+    produces; anything else is not a plain number and falls back to string comparison
+    (which can only cause false negatives, never false positives).
+    """
     t = s.replace(",", "") if re.fullmatch(r"-?\d{1,3}(,\d{3})+(\.\d+)?", s) else s
-    t = t.replace("(", "").replace(")", "")
     try:
-        if "/" in t:
-            num, den = t.split("/", 1)
-            return Fraction(Fraction(num), Fraction(den))
-        return Fraction(t)
+        if m := _MIXED_RE.match(t):
+            if int(m.group(4)) == 0:
+                return None
+            value = int(m.group(2)) + Fraction(int(m.group(3)), int(m.group(4)))
+            return -value if m.group(1) else value
+        if m := _FRAC_RE.match(t):
+            value = Fraction(m.group(2)) / Fraction(m.group(3))
+            return -value if m.group(1) else value
+        if m := _PAREN_RE.match(t):
+            return Fraction(m.group(1))
+        if m := _SLASH_RE.match(t):
+            return Fraction(m.group(1)) / Fraction(m.group(2))
+        if _PLAIN_RE.match(t):
+            return Fraction(t)
     except (ValueError, ZeroDivisionError):
         return None
+    return None
 
 
 def answers_equal(pred: str, gold: str) -> bool:

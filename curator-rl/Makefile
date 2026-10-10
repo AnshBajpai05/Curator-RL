@@ -1,4 +1,4 @@
-include requirements.lock
+-include requirements.lock   # optional pin file (E1: the file is not in the repo)
 SRC := src/curator_rl
 
 .PHONY: install test lint smoke

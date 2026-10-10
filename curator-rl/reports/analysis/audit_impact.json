@@ -1,0 +1,851 @@
+{
+  "generated_utc": "20261010T101956Z",
+  "seeds": [
+    0,
+    49
+  ],
+  "note": "tuning seeds; exploratory; primary metric = noiseless final score",
+  "table": {
+    "S-I-R1-GPU|curator_pre_audit": {
+      "score": 0.21202997501508702,
+      "vs_pre_audit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.2211356195887446,
+      "calib_cost": 0.024528349225918775,
+      "max_weight": 0.2937473774483305,
+      "detected": 0.0,
+      "false_flags": 0.0,
+      "noisy_z_sd": 0.4050023063119007
+    },
+    "S-I-R1-GPU|curator_fixed": {
+      "score": 0.21807756872176542,
+      "vs_pre_audit": [
+        0.006047593706678447,
+        0.00425719640178596,
+        0.007837991011570934
+      ],
+      "noisy_share": 0.2672124808276754,
+      "calib_cost": 0.022875717419918916,
+      "max_weight": 0.41068246513028744,
+      "detected": 0.14,
+      "false_flags": 0.01,
+      "noisy_z_sd": 0.9487151730567841
+    },
+    "S-I-R1-GPU|fixed_but_legacy_lp_se": {
+      "score": 0.21870551566273908,
+      "vs_pre_audit": [
+        0.006675540647652058,
+        0.00502901685496973,
+        0.008322064440334384
+      ],
+      "noisy_share": 0.2557498377583283,
+      "calib_cost": 0.02299196204228728,
+      "max_weight": 0.4101800478015321,
+      "detected": 0.2,
+      "false_flags": 0.005,
+      "noisy_z_sd": 0.48440780132792405
+    },
+    "S-I-R1-GPU|fixed_but_stale_flags": {
+      "score": 0.21816901565163593,
+      "vs_pre_audit": [
+        0.006139040636548949,
+        0.004297964252294186,
+        0.007980117020803713
+      ],
+      "noisy_share": 0.26631647904336053,
+      "calib_cost": 0.022879346412088823,
+      "max_weight": 0.4120455506437459,
+      "detected": 0.12,
+      "false_flags": 0.015,
+      "noisy_z_sd": 0.9422865587447489
+    },
+    "S-I-R1-GPU|fixed_but_own_slice_credit": {
+      "score": 0.21804865894445288,
+      "vs_pre_audit": [
+        0.006018683929365882,
+        0.004246235807196881,
+        0.007791132051534884
+      ],
+      "noisy_share": 0.2699016708121732,
+      "calib_cost": 0.022885718536729428,
+      "max_weight": 0.4088899604352333,
+      "detected": 0.06,
+      "false_flags": 0.01,
+      "noisy_z_sd": 0.964596347248313
+    },
+    "S-I-R1-GPU|fixed_but_requested_counters": {
+      "score": 0.2189232474698586,
+      "vs_pre_audit": [
+        0.006893272454771592,
+        0.005063861364841513,
+        0.00872268354470167
+      ],
+      "noisy_share": 0.2613629445953441,
+      "calib_cost": 0.022856614610696033,
+      "max_weight": 0.41401956414536983,
+      "detected": 0.1,
+      "false_flags": 0.015,
+      "noisy_z_sd": 0.9405796534329355
+    },
+    "S-I-R1-GPU|fixed_but_unscaled_n_min": {
+      "score": 0.21284253525344354,
+      "vs_pre_audit": [
+        0.0008125602383565488,
+        -0.0004256640949622866,
+        0.002050784571675384
+      ],
+      "noisy_share": 0.21643999363014693,
+      "calib_cost": 0.024495910225335118,
+      "max_weight": 0.29529701041389056,
+      "detected": 0.0,
+      "false_flags": 0.0,
+      "noisy_z_sd": 0.9721802031556255
+    },
+    "S-I-R1-GPU|fixed_plus_s5_cap": {
+      "score": 0.21806931234386476,
+      "vs_pre_audit": [
+        0.006039337328777738,
+        0.004249598649502475,
+        0.007829076008053002
+      ],
+      "noisy_share": 0.26722405490174944,
+      "calib_cost": 0.022876011598616013,
+      "max_weight": 0.41069161194699305,
+      "detected": 0.14,
+      "false_flags": 0.01,
+      "noisy_z_sd": 0.9481569529042918
+    },
+    "S-I-R1-GPU|fixed_plus_gamma1": {
+      "score": 0.22071471149324493,
+      "vs_pre_audit": [
+        0.008684736478157906,
+        0.005404573816072929,
+        0.011964899140242883
+      ],
+      "noisy_share": 0.3175253255437933,
+      "calib_cost": 0.024744319235047624,
+      "max_weight": 0.6433567738453864,
+      "detected": 0.24,
+      "false_flags": 0.015,
+      "noisy_z_sd": 0.911967038135848
+    },
+    "S-I-R1-GPU|uniform": {
+      "score": 0.21103448404875902,
+      "vs_pre_audit": [
+        -0.0009954909663279755,
+        -0.002345905234245568,
+        0.00035492330158961726
+      ],
+      "noisy_share": 0.20011111111111113,
+      "calib_cost": 0.0,
+      "max_weight": 0.19999999999999984,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R1-GPU|lp": {
+      "score": 0.2231750791489737,
+      "vs_pre_audit": [
+        0.011145104133886714,
+        0.0097286554496257,
+        0.012561552818147727
+      ],
+      "noisy_share": 0.16907925340163626,
+      "calib_cost": 0.0,
+      "max_weight": 0.6170677604679763,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R1-GPU|ucb": {
+      "score": 0.21865462778183592,
+      "vs_pre_audit": [
+        0.006624652766748913,
+        0.0026399854680080846,
+        0.01060932006548974
+      ],
+      "noisy_share": 0.31987889740106634,
+      "calib_cost": 0.0,
+      "max_weight": 0.7592299133090964,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": 0.8808045655121927
+    },
+    "S-I-R1-GPU|sec": {
+      "score": 0.21233505843462683,
+      "vs_pre_audit": [
+        0.00030508341953985494,
+        -0.0014124012320764685,
+        0.0020225680711561784
+      ],
+      "noisy_share": 0.3688592812114534,
+      "calib_cost": 0.0,
+      "max_weight": 0.3686068747728465,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R1-GPU|dump": {
+      "score": 0.21316391173787583,
+      "vs_pre_audit": [
+        0.001133936722788848,
+        -0.0003649367903765584,
+        0.0026328102359542546
+      ],
+      "noisy_share": 0.34345564550581,
+      "calib_cost": 0.0,
+      "max_weight": 0.3432466913861692,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R1-GPU|curator_gpu_tuned": {
+      "score": 0.22492151095007415,
+      "vs_pre_audit": [
+        0.012891535934987142,
+        0.005571724898714301,
+        0.020211346971259984
+      ],
+      "noisy_share": 0.35458178509919774,
+      "calib_cost": 0.026091182013632575,
+      "max_weight": 0.7484710519720916,
+      "detected": 0.26,
+      "false_flags": 0.06,
+      "noisy_z_sd": 0.9263724669562994
+    },
+    "S-I-R1-GPU|curator_gpu_tuned_K5": {
+      "score": 0.22350699494511314,
+      "vs_pre_audit": [
+        0.01147701993002616,
+        0.004295688613167367,
+        0.018658351246884954
+      ],
+      "noisy_share": 0.3519317556276934,
+      "calib_cost": 0.04926158693619535,
+      "max_weight": 0.7440961050784712,
+      "detected": 0.28,
+      "false_flags": 0.07,
+      "noisy_z_sd": 0.887624081455602
+    },
+    "S-I-R1-GPU|lp_gpu_tuned": {
+      "score": 0.22315089188794743,
+      "vs_pre_audit": [
+        0.011120916872860457,
+        0.008976578796191272,
+        0.013265254949529643
+      ],
+      "noisy_share": 0.17403505271441733,
+      "calib_cost": 0.0,
+      "max_weight": 0.7391575207993969,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R1-GPU|ucb_gpu_tuned": {
+      "score": 0.21956078159114398,
+      "vs_pre_audit": [
+        0.007530806576057001,
+        -0.0007012016845004349,
+        0.015762814836614437
+      ],
+      "noisy_share": 0.42121432233888206,
+      "calib_cost": 0.0,
+      "max_weight": 0.7813100408899081,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": 0.8631295133466095
+    },
+    "S-I-R1-GPU|sec_gpu_tuned": {
+      "score": 0.2149628081869327,
+      "vs_pre_audit": [
+        0.002932833171845694,
+        0.001316895107368467,
+        0.004548771236322921
+      ],
+      "noisy_share": 0.3756577416552746,
+      "calib_cost": 0.0,
+      "max_weight": 0.3804930787451922,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R1-GPU|dump_gpu_tuned": {
+      "score": 0.21419235561917446,
+      "vs_pre_audit": [
+        0.002162380604087458,
+        0.00039439404471706485,
+        0.003930367163457852
+      ],
+      "noisy_share": 0.3712082550125313,
+      "calib_cost": 0.0,
+      "max_weight": 0.37096557822885623,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R2-GPU|curator_pre_audit": {
+      "score": 0.21251882909986905,
+      "vs_pre_audit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.23002948113207547,
+      "calib_cost": 0.024481011699226393,
+      "max_weight": 0.2923963627546417,
+      "detected": 0.0,
+      "false_flags": 0.0,
+      "noisy_z_sd": 0.4022676339152281
+    },
+    "S-I-R2-GPU|curator_fixed": {
+      "score": 0.21773754011973426,
+      "vs_pre_audit": [
+        0.00521871101986523,
+        0.0030845858858107363,
+        0.007352836153919724
+      ],
+      "noisy_share": 0.2639759917791133,
+      "calib_cost": 0.02245986702154703,
+      "max_weight": 0.40925135498942966,
+      "detected": 0.18,
+      "false_flags": 0.0,
+      "noisy_z_sd": 0.9649558776299902
+    },
+    "S-I-R2-GPU|fixed_but_legacy_lp_se": {
+      "score": 0.2178193003395409,
+      "vs_pre_audit": [
+        0.005300471239671895,
+        0.0031534937384576985,
+        0.007447448740886093
+      ],
+      "noisy_share": 0.27227460017912986,
+      "calib_cost": 0.022115669627761944,
+      "max_weight": 0.407679648082371,
+      "detected": 0.08,
+      "false_flags": 0.01,
+      "noisy_z_sd": 0.4713086418796696
+    },
+    "S-I-R2-GPU|fixed_but_stale_flags": {
+      "score": 0.21773754011973426,
+      "vs_pre_audit": [
+        0.00521871101986523,
+        0.0030845858858107363,
+        0.007352836153919724
+      ],
+      "noisy_share": 0.2639759917791133,
+      "calib_cost": 0.02245986702154703,
+      "max_weight": 0.40925135498942966,
+      "detected": 0.18,
+      "false_flags": 0.0,
+      "noisy_z_sd": 0.9649558776299902
+    },
+    "S-I-R2-GPU|fixed_but_own_slice_credit": {
+      "score": 0.21750542361573955,
+      "vs_pre_audit": [
+        0.004986594515870537,
+        0.002850865460573356,
+        0.007122323571167717
+      ],
+      "noisy_share": 0.2686891008878592,
+      "calib_cost": 0.0223810962083867,
+      "max_weight": 0.40867846478189984,
+      "detected": 0.08,
+      "false_flags": 0.01,
+      "noisy_z_sd": 0.9703395757854676
+    },
+    "S-I-R2-GPU|fixed_but_requested_counters": {
+      "score": 0.21752443618784612,
+      "vs_pre_audit": [
+        0.005005607087977069,
+        0.0030354250598415163,
+        0.006975789116112621
+      ],
+      "noisy_share": 0.27537268256430647,
+      "calib_cost": 0.022233753145395222,
+      "max_weight": 0.4075577757093076,
+      "detected": 0.1,
+      "false_flags": 0.015,
+      "noisy_z_sd": 0.943699762946601
+    },
+    "S-I-R2-GPU|fixed_but_unscaled_n_min": {
+      "score": 0.21264891293886293,
+      "vs_pre_audit": [
+        0.00013008383899389963,
+        -0.0011580744459348165,
+        0.0014182421239226156
+      ],
+      "noisy_share": 0.22600716282320057,
+      "calib_cost": 0.024469522578766265,
+      "max_weight": 0.29418831665210565,
+      "detected": 0.0,
+      "false_flags": 0.0,
+      "noisy_z_sd": 0.9544329812531989
+    },
+    "S-I-R2-GPU|fixed_plus_s5_cap": {
+      "score": 0.21773794666391652,
+      "vs_pre_audit": [
+        0.005219117564047495,
+        0.003084997335002399,
+        0.007353237793092591
+      ],
+      "noisy_share": 0.2639641993262831,
+      "calib_cost": 0.022460021569788546,
+      "max_weight": 0.40925322161923505,
+      "detected": 0.18,
+      "false_flags": 0.0,
+      "noisy_z_sd": 0.9649558776299902
+    },
+    "S-I-R2-GPU|fixed_plus_gamma1": {
+      "score": 0.21870493993370338,
+      "vs_pre_audit": [
+        0.006186110833834349,
+        0.0029482458822209508,
+        0.009423975785447746
+      ],
+      "noisy_share": 0.3420145455078235,
+      "calib_cost": 0.024241487219274237,
+      "max_weight": 0.6629138712650228,
+      "detected": 0.3,
+      "false_flags": 0.035,
+      "noisy_z_sd": 0.9867952773954844
+    },
+    "S-I-R2-GPU|uniform": {
+      "score": 0.211026826477783,
+      "vs_pre_audit": [
+        -0.0014920026220860006,
+        -0.002952468539622782,
+        -3.153670454921929e-05
+      ],
+      "noisy_share": 0.20011111111111113,
+      "calib_cost": 0.0,
+      "max_weight": 0.19999999999999984,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R2-GPU|lp": {
+      "score": 0.22378825800480773,
+      "vs_pre_audit": [
+        0.011269428904938684,
+        0.009480050316188706,
+        0.013058807493688663
+      ],
+      "noisy_share": 0.1682886768854608,
+      "calib_cost": 0.0,
+      "max_weight": 0.6174166916495066,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R2-GPU|ucb": {
+      "score": 0.21860622579222835,
+      "vs_pre_audit": [
+        0.006087396692359314,
+        0.0020824231203574895,
+        0.010092370264361139
+      ],
+      "noisy_share": 0.3211949043851019,
+      "calib_cost": 0.0,
+      "max_weight": 0.7601629445919226,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": 0.8822258237408529
+    },
+    "S-I-R2-GPU|sec": {
+      "score": 0.21214001154014372,
+      "vs_pre_audit": [
+        -0.00037881755972530017,
+        -0.002083080528214415,
+        0.0013254454087638146
+      ],
+      "noisy_share": 0.3687732826384142,
+      "calib_cost": 0.0,
+      "max_weight": 0.3685484250723918,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R2-GPU|dump": {
+      "score": 0.21294401367983473,
+      "vs_pre_audit": [
+        0.0004251845799656978,
+        -0.0012297093969821753,
+        0.0020800785569135708
+      ],
+      "noisy_share": 0.3434644886363636,
+      "calib_cost": 0.0,
+      "max_weight": 0.343233247086885,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R2-GPU|curator_gpu_tuned": {
+      "score": 0.22172153696983174,
+      "vs_pre_audit": [
+        0.009202707869962693,
+        0.0020938422620972973,
+        0.01631157347782809
+      ],
+      "noisy_share": 0.375680254702749,
+      "calib_cost": 0.024627760155233984,
+      "max_weight": 0.7562550021400962,
+      "detected": 0.18,
+      "false_flags": 0.055,
+      "noisy_z_sd": 0.8761453565341767
+    },
+    "S-I-R2-GPU|curator_gpu_tuned_K5": {
+      "score": 0.21994577644464738,
+      "vs_pre_audit": [
+        0.007426947344778361,
+        0.0010257850374651477,
+        0.013828109652091573
+      ],
+      "noisy_share": 0.3850734247445143,
+      "calib_cost": 0.046089139014775904,
+      "max_weight": 0.7237186435631423,
+      "detected": 0.24,
+      "false_flags": 0.085,
+      "noisy_z_sd": 0.8859128176540574
+    },
+    "S-I-R2-GPU|lp_gpu_tuned": {
+      "score": 0.2237870899091597,
+      "vs_pre_audit": [
+        0.011268260809290657,
+        0.00888385370864652,
+        0.013652667909934794
+      ],
+      "noisy_share": 0.17356853036977207,
+      "calib_cost": 0.0,
+      "max_weight": 0.7393620008255557,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R2-GPU|ucb_gpu_tuned": {
+      "score": 0.2188971190045917,
+      "vs_pre_audit": [
+        0.006378289904722679,
+        -0.0017337159471889595,
+        0.014490295756634318
+      ],
+      "noisy_share": 0.42526756641516505,
+      "calib_cost": 0.0,
+      "max_weight": 0.7820292843420481,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": 0.8596977342817367
+    },
+    "S-I-R2-GPU|sec_gpu_tuned": {
+      "score": 0.21487018562853064,
+      "vs_pre_audit": [
+        0.002351356528661602,
+        0.0005790205804026066,
+        0.004123692476920598
+      ],
+      "noisy_share": 0.37567045454545456,
+      "calib_cost": 0.0,
+      "max_weight": 0.38051736516215096,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-I-R2-GPU|dump_gpu_tuned": {
+      "score": 0.21396872875791179,
+      "vs_pre_audit": [
+        0.0014498996580427537,
+        -0.0005099282785891003,
+        0.0034097275946746077
+      ],
+      "noisy_share": 0.37122118506493507,
+      "calib_cost": 0.0,
+      "max_weight": 0.37101630139518077,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-J-R-GPU|curator_pre_audit": {
+      "score": 0.21146162420970735,
+      "vs_pre_audit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.2292570754716981,
+      "calib_cost": 0.02114796820011939,
+      "max_weight": 0.2824156453047938,
+      "detected": 0.0,
+      "false_flags": 0.01,
+      "noisy_z_sd": 0.41545351375875816
+    },
+    "S-J-R-GPU|curator_fixed": {
+      "score": 0.21741011284425413,
+      "vs_pre_audit": [
+        0.005948488634546738,
+        0.004373783009453377,
+        0.007523194259640099
+      ],
+      "noisy_share": 0.2643394042627533,
+      "calib_cost": 0.021275147979503063,
+      "max_weight": 0.4068904120089087,
+      "detected": 0.1,
+      "false_flags": 0.015,
+      "noisy_z_sd": 0.8993390784844134
+    },
+    "S-J-R-GPU|fixed_but_legacy_lp_se": {
+      "score": 0.21877155417729682,
+      "vs_pre_audit": [
+        0.0073099299675894415,
+        0.005195908440813428,
+        0.009423951494365455
+      ],
+      "noisy_share": 0.25957809224318656,
+      "calib_cost": 0.02121333054015393,
+      "max_weight": 0.4019321322585661,
+      "detected": 0.04,
+      "false_flags": 0.005,
+      "noisy_z_sd": 0.44439397126096397
+    },
+    "S-J-R-GPU|fixed_but_stale_flags": {
+      "score": 0.21725870880826012,
+      "vs_pre_audit": [
+        0.005797084598552742,
+        0.004220629946437506,
+        0.007373539250667979
+      ],
+      "noisy_share": 0.2648936495457722,
+      "calib_cost": 0.02127484482029271,
+      "max_weight": 0.40743607241570956,
+      "detected": 0.1,
+      "false_flags": 0.015,
+      "noisy_z_sd": 0.9032964087403512
+    },
+    "S-J-R-GPU|fixed_but_own_slice_credit": {
+      "score": 0.21713680003800392,
+      "vs_pre_audit": [
+        0.0056751758282965435,
+        0.004003043312894736,
+        0.007347308343698351
+      ],
+      "noisy_share": 0.2685436320754717,
+      "calib_cost": 0.02121306950003385,
+      "max_weight": 0.4072463687448247,
+      "detected": 0.04,
+      "false_flags": 0.03,
+      "noisy_z_sd": 0.8997050390306334
+    },
+    "S-J-R-GPU|fixed_but_requested_counters": {
+      "score": 0.2181609691172927,
+      "vs_pre_audit": [
+        0.0066993449075853535,
+        0.004703643011903639,
+        0.008695046803267069
+      ],
+      "noisy_share": 0.2575779612159329,
+      "calib_cost": 0.021213801387324534,
+      "max_weight": 0.40641704982007476,
+      "detected": 0.12,
+      "false_flags": 0.005,
+      "noisy_z_sd": 0.9396499593174154
+    },
+    "S-J-R-GPU|fixed_but_unscaled_n_min": {
+      "score": 0.21253253553920903,
+      "vs_pre_audit": [
+        0.001070911329501647,
+        -0.0003778792632182478,
+        0.002519701922221542
+      ],
+      "noisy_share": 0.2278262578616352,
+      "calib_cost": 0.021217220428528756,
+      "max_weight": 0.29006233102925727,
+      "detected": 0.0,
+      "false_flags": 0.005,
+      "noisy_z_sd": 0.9646158051271891
+    },
+    "S-J-R-GPU|fixed_plus_s5_cap": {
+      "score": 0.21741011284425413,
+      "vs_pre_audit": [
+        0.005948488634546738,
+        0.004373783009453377,
+        0.007523194259640099
+      ],
+      "noisy_share": 0.2643394042627533,
+      "calib_cost": 0.021275147979503063,
+      "max_weight": 0.4068904120089087,
+      "detected": 0.1,
+      "false_flags": 0.015,
+      "noisy_z_sd": 0.8993390784844134
+    },
+    "S-J-R-GPU|fixed_plus_gamma1": {
+      "score": 0.21601228196180774,
+      "vs_pre_audit": [
+        0.004550657752100361,
+        0.001400259868994485,
+        0.007701055635206237
+      ],
+      "noisy_share": 0.348147929769392,
+      "calib_cost": 0.02140263966193994,
+      "max_weight": 0.6526074071783805,
+      "detected": 0.14,
+      "false_flags": 0.02,
+      "noisy_z_sd": 0.9101364380360087
+    },
+    "S-J-R-GPU|uniform": {
+      "score": 0.21102457404343858,
+      "vs_pre_audit": [
+        -0.00043705016626878533,
+        -0.001993231569131488,
+        0.0011191312365939174
+      ],
+      "noisy_share": 0.20011111111111113,
+      "calib_cost": 0.0,
+      "max_weight": 0.19999999999999984,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-J-R-GPU|lp": {
+      "score": 0.22517459383920818,
+      "vs_pre_audit": [
+        0.013712969629500811,
+        0.01198259301830754,
+        0.015443346240694083
+      ],
+      "noisy_share": 0.16869107744107745,
+      "calib_cost": 0.0,
+      "max_weight": 0.6177000248289392,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-J-R-GPU|ucb": {
+      "score": 0.21842443116117663,
+      "vs_pre_audit": [
+        0.006962806951469263,
+        0.00292362531625696,
+        0.011001988586681565
+      ],
+      "noisy_share": 0.32447916666666665,
+      "calib_cost": 0.0,
+      "max_weight": 0.7585896935308422,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": 0.8816840085201737
+    },
+    "S-J-R-GPU|sec": {
+      "score": 0.2113185952284757,
+      "vs_pre_audit": [
+        -0.00014302898123166096,
+        -0.0016679973187083577,
+        0.0013819393562450359
+      ],
+      "noisy_share": 0.368378367003367,
+      "calib_cost": 0.0,
+      "max_weight": 0.3681562516799363,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-J-R-GPU|dump": {
+      "score": 0.21245819061813997,
+      "vs_pre_audit": [
+        0.0009965664084325798,
+        -0.00035716322870399256,
+        0.002350296045569152
+      ],
+      "noisy_share": 0.3434168771043771,
+      "calib_cost": 0.0,
+      "max_weight": 0.3432090424080355,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-J-R-GPU|curator_gpu_tuned": {
+      "score": 0.22095200825967434,
+      "vs_pre_audit": [
+        0.00949038404996697,
+        0.002553151273192316,
+        0.016427616826741626
+      ],
+      "noisy_share": 0.3431804682040531,
+      "calib_cost": 0.021216594810138645,
+      "max_weight": 0.7377024775114747,
+      "detected": 0.16,
+      "false_flags": 0.055,
+      "noisy_z_sd": 0.8630873992045599
+    },
+    "S-J-R-GPU|curator_gpu_tuned_K5": {
+      "score": 0.2198722973927331,
+      "vs_pre_audit": [
+        0.008410673183025722,
+        0.0017277509224734016,
+        0.015093595443578042
+      ],
+      "noisy_share": 0.3410096153846154,
+      "calib_cost": 0.04210996943155254,
+      "max_weight": 0.730095957738144,
+      "detected": 0.22,
+      "false_flags": 0.07,
+      "noisy_z_sd": 0.8722284942688564
+    },
+    "S-J-R-GPU|lp_gpu_tuned": {
+      "score": 0.2253704563108248,
+      "vs_pre_audit": [
+        0.013908832101117435,
+        0.011480362693682201,
+        0.01633730150855267
+      ],
+      "noisy_share": 0.17404208754208753,
+      "calib_cost": 0.0,
+      "max_weight": 0.7393062212834144,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-J-R-GPU|ucb_gpu_tuned": {
+      "score": 0.21721932517896098,
+      "vs_pre_audit": [
+        0.005757700969253581,
+        -0.0019214669722825073,
+        0.01343686891078967
+      ],
+      "noisy_share": 0.43080218855218855,
+      "calib_cost": 0.0,
+      "max_weight": 0.784093434969839,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": 0.8604165386900051
+    },
+    "S-J-R-GPU|sec_gpu_tuned": {
+      "score": 0.21392293999138992,
+      "vs_pre_audit": [
+        0.0024613157816825424,
+        0.001027178663241915,
+        0.0038954529001231698
+      ],
+      "noisy_share": 0.3758103956228956,
+      "calib_cost": 0.0,
+      "max_weight": 0.3806567550994825,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    },
+    "S-J-R-GPU|dump_gpu_tuned": {
+      "score": 0.21328938501595285,
+      "vs_pre_audit": [
+        0.001827760806245493,
+        -6.357367753154642e-05,
+        0.0037190952900225324
+      ],
+      "noisy_share": 0.37145391414141415,
+      "calib_cost": 0.0,
+      "max_weight": 0.3712109819995016,
+      "detected": null,
+      "false_flags": null,
+      "noisy_z_sd": null
+    }
+  },
+  "seconds": 23.6
+}
