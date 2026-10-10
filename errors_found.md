@@ -21,6 +21,10 @@ Legacy behaviour stays available behind each new switch, so earlier decisions re
 
 **E-28 (found after this audit, while fixing E-05): status evidence thresholds do not transfer across batch shapes.** `signals.status.n_min = 64` prompt groups was tuned at 80 prompts per round. At the GPU plan's 32, an arm's discounted evidence settles at about 60, so 77% of arm-rounds stayed in S1 and its exploration quota pinned Curator near Uniform. Fixed by `core.config.rescale_for_batch_shape` (used by the GPU runner and the GPU-shape studies). Impact: +0.0060 [+0.0043, +0.0078] over the pre-audit Curator; after fair re-tuning, +6.0% over Uniform instead of +0.8%.
 
+**E-29 (found when opening the PR): CI had never run.** The workflow sat in `curator-rl/.github/workflows/`; GitHub only executes `.github/workflows/` at the repository root. Moved there with `working-directory: curator-rl`.
+
+**E-30 (found by that first CI run): split manifests verified only on Windows.** `write_manifests` wrote in text mode, so on Windows every line ended in CRLF and `MANIFEST.sha256` hashed CRLF bytes; on Linux (CI, Kaggle) the check failed. Manifests and index are now written with LF, pinned by `.gitattributes`, and the index is regenerated (split contents unchanged). CI now passes on Python 3.11 and 3.12.
+
 **Correction to E-05 below:** η must NOT be rescaled. The world's update is R·η per round over R·P prompts, i.e. η/P per prompt, independent of R. The GPU-shape scenarios keep η.
 
 **Severity:**
