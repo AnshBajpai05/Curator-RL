@@ -19,7 +19,7 @@ import time
 from fractions import Fraction
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -102,11 +102,12 @@ def safe_arith_eval(expression: str, allowed_numbers: list[int], require_all: bo
     except SyntaxError as exc:
         raise CountdownError(f"invalid expression: {exc}") from exc
     for node in ast.walk(tree):
-        if isinstance(node, ast.Constant) and not isinstance(node.value, int):
+        # bool is an int subclass: `True` must not stand in for the number 1
+        if isinstance(node, ast.Constant) and (isinstance(node.value, bool) or not isinstance(node.value, int)):
             raise CountdownError("only integer literals are allowed")
         if not isinstance(node, _ALLOWED_NODES):
             raise CountdownError(f"banned node: {ast.dump(node)[:80]}")
-    used = [node.value for node in ast.walk(tree) if isinstance(node, ast.Constant)]
+    used = [cast(int, node.value) for node in ast.walk(tree) if isinstance(node, ast.Constant)]
     available = list(allowed_numbers)
     for value in used:
         if value in available:
@@ -118,7 +119,7 @@ def safe_arith_eval(expression: str, allowed_numbers: list[int], require_all: bo
 
     def _eval(node: ast.AST) -> Fraction:
         if isinstance(node, ast.Constant):
-            return Fraction(node.value)
+            return Fraction(cast(int, node.value))      # validated above: an integer literal
         if isinstance(node, ast.UnaryOp):
             inner = _eval(node.operand)
             if isinstance(node.op, ast.USub):
@@ -223,7 +224,7 @@ class CountdownEnv(Environment):
 
     def __init__(self, repo_root: Path | None = None, cfg=None) -> None:
         super().__init__("countdown")
-        self.cfg = cfg
+        self.cfg: Any = cfg
         self.repo_root = Path(repo_root) if repo_root is not None else Path(".")
 
     def split_ids(self, split: str) -> list[str]:

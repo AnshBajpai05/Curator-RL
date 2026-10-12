@@ -11,7 +11,9 @@ the posterior mean +/- one posterior standard deviation.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 from curator_rl.core.types import EnvRoundObs
 
@@ -140,13 +142,13 @@ class PassRateTracker:
             }
         return out
 
-    def load_checkpoint(self, state: dict[str, dict[str, object]]) -> None:
+    def load_checkpoint(self, state: Mapping[str, Mapping[str, Any]]) -> None:
         self._envs = {}
         for env_id, raw in state.items():
             st = _EnvState(
-                main=_Counts(*raw["main"]),  # type: ignore[arg-type]
-                fast=_Counts(*raw["fast"]),  # type: ignore[arg-type]
-                slow=_Counts(*raw["slow"]),  # type: ignore[arg-type]
+                main=_Counts(*raw["main"]),
+                fast=_Counts(*raw["fast"]),
+                slow=_Counts(*raw["slow"]),
                 rounds_seen=int(raw["rounds_seen"]),
             )
             self._envs[env_id] = st

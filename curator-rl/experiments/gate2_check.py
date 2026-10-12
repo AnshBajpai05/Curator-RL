@@ -26,24 +26,18 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from datetime import UTC, datetime
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
-from experiments.analysis import common  # noqa: E402
-from experiments.analysis.common import REPO_ROOT  # noqa: E402
-from experiments.run_sim import FROZEN_D68_D94  # noqa: E402  (audit E-04: pre-registered config)
 
 from curator_rl.core.config import StatusCfg, load_config  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
 from curator_rl.simulator.oracle import StaticOracle  # noqa: E402
 from curator_rl.simulator.scenarios import ReportEvalCfg, build_world, load_scenario  # noqa: E402
+from experiments.analysis import common  # noqa: E402
+from experiments.analysis.common import REPO_ROOT  # noqa: E402
+from experiments.run_sim import FROZEN_D68_D94  # noqa: E402  (audit E-04: pre-registered config)
 
 REPORT_DIR = REPO_ROOT / "reports" / "gate2"
 DELTA_GAP = 0.01         # pre-registered margin: 1 benchmark point = 0.01 in score units (D-69)

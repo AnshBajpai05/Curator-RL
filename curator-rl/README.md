@@ -6,12 +6,17 @@ reinforcement learning on several task environments (math, code, puzzles), it de
 round which share of the GPU budget each environment gets. The aim is the highest held-out score
 when the budget runs out.
 
-> **Status (2026-10-10, branch `audit-fixes-and-gpu-run`):** design, simulator, scheduler, baselines,
-> calibration and all five environments are built and tested. A full audit found and fixed 28 errors
-> (`../errors_found.md`, impact in `../CHANGES_AND_IMPACT.md`). The Phase F runner now drives a real
-> TRL 1.15 GRPO trainer (verified on CPU with a tiny model); the Kaggle GPU package
-> (`kaggle/`, built by `scripts/make_kaggle_gpu_bundle.py`) is ready for the first real-GPU runs.
-> 404 tests pass (1 Linux-only skip), with the datasets downloaded.
+> **Status (2026-10-12, branch `audit-fixes-and-gpu-run`):** the code is complete for the Level-1 GPU
+> runs. Design, simulator, scheduler, baselines, calibration and all five environments are built and
+> tested; a full audit found and fixed 30+ errors (`../errors_found.md`). New since the audit: a
+> label-free **reward audit** that catches a reward which ignores the prompt (the random-reward arm)
+> at zero cost, the alpha/beta fit, drift-triggered discounting, realism-v2 simulator scenarios, the
+> ROI leaderboard and leave-one-out, figures, and runs that **survive a lost Kaggle session** (every
+> round checkpointed, mirrored to a Hugging Face dataset, resumed by rerunning the same command).
+> On tuning seeds, Curator with the audit gains +11-12% over Uniform at the GPU shape versus +6% for
+> the best baseline (`../CHANGES_AND_IMPACT.md`). Nothing has run on a real GPU yet: the Kaggle
+> package (`kaggle/`) is the next step. 481 tests pass (1 Linux-only skip) with the datasets
+> downloaded; pyright reports 0 errors; CI also rebuilds the datasets and enforces 85% coverage.
 
 ---
 

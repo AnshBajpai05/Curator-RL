@@ -1,6 +1,6 @@
 """MATH levels 3-5 environment (Roadmap v3 Phase E, D.2; env id `math35`).
 
-Data: `DigitalLearningGmbH/MATH-lighteval` train problems of level 3, 4 and 5 (5586 problems).
+Data: `DigitalLearningGmbH/MATH-lighteval` train problems of level 3, 4 and 5 (5,582 problems).
 The training pool is hash-split into train / calib / dev; the sealed test set is MATH-500
 (all levels, an out-of-distribution slice by level). The gold answer is the last balanced
 `\\boxed{...}` of the reference solution.
@@ -162,8 +162,9 @@ class Math35Env(FiniteJsonlEnv):
         start = time.perf_counter()
         try:
             boxed = extract_boxed(response)
+            pred: str = boxed or ""
             success = boxed is not None and run_with_timeout(
-                lambda: answers_equal(boxed, prompt.reference), self.cfg.verifier_timeout_s)
+                lambda: answers_equal(pred, prompt.reference), self.cfg.verifier_timeout_s)
             info: dict[str, Any] = {"boxed": boxed}
         except Exception:
             boxed, success, info = None, False, {"timeout": True}

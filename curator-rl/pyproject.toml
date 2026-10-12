@@ -21,9 +21,20 @@ dev = [
     "pytest-cov>=4.1",
     "hypothesis>=6.100",
     "ruff>=0.5",
+    "pyright>=1.1.400",
 ]
-train = []   # TRL/transformers/peft/torch pinned in v1 Phase 7, behind the versions spike
+# GPU training stack: the exact versions verified on Kaggle and in the CPU tests (docs/TRL_SPIKE.md,
+# kaggle/requirements-hf.txt). torch is not pinned: it must be the platform's CUDA build (Kaggle ships it).
+# The vLLM stack lives in its own virtualenv: kaggle/requirements-vllm.txt.
+train = [
+    "trl==1.15.0",
+    "transformers==5.16.1",
+    "peft==0.20.0",
+    "datasets==4.8.5",
+    "accelerate==1.14.0",
+]
 sim = []
+viz = ["matplotlib>=3.8"]   # figures (curator_rl.viz); Kaggle images ship matplotlib
 
 [project.scripts]
 curator = "curator_rl.cli:main"
@@ -33,7 +44,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+# the library, plus the experiment scripts as a package so they import each other without sys.path hacks (E5)
+where = ["src", "."]
+include = ["curator_rl*", "experiments*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,7 +56,12 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["curator_rl.core"]
+# the whole library (improvement E3); the two GPU-only modules need torch/TRL, which CI does not install
+source = ["curator_rl"]
+omit = ["*/curator_rl/trainer/trl_adapter.py", "*/curator_rl/trainer/logprob_fallback.py"]
+
+[tool.coverage.report]
+fail_under = 85
 
 [tool.ruff]
 line-length = 100
@@ -57,3 +75,13 @@ ignore = [
     "E501",  # long lines in tables/docs strings; kept readable
     "B905",  # zip() without strict=; all uses zip equal-length same-package tuples
 ]
+
+[tool.pyright]
+# improvement E8: static checking of the library in CI. The two GPU-only modules import torch/TRL,
+# which the CPU CI does not install; they are exercised by the CPU TRL tests where torch is present.
+include = ["src"]
+exclude = ["src/curator_rl/trainer/trl_adapter.py", "src/curator_rl/trainer/logprob_fallback.py"]
+typeCheckingMode = "basic"
+pythonVersion = "3.11"
+reportMissingImports = "warning"
+reportMissingModuleSource = "warning"

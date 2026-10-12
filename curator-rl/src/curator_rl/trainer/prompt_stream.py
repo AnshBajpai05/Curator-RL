@@ -18,6 +18,7 @@ import numpy as np
 from curator_rl.core.quotas import CarryQuotas
 from curator_rl.core.seeding import SeedManager
 from curator_rl.core.types import Prompt
+from curator_rl.envs.base import Environment
 
 
 class _PassSampler:
@@ -50,7 +51,7 @@ class _PassSampler:
 class PromptStream:
     """Turns mixtures into the prompts of each GRPO step."""
 
-    def __init__(self, envs: Mapping[str, object], *, seed: int, split: str = "train") -> None:
+    def __init__(self, envs: Mapping[str, Environment], *, seed: int, split: str = "train") -> None:
         self.envs = dict(envs)
         self.env_ids = tuple(sorted(self.envs))
         self.split = split

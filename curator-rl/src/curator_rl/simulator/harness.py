@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, replace
-from typing import Protocol
+from typing import Protocol, cast
 
 from curator_rl.core.types import CalibrationObservation, RoundObservation
 from curator_rl.scheduler.base import BaseScheduler
@@ -23,9 +23,13 @@ from curator_rl.simulator.world import SimWorld
 
 
 class OracleScheduler(Protocol):
-    """Duck type shared by oracles: they read hidden world state by design."""
+    """Duck type shared by oracles and scheduler adapters: what the harness calls."""
 
     def select_mixture(self, observation: RoundObservation | None) -> dict[str, float]: ...
+
+    def update_observation(self, observation: RoundObservation) -> None: ...
+
+    def update_calibration(self, observation: CalibrationObservation) -> None: ...
 
 
 SchedulerLike = BaseScheduler | OracleScheduler
@@ -168,7 +172,7 @@ def run_episode(
             and (round_t + 1) % calibration.interval_rounds == 0
         ):
             request_fn = getattr(scheduler, "calibration_request", None)
-            request = request_fn() if callable(request_fn) else None
+            request = cast("dict[str, int] | None", request_fn() if callable(request_fn) else None)
             default_items = calibration.items_per_slice or scenario.world.benchmark_items
             if request:
                 eval_cost = calibration.eval_cost_items(sum(request.values()))
@@ -195,6 +199,10 @@ def run_episode(
                     "eval_cost_usd": calib_obs.eval_cost_usd,
                     "evaluated": sorted(calib_obs.score_by_domain),
                     "exposure_by_env": dict(calib_obs.exposure_by_env),
+                    # per-slice detail for the ROI leaderboard (roi/leaderboard.py); same names as a GPU run's
+                    "scores": dict(calib_obs.score_by_domain), "se": dict(calib_obs.se_by_domain),
+                    "delta_se": dict(calib_obs.delta_se_by_domain or {}),
+                    "exposure": dict(calib_obs.exposure_by_env),
                 }
             )
             exposure = {i: 0.0 for i in world._order}

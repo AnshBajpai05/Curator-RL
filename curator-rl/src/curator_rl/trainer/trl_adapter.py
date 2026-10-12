@@ -19,6 +19,7 @@ from __future__ import annotations
 import dataclasses
 import time
 from pathlib import Path
+from typing import Any
 
 import torch
 from datasets import Dataset
@@ -129,6 +130,31 @@ def _vllm_greedy(trainer, tok):
     return generate
 
 
+def attach_eval_generate(controller, run_cfg, ckpt_dir: Path, batch: int = 16) -> None:
+    """Evaluation only (training already complete): base model + saved LoRA adapter, HF greedy decoding."""
+    cuda = torch.cuda.is_available()
+    tok = AutoTokenizer.from_pretrained(run_cfg.model)
+    tok.padding_side = "left"
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    model = _load_model(run_cfg.model, torch.float16 if cuda else torch.float32)
+    model = PeftModel.from_pretrained(model, str(Path(ckpt_dir) / "adapter"))
+    model = model.to("cuda" if cuda else "cpu").eval()
+
+    def generate(prompts, cap):
+        texts = []
+        for i in range(0, len(prompts), batch):
+            chunk = [_render(tok, p.messages) for p in prompts[i:i + batch]]
+            enc = tok(chunk, return_tensors="pt", padding=True, add_special_tokens=False).to(model.device)
+            with torch.no_grad():
+                out = model.generate(**enc, do_sample=False, max_new_tokens=int(cap), repetition_penalty=1.0,
+                                     pad_token_id=tok.pad_token_id)
+            texts += tok.batch_decode(out[:, enc["input_ids"].shape[1]:], skip_special_tokens=True)
+        return texts
+
+    controller.generate = generate
+
+
 def run_trl(controller, run_cfg, out_dir: Path, *, backend: str, resume_dir: Path | None,
             gradient_checkpointing: bool = True) -> None:
     """Train until the controller stops (budget or max rounds); checkpoints along the way."""
@@ -161,7 +187,7 @@ def run_trl(controller, run_cfg, out_dir: Path, *, backend: str, resume_dir: Pat
                    "reference": "", "meta_json": "{}"}
     dataset = Dataset.from_list([placeholder] * (p * (remaining_steps + 1)))
 
-    kwargs = dict(
+    kwargs: dict[str, Any] = dict(
         output_dir=str(out_dir / "trl"), per_device_train_batch_size=micro,
         gradient_accumulation_steps=completions_per_step // micro, num_generations=g,
         max_completion_length=run_cfg.max_completion_tokens, learning_rate=run_cfg.learning_rate,

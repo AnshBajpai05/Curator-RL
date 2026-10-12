@@ -198,3 +198,43 @@ def test_supervisor_restarts_a_crashed_run_and_mirrors_everything(tmp_path):
     mirrored = backup / "curator_s0"
     assert (mirrored / "summary.json").exists() and (mirrored / "checkpoints" / "latest.json").exists()
     assert len(_lines(mirrored / "rounds.jsonl")) == 5
+
+
+def test_leave_one_out_runs_keep_the_full_benchmark_and_report_h5(tmp_path):
+    """run.py loo: full portfolio + one run per arm left out; the benchmark always covers every domain."""
+    import subprocess
+    import sys
+
+    out = tmp_path / "out"
+    shape = {"prompts_per_step": 4, "group_size": 4, "steps_per_round": 1, "calib_interval": 1,
+             "calib_items": 6, "report_every": 0, "final_items": 6}
+    base = [sys.executable, str(REPO / "kaggle" / "run.py"), "--backend", "fake", "--seeds", "0", "--rounds", "3",
+            "--budget-gpu-hours", "10", "--out", str(out), "--shape", json.dumps(shape), "--set", "signals.status.n_min=8"]
+    res = subprocess.run(base[:2] + ["compare", "--methods", "curator"] + base[2:], capture_output=True, text=True,
+                         timeout=600)
+    assert res.returncode == 0, res.stdout[-2000:] + res.stderr[-2000:]
+    res = subprocess.run(base[:2] + ["loo", "--methods", "curator", "--arms", "noisy,countdown"] + base[2:],
+                         capture_output=True, text=True, timeout=900)
+    assert res.returncode == 0, res.stdout[-2000:] + res.stderr[-2000:]
+    wo = json.loads((out / "curator-wo-noisy_s0" / "summary.json").read_text())
+    assert wo["label"] == "curator-wo-noisy" and "noisy" not in wo["envs"]
+    assert set(wo["final"]["scores"]) == {"gsm8k", "math35", "mbpp", "countdown"}     # benchmark unchanged
+    assert wo["mean_delivered_share"].get("noisy") is None
+    report = (out / "comparison.md").read_text()
+    assert "## Leave-one-out under curator, seed 0" in report and "ROI leaderboard: curator, seed 0" in report
+    assert "H5 (ROI of the Curator run" in report
+
+
+def test_a_finished_run_is_never_overwritten_and_a_lost_final_is_recomputed(tmp_path):
+    from curator_rl.trainer.runner import run_single
+
+    cfg = _cfg(tmp_path, max_rounds=3, report_every=0, overrides=["signals.status.n_min=8"])
+    first = run_single(cfg, REPO)
+    path = tmp_path / "curator_s3" / "summary.json"
+    assert first["status"] == "finished" and first["final"]["macro"] is not None
+    stamp = path.stat().st_mtime_ns
+    again = run_single(cfg, REPO)                       # re-launching a finished run changes nothing
+    assert again["final"] == first["final"] and path.stat().st_mtime_ns == stamp
+    path.unlink()                                       # the session died during the final evaluation
+    redo = run_single(cfg, REPO)
+    assert redo["final"]["scores"] == first["final"]["scores"] and redo["rounds"] == 3

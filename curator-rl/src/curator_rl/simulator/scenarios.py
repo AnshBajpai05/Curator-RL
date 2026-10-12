@@ -22,6 +22,7 @@ Scenario suite (Roadmap F.3):
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Literal
 
@@ -215,8 +216,8 @@ def scenario_env_params(cfg: ScenarioCfg) -> list[SimEnvParams]:
                 drift_shift=e.drift.shift if e.drift else 0.0,
                 late_start_round=e.late_start_round,
                 cost_skill_slope=e.cost_skill_slope,
-                bench_slope=e.bench_slope,
-                bench_difficulty=e.bench_difficulty,
+                bench_slope=math.nan if e.bench_slope is None else e.bench_slope,
+                bench_difficulty=math.nan if e.bench_difficulty is None else e.bench_difficulty,
                 bench_weight=e.bench_weight,
                 bench_domain=e.bench_domain,
                 forget_rate=e.forget_rate,

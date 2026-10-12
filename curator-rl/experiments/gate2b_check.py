@@ -26,24 +26,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
+
+from curator_rl.core.config import load_config  # noqa: E402
+from curator_rl.simulator.harness import run_episode  # noqa: E402
+from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
 from experiments import gate2_check  # noqa: E402
 from experiments.run_sim import (  # noqa: E402
     FROZEN_D68_D94,  # noqa: E402  (audit E-04)
     make_scheduler,  # noqa: E402
 )
-
-from curator_rl.core.config import load_config  # noqa: E402
-from curator_rl.simulator.harness import run_episode  # noqa: E402
-from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
 
 FROZEN_CFG = load_config(FROZEN_D68_D94)
 REPORT_DIR = REPO_ROOT / "reports" / "gate2"

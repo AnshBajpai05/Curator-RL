@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
+from typing import TypedDict
 
 import numpy as np
 
@@ -59,6 +60,19 @@ def share_credit(delta_total: float, exposure: Mapping[str, float]) -> dict[str,
     return {e: delta_total * w for e, w in exposure_shares(exposure).items()}
 
 
+class OwnSliceState(TypedDict):
+    sww: dict[str, float]
+    swy: dict[str, float]
+    n: dict[str, int]
+
+
+class SharedSliceState(TypedDict):
+    members: dict[str, list[str]]
+    n: dict[str, int]
+    xtx: dict[str, list[list[float]]]
+    xty: dict[str, list[float]]
+
+
 class OwnSliceCredit:
     """Weighted least squares of own-slice gains on compute share, per environment."""
 
@@ -91,13 +105,13 @@ class OwnSliceCredit:
     def windows(self, env_id: str) -> int:
         return self._n[env_id]
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> OwnSliceState:
         return {"sww": dict(self._sww), "swy": dict(self._swy), "n": dict(self._n)}
 
-    def load_checkpoint(self, state: Mapping[str, object]) -> None:
-        self._sww = {e: float(v) for e, v in state["sww"].items()}  # type: ignore[union-attr]
-        self._swy = {e: float(v) for e, v in state["swy"].items()}  # type: ignore[union-attr]
-        self._n = {e: int(v) for e, v in state["n"].items()}  # type: ignore[union-attr]
+    def load_checkpoint(self, state: OwnSliceState) -> None:
+        self._sww = {e: float(v) for e, v in state["sww"].items()}
+        self._swy = {e: float(v) for e, v in state["swy"].items()}
+        self._n = {e: int(v) for e, v in state["n"].items()}
 
 
 # Weak ridge prior on every transfer coefficient: b ~ N(0, PRIOR_SD^2) in "gain per window of
@@ -156,12 +170,12 @@ class SharedSliceCredit:
     def windows(self, env_id: str) -> int:
         return self._n.get(env_id, 0)
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> SharedSliceState:
         return {"members": self.members, "n": dict(self._n),
                 "xtx": {d: v.tolist() for d, v in self._xtx.items()},
                 "xty": {d: v.tolist() for d, v in self._xty.items()}}
 
-    def load_checkpoint(self, state: Mapping[str, object]) -> None:
+    def load_checkpoint(self, state: SharedSliceState) -> None:
         self._n = {e: int(v) for e, v in state["n"].items()}  # type: ignore[union-attr]
         self._xtx = {d: np.asarray(v, dtype=float) for d, v in state["xtx"].items()}  # type: ignore[union-attr]
         self._xty = {d: np.asarray(v, dtype=float) for d, v in state["xty"].items()}  # type: ignore[union-attr]

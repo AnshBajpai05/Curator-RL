@@ -69,6 +69,8 @@ class Environment(abc.ABC):
     - split_ids        ids of a split, used by leakage tests.
     """
 
+    cfg: Any                      # the environment's validated config section (token limits, timeouts, ...)
+
     def __init__(self, env_id: str) -> None:
         self.env_id = env_id
 

@@ -36,7 +36,7 @@ class DirichletDesign(BaseScheduler):
         return {"rng": self._rng.bit_generator.state}
 
     def load_checkpoint(self, state) -> None:
-        self._rng.bit_generator.state = state["rng"]
+        self._rng.bit_generator.state = state["rng"]  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def make_run_scheduler(method: str, cfg, env_ids: Sequence[str], *, seed: int,

@@ -22,7 +22,7 @@ from curator_rl.envs.registry import EnvRegistry
 from curator_rl.trainer.artifacts import ArtifactSync
 from curator_rl.trainer.checkpoint import latest_checkpoint, load_controller_state
 from curator_rl.trainer.round_controller import SYNC_RESERVE_SECONDS, RoundController
-from curator_rl.trainer.run_config import RunConfig
+from curator_rl.trainer.run_config import BENCH_DOMAINS, RunConfig
 
 
 def resolve_backend(requested: str) -> str:
@@ -46,7 +46,7 @@ def resolve_backend(requested: str) -> str:
 
 
 def run_dir(cfg: RunConfig) -> Path:
-    return Path(cfg.out_dir) / f"{cfg.method}_s{cfg.seed}"
+    return Path(cfg.out_dir) / f"{cfg.name}_s{cfg.seed}"
 
 
 MIN_FREE_DISK_GB = 2.0      # a checkpoint is ~0.1 GB (LoRA + Adam); keep room for several plus logs
@@ -87,9 +87,12 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
     if not any(o.startswith("signals.status.n_min=") for o in cfg.overrides):
         root_cfg = rescale_for_batch_shape(root_cfg, cfg.prompts_per_round)      # audit E-28
     registry = EnvRegistry(Path(repo_root), root_cfg.data)
-    envs = {e: registry.get(e) for e in cfg.envs}
+    # training arms plus every benchmark domain: a leave-one-out run trains without an arm but is still
+    # scored on the full benchmark
+    envs = {e: registry.get(e) for e in sorted(set(cfg.envs) | set(BENCH_DOMAINS))}
     ctl = RoundController(cfg, root_cfg, envs, out_dir=out)
-    ctl.sync = ArtifactSync(out, cfg.sync_to, min_interval_s=60.0 * cfg.sync_every_min)
+    sync = ArtifactSync(out, cfg.sync_to, min_interval_s=60.0 * cfg.sync_every_min)
+    ctl.sync = sync
     backend = resolve_backend(cfg.backend)
     ckpt = latest_checkpoint(out) if resume else None
     (out / "run_config.json").write_text(cfg.to_json(), encoding="utf-8")
@@ -102,6 +105,13 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
         ctl.last_checkpoint_round = ctl.round
     else:
         ctl.begin_round()
+    summary_path = out / "summary.json"
+    if ctl.stop and summary_path.exists():
+        # training is complete and the final evaluation already ran: nothing to redo (re-launching a
+        # finished run must never overwrite its result)
+        ctl.close()
+        print(f"[curator] {cfg.name} seed {cfg.seed}: already finished; keeping {summary_path}", flush=True)
+        return json.loads(summary_path.read_text(encoding="utf-8"))
     previous = _install_stop_handlers(ctl)
     ctl.write_progress("running")
     try:
@@ -121,10 +131,14 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
                         gradient_checkpointing=gradient_checkpointing)
             if ctl.save_backend is not None and ctl.last_checkpoint_round != ctl.round:
                 ctl.save(ctl.save_backend)        # final state, for later analysis
+        elif ctl.generate is None:
+            # training finished in an earlier session but the final evaluation did not complete:
+            # load the trained policy for evaluation only
+            _attach_eval_backend(ctl, cfg, backend, ckpt)
         if ctl.preempted:
             ctl.write_progress("preempted")
-            ok = ctl.sync.flush(label=f"preempted at round {ctl.round}")
-            print(f"[curator] {cfg.method} seed {cfg.seed}: stopped cleanly at round {ctl.round} "
+            ok = sync.flush(label=f"preempted at round {ctl.round}")
+            print(f"[curator] {cfg.name} seed {cfg.seed}: stopped cleanly at round {ctl.round} "
                   f"({ctl.stop_reason}); checkpoint saved{', synced' if ok else ''}. Resume to continue.",
                   flush=True)
             ctl.close()
@@ -136,12 +150,12 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
         summary["status"] = "finished"
         atomic_write_json(out / "summary.json", summary)
         ctl.write_progress("finished")
-        ctl.sync.flush(label="finished")
+        sync.flush(label="finished")
     except BaseException as exc:
         # save what exists (logs, the last checkpoint) before the process dies; the supervisor
         # in run.py restarts the run from that checkpoint
         ctl.write_progress("failed", error=repr(exc)[:500])
-        ctl.sync.flush(timeout=300.0, label=f"failed at round {ctl.round}")
+        sync.flush(timeout=300.0, label=f"failed at round {ctl.round}")
         ctl.close()
         raise
     finally:
@@ -150,6 +164,20 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
     print(f"[curator] {cfg.method} seed {cfg.seed}: final macro {final.get('macro')} "
           f"after {summary['rounds']} rounds, {summary['charged_gpu_hours']:.3f} charged GPU-h", flush=True)
     return summary
+
+
+def _attach_eval_backend(ctl, cfg: RunConfig, backend: str, ckpt) -> None:
+    if ckpt is None:
+        raise RuntimeError("nothing to evaluate: the run is complete but has no checkpoint")
+    if backend == "fake":
+        from curator_rl.trainer.fake_backend import FakeTrainer
+
+        FakeTrainer(ctl, cfg.seed).load(ckpt)     # sets ctl.generate
+    else:
+        from curator_rl.trainer.trl_adapter import attach_eval_generate
+
+        attach_eval_generate(ctl, cfg, ckpt)
+    print(f"[curator] {cfg.name} seed {cfg.seed}: training already complete; evaluating the saved policy", flush=True)
 
 
 def _install_stop_handlers(ctl) -> dict:
@@ -189,7 +217,7 @@ def compare_report(root: Path, *, reference: str = "uniform") -> str:
     runs: dict[str, dict[int, dict]] = {}
     for path in sorted(Path(root).glob("*/summary.json")):
         s = json.loads(path.read_text(encoding="utf-8"))
-        runs.setdefault(s["method"], {})[int(s["seed"])] = s
+        runs.setdefault(s.get("label") or s["method"], {})[int(s["seed"])] = s
     lines = ["# CURATOR GPU comparison", "",
              "Final score = macro-average of greedy dev accuracy over gsm8k, math35, mbpp, countdown "
              "(uncharged evaluation, identical for every method; the sealed test is not used).", "",
@@ -219,4 +247,70 @@ def compare_report(root: Path, *, reference: str = "uniform") -> str:
                 lines.append(f"| {m} | 1 | {diffs[0]:+.4f} | one seed: no interval | - |")
         lines += ["", "With n < 20 seeds the interval is a Student-t interval (a percentile bootstrap undercovers "
                   "badly at this size: 75% at n = 3, 83% at n = 5; audit E-11). One seed is descriptive only."]
+    lines += roi_sections(Path(root), runs)
     return "\n".join(lines) + "\n"
+
+
+def _rows(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+
+
+def gpu_hours_per_prompt(run: Path) -> dict[str, float]:
+    """Measured training GPU-hours per prompt per arm, from the run's round log."""
+    secs: dict[str, float] = {}
+    prompts: dict[str, int] = {}
+    for r in _rows(run / "rounds.jsonl"):
+        for e, a in r["arms"].items():
+            secs[e] = secs.get(e, 0.0) + float(a.get("gpu_seconds") or 0.0)
+            prompts[e] = prompts.get(e, 0) + int(a.get("prompts") or 0)
+    return {e: secs[e] / prompts[e] / 3600.0 for e in secs if prompts.get(e)}
+
+
+def roi_sections(root: Path, runs: dict[str, dict[int, dict]]) -> list[str]:
+    """ROI leaderboard of every calibrating run, and the leave-one-out table with the H5 verdict."""
+    from curator_rl.evaluation.loo import h5_verdict
+    from curator_rl.roi.leaderboard import render, roi_table
+    from curator_rl.trainer.run_config import BENCH_DOMAINS, DOMAIN_OF
+
+    weights = {d: 1.0 / len(BENCH_DOMAINS) for d in BENCH_DOMAINS}
+    lines: list[str] = []
+    roi_by_seed: dict[int, dict[str, float]] = {}
+    for name, by_seed in sorted(runs.items()):
+        if "-wo-" in name:
+            continue
+        for seed, summ in sorted(by_seed.items()):
+            run = root / f"{name}_s{seed}"
+            calib = [r for r in _rows(run / "calibration.jsonl") if "scores" in r]
+            if len(calib) < 2:
+                continue
+            envs = summ.get("envs") or list(summ.get("mean_delivered_share", {}))
+            table = roi_table(calib, envs, gpu_hours_per_prompt(run), weights, domain_of=DOMAIN_OF)
+            if name.startswith("curator") and seed not in roi_by_seed:
+                roi_by_seed[seed] = {r.env_id: r.roi for r in table}
+            lines += ["", f"## ROI leaderboard: {name}, seed {seed} ({len(calib)} calibration evaluations)", "",
+                      "Benchmark gain per GPU-hour spent on each arm, credited on the slice the arm is scored on "
+                      "(roi/leaderboard.py, `members`). From one run this is descriptive: in the simulator one run "
+                      "ranks arms like leave-one-out with median tau 0.3-0.5 (reports/analysis/roi_loo_sim.md).", "",
+                      render(table)]
+    loo_bases = sorted({n.split("-wo-")[0] for n in runs if "-wo-" in n})
+    for base in loo_bases:
+        for seed, full in sorted(runs.get(base, {}).items()):
+            arms = {n.split("-wo-")[1]: by[seed] for n, by in runs.items()
+                    if n.startswith(base + "-wo-") and seed in by}
+            if not arms or full["final"].get("macro") is None:
+                continue
+            contrib = {a: full["final"]["macro"] - s["final"]["macro"] for a, s in arms.items()
+                       if s["final"].get("macro") is not None}
+            lines += ["", f"## Leave-one-out under {base}, seed {seed}", "",
+                      "| arm left out | final macro without it | contribution (full - without) |", "|---|---|---|"]
+            for a in sorted(contrib, key=lambda a: -contrib[a]):
+                lines.append(f"| {a} | {arms[a]['final']['macro']:.4f} | {contrib[a]:+.4f} |")
+            roi = roi_by_seed.get(seed)
+            if roi and set(contrib) <= set(roi):
+                v = h5_verdict({a: roi[a] for a in contrib}, contrib, [a for a in ("noisy", "countdown") if a in contrib])
+                lines += ["", f"H5 (ROI of the Curator run vs these contributions): Kendall tau {v['tau']:+.2f} "
+                          f"(needs >= 0.4); junk arms in the bottom two of both: {v['junk_bottom']} -> "
+                          f"**{'PASS' if v['pass'] else 'FAIL'}** (one seed: descriptive)."]
+    return lines

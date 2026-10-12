@@ -48,7 +48,12 @@ class RunConfig:
     verify_workers: int = 4              # MBPP verification is CPU-bound (D-87)
     vllm_gpu_memory_utilization: float = 0.3
     out_dir: str = "runs"
+    label: str = ""                      # run name (default: method); leave-one-out runs are "<method>-wo-<arm>"
     overrides: list[str] = field(default_factory=list)   # base.yaml overrides, e.g. scheduler.gamma=1.0
+
+    @property
+    def name(self) -> str:
+        return self.label or self.method
 
     @property
     def prompts_per_round(self) -> int:

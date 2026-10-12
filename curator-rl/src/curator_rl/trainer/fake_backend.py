@@ -114,10 +114,11 @@ class FakeTrainer:
         state = {"policy": self.policy.get_state(), "len_rng": self.len_rng.bit_generator.state}
         (Path(ckpt_dir) / "fake_policy.json").write_text(json.dumps(state), encoding="utf-8")
 
-    def load(self, ckpt_dir: Path) -> None:
+    def load(self, ckpt_dir: Path) -> FakeTrainer:
         state = json.loads((Path(ckpt_dir) / "fake_policy.json").read_text(encoding="utf-8"))
         self.policy.load_state(state["policy"])
         self.len_rng.bit_generator.state = state["len_rng"]
+        return self
 
     def train(self, on_checkpoint=None, *, stop_after_steps: int | None = None) -> None:
         cfg = self.ctl.cfg

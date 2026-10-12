@@ -14,17 +14,13 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import experiments.analysis.component_study_gpu2 as cs  # noqa: E402
-
 from curator_rl.core.stats import paired_t_interval  # noqa: E402
 
 PREFIX = {"curator": "scheduler", "ucb": "baselines.ucb", "lp": "baselines.lp", "sec": "baselines.sec",

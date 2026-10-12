@@ -20,7 +20,7 @@ Per-round update order (deterministic, permutation-invariant over env ids):
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from typing import Any, NotRequired, TypedDict
 
 from curator_rl.core.config import CalibCfg, ProxyCfg, SignalsCfg
 from curator_rl.core.types import (
@@ -30,12 +30,23 @@ from curator_rl.core.types import (
     RoundObservation,
     SignalVector,
 )
-from curator_rl.signals.audit import PromptDependenceAudit
+from curator_rl.signals.audit import AuditState, PromptDependenceAudit
 from curator_rl.signals.passrate import PassRateTracker, Posterior
 from curator_rl.signals.progress import LPEstimator
-from curator_rl.signals.proxy import ProxyReward
+from curator_rl.signals.proxy import ProxyReward, ProxyState
 from curator_rl.signals.richness import RichnessEstimator
-from curator_rl.signals.status import StatusClassifier
+from curator_rl.signals.status import StatusClassifier, StatusState
+
+
+class EngineState(TypedDict):
+    round_t: int
+    unit_cost: dict[str, float]
+    tracker: Any
+    lp: Any
+    richness: Any
+    proxy: ProxyState
+    classifiers: dict[str, StatusState]
+    audit: NotRequired[AuditState]      # absent in checkpoints made before the reward audit
 
 
 def _zero_obs(env_id: str) -> EnvRoundObs:
@@ -244,7 +255,7 @@ class SignalEngine:
 
     # ------------------------------------------------------------- checkpoints
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> EngineState:
         return {
             "round_t": self._round_t,
             "unit_cost": dict(self._unit_cost),
@@ -256,14 +267,14 @@ class SignalEngine:
             "audit": self._audit.get_state(),
         }
 
-    def load_checkpoint(self, state: Mapping[str, object]) -> None:
-        self._round_t = int(state["round_t"])  # type: ignore[arg-type]
-        self._unit_cost = {e: float(v) for e, v in state["unit_cost"].items()}  # type: ignore[union-attr,attr-defined]
-        for env_id, raw in state["classifiers"].items():  # type: ignore[union-attr]
-            self._classifiers[env_id].load_checkpoint(raw)  # type: ignore[arg-type]
-        self._tracker.load_checkpoint(state["tracker"])  # type: ignore[arg-type]
-        self._lp.load_checkpoint(state["lp"])  # type: ignore[arg-type]
-        self._richness.load_checkpoint(state["richness"])  # type: ignore[arg-type]
-        self._proxy.load_checkpoint(state["proxy"])  # type: ignore[arg-type]
+    def load_checkpoint(self, state: EngineState) -> None:
+        self._round_t = int(state["round_t"])
+        self._unit_cost = {e: float(v) for e, v in state["unit_cost"].items()}
+        for env_id, raw in state["classifiers"].items():
+            self._classifiers[env_id].load_checkpoint(raw)
+        self._tracker.load_checkpoint(state["tracker"])
+        self._lp.load_checkpoint(state["lp"])
+        self._richness.load_checkpoint(state["richness"])
+        self._proxy.load_checkpoint(state["proxy"])
         if "audit" in state:                    # absent in checkpoints made before the audit existed
-            self._audit.load_checkpoint(state["audit"])  # type: ignore[arg-type]
+            self._audit.load_checkpoint(state["audit"])

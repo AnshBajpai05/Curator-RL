@@ -16,13 +16,11 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
 
 TOP_LEVEL = ("run.py", "requirements.txt", "requirements-hf.txt", "requirements-vllm.txt", "README_KAGGLE.md",
              "curator_gpu.ipynb")

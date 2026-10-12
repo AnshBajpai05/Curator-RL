@@ -44,6 +44,7 @@ import math
 import statistics
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any, NotRequired, TypedDict
 
 from curator_rl.calibration.credit import (
     OwnSliceCredit,
@@ -55,6 +56,20 @@ from curator_rl.core.config import CalibCfg
 from curator_rl.core.types import CalibrationObservation
 
 _MIN_SE = 1e-6
+
+
+class CalibratorState(TypedDict):
+    credit_mode: NotRequired[str]       # absent before shared-slice credit (then own_slice)
+    credit: Any                         # OwnSliceState | SharedSliceState, per credit_mode
+    last_score: dict[str, float]
+    last_se: dict[str, float]
+    span_w: dict[str, float]
+    span_usd: NotRequired[dict[str, float]]
+    x_sum: dict[str, float]
+    x_w: dict[str, float]
+    windows: int
+    c1_total: dict[str, float]
+    age: NotRequired[dict[str, int]]
 
 
 @dataclass(frozen=True)
@@ -89,8 +104,9 @@ class Calibrator:
         self._domain = {e: (domain_of or {}).get(e, e) for e in self.env_ids}
         self._members: dict[str, list[str]] = {}
         for e in self.env_ids:
-            if self._domain[e] is not None:
-                self._members.setdefault(self._domain[e], []).append(e)
+            d = self._domain[e]
+            if d is not None:
+                self._members.setdefault(d, []).append(e)
         self._domains = tuple(sorted(self._members))
         self._credit_mode = calib_cfg.credit
         self._credit: OwnSliceCredit | SharedSliceCredit = (
@@ -217,7 +233,7 @@ class Calibrator:
 
     # ------------------------------------------------------------- checkpoints
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> CalibratorState:
         return {
             "credit_mode": self._credit_mode,
             "credit": self._credit.get_state(),
@@ -227,19 +243,19 @@ class Calibrator:
             "windows": self._windows, "c1_total": dict(self._c1_total), "age": dict(self._age),
         }
 
-    def load_checkpoint(self, state: Mapping[str, object]) -> None:
+    def load_checkpoint(self, state: CalibratorState) -> None:
         mode = state.get("credit_mode", "own_slice")
         if mode != self._credit_mode:
             raise ValueError(f"checkpoint credit mode {mode!r} != configured {self._credit_mode!r}")
-        self._credit.load_checkpoint(state["credit"])  # type: ignore[arg-type]
-        self._last_score = {d: float(v) for d, v in state["last_score"].items()}  # type: ignore[union-attr]
-        self._last_se = {d: float(v) for d, v in state["last_se"].items()}  # type: ignore[union-attr]
-        self._span_w = {e: float(v) for e, v in state["span_w"].items()}  # type: ignore[union-attr]
-        self._span_usd = {e: float(v) for e, v in state.get("span_usd", {}).items()} or {  # type: ignore[union-attr]
+        self._credit.load_checkpoint(state["credit"])
+        self._last_score = {d: float(v) for d, v in state["last_score"].items()}
+        self._last_se = {d: float(v) for d, v in state["last_se"].items()}
+        self._span_w = {e: float(v) for e, v in state["span_w"].items()}
+        self._span_usd = {e: float(v) for e, v in state.get("span_usd", {}).items()} or {
             e: 0.0 for e in self.env_ids}
-        self._x_sum = {e: float(v) for e, v in state["x_sum"].items()}  # type: ignore[union-attr]
-        self._x_w = {e: float(v) for e, v in state["x_w"].items()}  # type: ignore[union-attr]
-        self._windows = int(state["windows"])  # type: ignore[arg-type]
-        self._c1_total = {e: float(v) for e, v in state["c1_total"].items()}  # type: ignore[union-attr]
-        self._age = {d: int(v) for d, v in state.get("age", {}).items()} or {  # type: ignore[union-attr]
+        self._x_sum = {e: float(v) for e, v in state["x_sum"].items()}
+        self._x_w = {e: float(v) for e, v in state["x_w"].items()}
+        self._windows = int(state["windows"])
+        self._c1_total = {e: float(v) for e, v in state["c1_total"].items()}
+        self._age = {d: int(v) for d, v in state.get("age", {}).items()} or {
             d: 0 for d in self._domains}

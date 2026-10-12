@@ -92,25 +92,52 @@ values and gradients) when Triton cannot run. Never put T4 and P100 runs in the 
 - Step time is measured (CUDA-synchronised) and attributed to arms (verification exactly, the rest by tokens).
   Training and Curator's calibration are charged; reporting evaluations are not. Each run stops at the
   same budget (default 1.5 GPU-hours).
+- Curator audits every arm's reward each round (does it depend on the prompt? `signals/audit.py`; zero
+  extra compute) and sends an arm whose reward ignores the prompt to S5, capped at the exploration floor.
+  On the pilot data the random-reward arm has dispersion D = 1.0-1.09 and every real verifier 3.0-4.4.
 - Curator calibrates every 10 rounds on fixed paired items (greedy); the noisy arm is scored on the GSM8K
-  slice with transfer-aware credit.
+  slice with transfer-aware credit. Calibration flags an arm after 3 consecutive mismatches.
 - The final score is greedy accuracy on the **dev** split (300 items per domain), macro-averaged over GSM8K,
   MATH35, MBPP and Countdown. The sealed test sets are not in the zip and are never touched.
 
 Each run writes `/kaggle/working/curator_runs/<method>_s<seed>/`: `rounds.jsonl` (mixture, delivered
 shares, pass rates, statuses, costs), `steps.jsonl`, `calibration.jsonl`, `reports.jsonl`,
-`summary.json`, `progress.json`, `checkpoints/`. `comparison.md` pairs the methods by seed (t-interval; with one seed it
-is descriptive only).
+`summary.json`, `progress.json`, `checkpoints/`. `comparison.md` pairs the methods by seed (t-interval; with one
+seed it is descriptive only), adds the ROI leaderboard of every calibrating run and, after `loo`, the
+leave-one-out table with the H5 verdict; `plots/` holds each run's mixture over rounds and the
+score-vs-GPU-hours curves. Every `rounds.jsonl` row also records each arm's reward dispersion (`dispersion`).
 
-## Presets
+## Presets and methods
 
-`--preset gpu_tuned` (default): every method at its own configuration tuned at this GPU shape on tuning
-seeds (reports/sweeps/tune_gpu_shape.md; equal tuning budget). `--preset base`: configs/base.yaml as is.
-Any base.yaml key can be overridden with `--set key=value`.
+`--preset gpu_tuned` (default): every method at its own configuration, tuned with an equal budget on the
+realism-v2 GPU-shape scenarios (`reports/sweeps/tune_gpu2.md`, held-out check
+`reports/analysis/heldout_gpu2.md`). Curator carries the reward audit and stricter calibration flags
+(DECISIONS.md D-98). `--preset gpu_tuned_v1`: the previous tuned points (before the audit).
+`--preset base`: configs/base.yaml as is. Any base.yaml key can be overridden with `--set key=value`.
+
+Methods: `curator`, `curator_nocal` (Curator without calibration: the ablation), `uniform`,
+`pilot_uniform` (uniform over the arms the pilot could solve: what a practitioner would run), `lp`,
+`ucb`, `sec`, `dump`, `static` (size-proportional), and `dirichlet` (the sysid design, via `sysid`).
+
+## What to run, in order (Kaggle's weekly GPU quota is about 30 hours)
+
+| step | command | GPU | about |
+|---|---|---|---|
+| 1 | `python run.py smoke --sync-to hf://<you>/curator-runs` | any | 10 min |
+| 2 | `python run.py compare --methods curator,uniform,lp --seeds 0 --sync-to ...` | T4 x2 | 4.5 GPU-h (2.3 h wall) |
+| 3 | `python run.py sysid --calib-items 50 --final-items 100 --sync-to ...` | P100 | 1.5 GPU-h |
+| 4 | `python run.py compare --methods curator_nocal,pilot_uniform --seeds 0 --sync-to ...` | T4 x2 | 3 GPU-h |
+| 5 | `python run.py compare --methods curator,uniform,lp --seeds 1,2 --sync-to ...` | T4 x2 | 9 GPU-h |
+| 6 | `python run.py loo --methods uniform --seeds 0 --sync-to ...` | T4 x2 | 9 GPU-h (full + 5 arms) |
+
+Step 2 answers the main question on one seed (descriptive); step 5 gives the first intervals (n = 3);
+step 3 measures the costs, learning speeds and transfers the simulator still assumes; step 6 is the
+ground truth the ROI leaderboard is checked against (H5). All steps resume if a session ends.
 
 ## What to send back
 
-`comparison.md`, every `summary.json`, the `sysid_report.md` (if run), and `logs/*.log` of any failed run.
+`comparison.md`, `plots/`, every `summary.json` and `progress.json`, the `sysid_report.md` (if run), and
+`logs/*.log` of any failed run. With `--sync-to`, all of it is already in your Hugging Face dataset.
 
 ## If something breaks
 

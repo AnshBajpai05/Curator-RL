@@ -25,23 +25,20 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
-import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
-from experiments.run_sim import FROZEN_D68_D94, make_scheduler  # noqa: E402
 
 from curator_rl.core.config import load_config, rescale_for_batch_shape  # noqa: E402
 from curator_rl.core.stats import paired_t_interval  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
 from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
+from experiments.run_sim import FROZEN_D68_D94, make_scheduler  # noqa: E402
 
 SCENARIOS = {"S-I-R1-GPU": "scenario_si_r1_gpu.yaml", "S-I-R2-GPU": "scenario_si_r2_gpu.yaml",
              "S-J-R-GPU": "scenario_sj_r_gpu.yaml"}

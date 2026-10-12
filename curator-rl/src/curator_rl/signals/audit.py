@@ -35,11 +35,18 @@ benchmark calibration's job (calibration/calibrator.py). Pure L1: no RNG, determ
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import TypedDict
 
 from curator_rl.core.config import RewardAuditCfg
 from curator_rl.core.types import EnvRoundObs
+
+
+class AuditState(TypedDict):
+    ss: dict[str, float]
+    e0: dict[str, float]
+    df: dict[str, int]
+    flag: dict[str, bool]
 
 
 @dataclass(frozen=True)
@@ -95,11 +102,11 @@ class PromptDependenceAudit:
 
     # ------------------------------------------------------------------ checkpoints
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> AuditState:
         return {"ss": dict(self._ss), "e0": dict(self._e0), "df": dict(self._df), "flag": dict(self._flag)}
 
-    def load_checkpoint(self, state: Mapping[str, object]) -> None:
-        self._ss = {e: float(v) for e, v in state["ss"].items()}  # type: ignore[union-attr]
-        self._e0 = {e: float(v) for e, v in state["e0"].items()}  # type: ignore[union-attr]
-        self._df = {e: int(v) for e, v in state["df"].items()}  # type: ignore[union-attr]
-        self._flag = {e: bool(v) for e, v in state["flag"].items()}  # type: ignore[union-attr]
+    def load_checkpoint(self, state: AuditState) -> None:
+        self._ss = {e: float(v) for e, v in state["ss"].items()}
+        self._e0 = {e: float(v) for e, v in state["e0"].items()}
+        self._df = {e: int(v) for e, v in state["df"].items()}
+        self._flag = {e: bool(v) for e, v in state["flag"].items()}

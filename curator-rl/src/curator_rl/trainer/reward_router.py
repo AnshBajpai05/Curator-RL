@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 
 from curator_rl.core.advantage import group_mean_abs_advantage
 from curator_rl.core.types import Prompt, Verdict
+from curator_rl.envs.base import Environment
 
 
 @dataclass
@@ -63,7 +64,7 @@ class RewardRouter:
 
     __name__ = "curator_reward"   # TRL names reward functions in its logs
 
-    def __init__(self, envs: Mapping[str, object], *, group_size: int, workers: int = 4,
+    def __init__(self, envs: Mapping[str, Environment], *, group_size: int, workers: int = 4,
                  count_prompt_tokens: Callable[[Sequence[dict]], int] | None = None,
                  max_completion_tokens: int | None = None,
                  clock: Callable[[], float] = time.perf_counter) -> None:

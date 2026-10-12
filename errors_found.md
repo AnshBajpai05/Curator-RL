@@ -15,7 +15,7 @@ The remaining errors are verified by reading the code at the cited line, or by a
 
 | Fixed, with a regression test | Fixed, design-level | Open |
 |---|---|---|
-| E-01 (config `signals.lp_se`), E-02 (`calib.flag_scope`), E-04 (`configs/frozen/`), E-06, E-07, E-08, E-09 (`CarryQuotas`, `pull_unit: delivered`, world `learning_from`), E-10 (`final_score_expected`), E-11 (`core/stats.py`), E-13, E-16 (`dump.window_rounds`), E-17, E-18, E-19, E-21, E-25, E-28 (`rescale_for_batch_shape`) | E-03 (`calib.credit: transfer` + shared slice), E-05 (GPU-shape scenarios), E-12 (README_KAGGLE budget), E-15 (GPU-shape calibration cost), E-20 (stats module; design note), E-22, E-23, E-26 | E-14 (MBPP exhaustion), E-24 (noisy key) |
+| E-01 (config `signals.lp_se`), E-02 (`calib.flag_scope`), E-04 (`configs/frozen/`), E-06, E-07, E-08, E-09 (`CarryQuotas`, `pull_unit: delivered`, world `learning_from`), E-10 (`final_score_expected`), E-11 (`core/stats.py`), E-13, E-16 (`dump.window_rounds`), E-17, E-18, E-19, E-21, E-24 (rollout index in the noisy key), E-25, E-28 (`rescale_for_batch_shape`), E-31, E-32 | E-03 (`calib.credit: transfer` + shared slice), E-05 (GPU-shape scenarios), E-12 (README_KAGGLE budget), E-14 (`train_items` + `repeat_decay` in realism-v2 scenarios; MBPP passes reported per episode), E-15 (GPU-shape calibration cost), E-20 (stats module; design note), E-22, E-23, E-26 | — |
 
 Legacy behaviour stays available behind each new switch, so earlier decisions remain reproducible (proved by re-running the D-94 gate exactly).
 
@@ -24,6 +24,10 @@ Legacy behaviour stays available behind each new switch, so earlier decisions re
 **E-29 (found when opening the PR): CI had never run.** The workflow sat in `curator-rl/.github/workflows/`; GitHub only executes `.github/workflows/` at the repository root. Moved there with `working-directory: curator-rl`.
 
 **E-30 (found by that first CI run): split manifests verified only on Windows.** `write_manifests` wrote in text mode, so on Windows every line ended in CRLF and `MANIFEST.sha256` hashed CRLF bytes; on Linux (CI, Kaggle) the check failed. Manifests and index are now written with LF, pinned by `.gitattributes`, and the index is regenerated (split contents unchanged). CI now passes on Python 3.11 and 3.12.
+
+**E-31 (found while building leave-one-out): re-launching a run whose training had finished overwrote its result.** `run_single` skipped training when the checkpoint said the run was complete, so no backend set a generate function; the final evaluation returned nothing and an empty "finished" summary replaced the real one. This is exactly what a lost session during the final evaluation would trigger. Fixed: a complete run with a summary is left untouched; a complete run without one loads the saved policy for evaluation only. Regression test in `tests/integration/test_trainer_fake.py`.
+
+**E-32: Countdown accepted `True` as the number 1.** `isinstance(True, int)` holds in Python, so the literal check let a boolean consume the number 1. Harmless in effect (same value), wrong in principle; booleans are now rejected (found by the pyright pass, improvement E8).
 
 **Correction to E-05 below:** η must NOT be rescaled. The world's update is R·η per round over R·P prompts, i.e. η/P per prompt, independent of R. The GPU-shape scenarios keep η.
 

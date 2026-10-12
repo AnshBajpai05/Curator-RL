@@ -33,12 +33,15 @@ import time
 from collections.abc import Callable, Mapping
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any, cast
 
 from curator_rl.core.atomic import atomic_write_json
 from curator_rl.core.jsonl import JsonlWriter
 from curator_rl.core.types import CalibrationObservation, EnvRoundObs, RoundObservation
 from curator_rl.cost.attribution import attribute_step
 from curator_rl.cost.ledger import Ledger
+from curator_rl.envs.base import Environment
+from curator_rl.trainer.artifacts import ArtifactSync
 from curator_rl.trainer.calibration_eval import EvalSuite, GenerateFn
 from curator_rl.trainer.checkpoint import save_checkpoint
 from curator_rl.trainer.prompt_stream import PromptStream
@@ -53,7 +56,7 @@ SYNC_RESERVE_SECONDS = 300.0   # time kept free before the deadline for the last
 
 
 class RoundController:
-    def __init__(self, run_cfg: RunConfig, root_cfg, envs: Mapping[str, object], *, out_dir: Path,
+    def __init__(self, run_cfg: RunConfig, root_cfg, envs: Mapping[str, Environment], *, out_dir: Path,
                  clock: Callable[[], float] = time.perf_counter) -> None:
         self.cfg = run_cfg
         self.root = root_cfg
@@ -66,7 +69,7 @@ class RoundController:
         self.scheduler = make_run_scheduler(
             run_cfg.method, root_cfg, self.env_ids, seed=run_cfg.seed,
             prompts_per_round=run_cfg.prompts_per_round, domain_of=self.domain_of, nominal_sizes=nominal)
-        self.stream = PromptStream(self.envs, seed=run_cfg.seed)
+        self.stream = PromptStream({e: self.envs[e] for e in self.env_ids}, seed=run_cfg.seed)
         self.router = RewardRouter(self.envs, group_size=run_cfg.group_size, workers=run_cfg.verify_workers,
                                    max_completion_tokens=run_cfg.max_completion_tokens, clock=clock)
         self.domains = tuple(sorted({d for d in self.domain_of.values() if d}))
@@ -74,7 +77,10 @@ class RoundController:
                 for d in self.domains}
         self.calib_suite = EvalSuite(self.envs, self.domains, split="calib",
                                      items_per_domain=run_cfg.calib_items, caps=caps, workers=run_cfg.verify_workers)
-        self.bench = tuple(d for d in BENCH_DOMAINS if d in self.domains)
+        # the benchmark is fixed (every domain with a test set that has an environment), whatever is trained
+        self.bench = tuple(d for d in BENCH_DOMAINS if d in self.envs)
+        caps.update({d: min(int(self.envs[d].cfg.max_completion_tokens), run_cfg.max_completion_tokens)
+                     for d in self.bench})
         self.report_suite = EvalSuite(self.envs, self.bench, split="dev",
                                       items_per_domain=max(run_cfg.report_items, run_cfg.final_items), caps=caps,
                                       workers=run_cfg.verify_workers)
@@ -97,7 +103,7 @@ class RoundController:
         self.logs = {name: JsonlWriter(self.out_dir / f"{name}.jsonl", schema_version=1) for name in LOG_FILES}
         self._log_lines = {name: 0 for name in LOG_FILES}
         # survival state (not checkpointed: it describes this process, not the experiment)
-        self.sync = None                                  # ArtifactSync, set by the runner
+        self.sync: ArtifactSync | None = None             # set by the runner
         self.save_backend: Callable[[Path], None] | None = None
         self.preempted = False
         self.stop_reason = ""
@@ -255,7 +261,8 @@ class RoundController:
         """Atomically rewrite progress.json (a heartbeat; never raises)."""
         try:
             atomic_write_json(self.out_dir / "progress.json", {
-                "status": status, "method": self.cfg.method, "seed": self.cfg.seed, "round": self.round,
+                "status": status, "method": self.cfg.method, "label": self.cfg.name, "seed": self.cfg.seed,
+                "round": self.round,
                 "max_rounds": self.cfg.max_rounds, "global_step": self.global_step,
                 "charged_gpu_hours": round(self.ledger.charged_gpu_hours, 5),
                 "budget_gpu_hours": self.cfg.budget_gpu_hours,
@@ -295,7 +302,7 @@ class RoundController:
         if self.generate is None:
             raise RuntimeError("calibration needs a generate function (set by the backend)")
         request = ({d: self.cfg.calib_items for d in self.domains} if self.cfg.method == "dirichlet"
-                   else self.scheduler.calibration_request())
+                   else cast(Any, self.scheduler).calibration_request())   # only calibrating methods get here
         if not request:
             return
         t0 = self.clock()
@@ -416,7 +423,8 @@ class RoundController:
         s5 = sorted({e for r in rounds for e, s in (r.get("statuses") or {}).items() if str(s).startswith("S5")})
         rejected = {e: sum(r["arms"][e]["rejected"] for r in rounds) for e in self.env_ids}
         verr = {e: sum(r["arms"][e].get("verifier_errors", 0) for r in rounds) for e in self.env_ids}
-        return {"method": self.cfg.method, "seed": self.cfg.seed, "rounds": self.round, "steps": self.global_step,
+        return {"method": self.cfg.method, "label": self.cfg.name, "seed": self.cfg.seed, "envs": list(self.env_ids),
+                "rounds": self.round, "steps": self.global_step,
                 "charged_gpu_hours": self.ledger.charged_gpu_hours, "ledger_seconds": dict(self.ledger.seconds),
                 "final": dict(final or {}), "mean_delivered_share": mean_share, "ever_s5": s5,
                 "sandbox_rejections": rejected, "verifier_errors": verr, "eval_errors": self.eval_errors,

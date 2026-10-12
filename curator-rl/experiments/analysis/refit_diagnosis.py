@@ -22,24 +22,21 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
+
+from curator_rl.core.config import load_config  # noqa: E402
+from curator_rl.simulator.harness import run_episode  # noqa: E402
 from experiments import gate2_check  # noqa: E402
 from experiments.refit_gate import SCENARIOS, scenario_with_calibration  # noqa: E402
 from experiments.run_sim import (  # noqa: E402
     FROZEN_D68_D94,  # noqa: E402  (audit E-04: pre-registered config)
     make_scheduler,  # noqa: E402
 )
-
-from curator_rl.core.config import load_config  # noqa: E402
-from curator_rl.simulator.harness import run_episode  # noqa: E402
 
 SKIP = 8
 NOISY = "noisy"

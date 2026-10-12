@@ -12,8 +12,21 @@ exempt (roadmap E.5); interpreted choices are logged as D-36/D-37.
 
 from __future__ import annotations
 
+from typing import NotRequired, TypedDict
+
 from curator_rl.core.config import StatusCfg
 from curator_rl.core.types import EnvStatus
+
+
+class StatusState(TypedDict):
+    status: str
+    rounds_in_status: int
+    s3_run: int
+    s4_run: int
+    hot: int
+    clear: int
+    audit: NotRequired[bool]            # absent in checkpoints made before the reward audit
+    s5_from_audit: NotRequired[bool]
 
 
 def flip_rate(trace: list[EnvStatus], *, warmup: int = 0) -> float:
@@ -190,7 +203,7 @@ class StatusClassifier:
 
     # ------------------------------------------------------------- checkpoints
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> StatusState:
         return {
             "status": self.status.value,
             "rounds_in_status": self._rounds_in_status,
@@ -202,12 +215,12 @@ class StatusClassifier:
             "s5_from_audit": self._s5_from_audit,
         }
 
-    def load_checkpoint(self, state: dict[str, object]) -> None:
-        self.status = EnvStatus(str(state["status"]))  # type: ignore[arg-type]
-        self._rounds_in_status = int(state["rounds_in_status"])  # type: ignore[arg-type]
-        self._s3_run = int(state["s3_run"])  # type: ignore[arg-type]
-        self._s4_run = int(state["s4_run"])  # type: ignore[arg-type]
-        self._hot = int(state["hot"])  # type: ignore[arg-type]
-        self._clear = int(state["clear"])  # type: ignore[arg-type]
+    def load_checkpoint(self, state: StatusState) -> None:
+        self.status = EnvStatus(str(state["status"]))
+        self._rounds_in_status = int(state["rounds_in_status"])
+        self._s3_run = int(state["s3_run"])
+        self._s4_run = int(state["s4_run"])
+        self._hot = int(state["hot"])
+        self._clear = int(state["clear"])
         self._audit = bool(state.get("audit", False))  # absent in pre-audit checkpoints
         self._s5_from_audit = bool(state.get("s5_from_audit", False))

@@ -6,6 +6,7 @@
     python run.py compare                    # Curator vs Uniform vs LP, same seed, matched GPU-hour budget
                                              # (--methods curator,curator_nocal,pilot_uniform,ucb,sec,dump,static too)
     python run.py sysid                      # randomized-mixture run -> costs, learning/transfer, kappa
+    python run.py loo --methods uniform      # leave-one-out: full portfolio + one run without each arm (H5)
     python run.py status                     # where every run is (progress.json heartbeat)
     python run.py report                     # rebuild comparison.md / sysid_report.md from the outputs
 
@@ -47,6 +48,7 @@ ON_KAGGLE = Path("/kaggle/working").exists()
 DEFAULT_OUT = Path("/kaggle/working/curator_runs") if ON_KAGGLE else HERE / "curator_runs"
 EXIT_PREEMPTED = 75            # a run stopped cleanly before the session limit (resumable)
 KAGGLE_SESSION_HOURS = 11.75   # Kaggle GPU sessions end at 12 h; leave a margin for the last upload
+LEVEL1_ENVS = ("gsm8k", "math35", "mbpp", "countdown", "noisy")   # = curator_rl.trainer.run_config.LEVEL1_ENVS
 
 # Each method at its own tuned point on the realism-v2 GPU-shape scenarios (reports/sweeps/tune_gpu2.md:
 # equal tuning budget, tuning seeds, one-SE + least-concentrated rule; held-out check in
@@ -167,13 +169,15 @@ def run_config(args, method: str, seed: int, **shape):
     sys.path.insert(0, str(CODE / "src"))
     from curator_rl.trainer.run_config import RunConfig
 
+    if "envs" in shape:
+        shape["envs"] = tuple(shape["envs"])
     overrides = list(PRESETS[args.preset].get(method, [])) + list(args.set or [])
     cfg = RunConfig(method=method, seed=seed, model=args.model, backend=args.backend, out_dir=str(args.out),
                     budget_gpu_hours=args.budget_gpu_hours, max_rounds=args.rounds, overrides=overrides,
                     micro_batch=args.micro_batch, max_completion_tokens=args.max_tokens,
                     calib_items=args.calib_items, final_items=args.final_items, report_items=args.report_items,
                     report_every=args.report_every, sync_to=args.sync_to or "", sync_every_min=args.sync_every_min,
-                    deadline_unix=args.deadline_unix)
+                    deadline_unix=args.deadline_unix, label=getattr(args, "label", None) or "")
     for k, v in shape.items():
         setattr(cfg, k, v)
     return cfg
@@ -190,7 +194,7 @@ def cmd_train(args) -> int:
 
 
 def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
-    method, seed = job["method"], job["seed"]
+    method, seed, name = job["method"], job["seed"], job["name"]
     cmd = [worker_python(), str(Path(__file__).resolve()), "train", "--method", method, "--seed", str(seed),
            "--out", str(args.out), "--preset", args.preset, "--model", args.model, "--backend", args.backend,
            "--budget-gpu-hours", str(args.budget_gpu_hours), "--rounds", str(args.rounds),
@@ -199,6 +203,8 @@ def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
            "--report-items", str(args.report_items), "--report-every", str(args.report_every),
            "--sync-every-min", str(args.sync_every_min), "--deadline-unix", str(args.deadline_unix),
            "--shape", json.dumps(job["shape"]), *job["extra"]]
+    if job["label"]:
+        cmd += ["--label", job["label"]]
     if args.sync_to:
         cmd += ["--sync-to", args.sync_to]
     if args.no_grad_ckpt:
@@ -208,9 +214,9 @@ def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
     env = dict(os.environ)
     if gpu is not None:
         env["CUDA_VISIBLE_DEVICES"] = str(gpu)
-    log = log_path(args, method, seed)
+    log = log_path(args, name, seed)
     log.parent.mkdir(parents=True, exist_ok=True)
-    print(f"[run.py] {method} seed {seed} on GPU {gpu} (attempt {job['attempt'] + 1}, micro-batch "
+    print(f"[run.py] {name} seed {seed} on GPU {gpu} (attempt {job['attempt'] + 1}, micro-batch "
           f"{job['micro_batch']}) -> {log}", flush=True)
     return subprocess.Popen(cmd, env=env, stdout=log.open("a"), stderr=subprocess.STDOUT)
 
@@ -221,14 +227,14 @@ def log_path(args, method: str, seed: int) -> Path:
 
 def _progress_round(args, job: dict) -> int | None:
     try:
-        return json.loads((Path(args.out) / f"{job['method']}_s{job['seed']}" / "progress.json").read_text())["round"]
+        return json.loads((Path(args.out) / f"{job['name']}_s{job['seed']}" / "progress.json").read_text())["round"]
     except (OSError, ValueError, KeyError):
         return None
 
 
 def _out_of_memory(args, job: dict) -> bool:
     try:
-        tail = log_path(args, job["method"], job["seed"]).read_text(errors="replace")[-20000:]
+        tail = log_path(args, job["name"], job["seed"]).read_text(errors="replace")[-20000:]
     except OSError:
         return False
     return "out of memory" in tail.lower() or "OutOfMemoryError" in tail
@@ -238,10 +244,10 @@ def _retry(args, job: dict) -> dict | None:
     """The job to run after a crash (resumes from its checkpoint), or None to give up."""
     round_now = _progress_round(args, job)
     if job["attempt"] >= args.max_restarts:
-        print(f"[run.py] {job['method']} seed {job['seed']}: giving up after {job['attempt'] + 1} attempts", flush=True)
+        print(f"[run.py] {job['name']} seed {job['seed']}: giving up after {job['attempt'] + 1} attempts", flush=True)
         return None
     if job["failed_at_round"] is not None and round_now == job["failed_at_round"]:
-        print(f"[run.py] {job['method']} seed {job['seed']}: crashed twice at round {round_now} with no progress; "
+        print(f"[run.py] {job['name']} seed {job['seed']}: crashed twice at round {round_now} with no progress; "
               "giving up (see the log)", flush=True)
         return None
     nxt = dict(job, attempt=job["attempt"] + 1, failed_at_round=round_now,
@@ -257,11 +263,23 @@ def _retry(args, job: dict) -> dict | None:
     return nxt
 
 
-def run_jobs(args, jobs: list[tuple[str, int]], shape: dict | None = None, extra: list[str] | None = None) -> dict:
-    """Run jobs one per GPU; restart crashed ones from their checkpoint. Returns outcome lists."""
+def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str] | None = None) -> dict:
+    """Run jobs one per GPU; restart crashed ones from their checkpoint. Returns outcome lists.
+
+    A job is (method, seed) or (method, seed, arm_left_out); the latter trains without that arm (LOO).
+    """
     devices = [d["index"] for d in gpus()] or [None]
-    pending = [{"method": m, "seed": s, "attempt": 0, "failed_at_round": None, "micro_batch": args.micro_batch,
-                "shape": dict(shape or {}), "extra": list(extra or [])} for m, s in jobs]
+    pending = []
+    for job in jobs:
+        m, s, arm = (tuple(job) + (None,))[:3]
+        sh_ = dict(shape or {})
+        label = ""
+        if arm:
+            label = f"{m}-wo-{arm}"
+            sh_["envs"] = [e for e in sh_.get("envs", LEVEL1_ENVS) if e != arm]
+        pending.append({"method": m, "seed": s, "label": label, "name": label or m, "attempt": 0,
+                        "failed_at_round": None, "micro_batch": args.micro_batch, "shape": sh_,
+                        "extra": list(extra or [])})
     running: list[tuple[subprocess.Popen, int | None, dict]] = []
     outcome = {"finished": [], "preempted": [], "failed": []}
     while pending or running:
@@ -275,7 +293,7 @@ def run_jobs(args, jobs: list[tuple[str, int]], shape: dict | None = None, extra
             if code is None:
                 continue
             running.remove((proc, g, job))
-            name = f"{job['method']}_s{job['seed']}"
+            name = f"{job['name']}_s{job['seed']}"
             if code == 0:
                 outcome["finished"].append(name)
             elif code == EXIT_PREEMPTED:
@@ -324,7 +342,24 @@ def _shape(args) -> dict:
 
 def cmd_compare(args) -> int:
     restore(args)
+    args.methods = args.methods or ["curator", "uniform", "lp"]
     outcome = run_jobs(args, [(m, s) for s in args.seeds for m in args.methods], _shape(args))
+    cmd_report(args)
+    return finish(args, outcome)
+
+
+def cmd_loo(args) -> int:
+    """Leave-one-out (Gate 7/9, H5): per method and seed, the full portfolio plus one run without each arm.
+
+    Same budget per run; the benchmark is unchanged (an arm left out is still scored). Default method:
+    Uniform, whose contributions are the arm's value in an equal mixture (the ground truth the in-run ROI
+    leaderboard is checked against). 1 + 5 runs per method and seed.
+    """
+    restore(args)
+    args.methods = args.methods or ["uniform"]
+    arms = args.arms or list(LEVEL1_ENVS)
+    jobs = [j for s in args.seeds for m in args.methods for j in [(m, s)] + [(m, s, a) for a in arms]]
+    outcome = run_jobs(args, jobs, _shape(args))
     cmd_report(args)
     return finish(args, outcome)
 
@@ -399,6 +434,13 @@ def cmd_report(args) -> int:
         md = compare_report(out)
         (out / "comparison.md").write_text(md, encoding="utf-8")
         print(md)
+    try:
+        from curator_rl.viz.plots import render_run_plots
+
+        _, note = render_run_plots(out)
+        print(f"[run.py] figures: {note}")
+    except Exception as exc:  # noqa: BLE001 - figures are a convenience; never fail a report over them
+        print(f"[run.py] figures skipped: {exc!r}")
     for run in sorted(out.glob("dirichlet_s*")):
         if not (run / "run_config.json").exists():
             continue
@@ -412,8 +454,11 @@ def cmd_report(args) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["setup", "smoke", "compare", "sysid", "train", "report", "status"])
-    ap.add_argument("--methods", type=lambda s: s.split(","), default=["curator", "uniform", "lp"])
+    ap.add_argument("command", choices=["setup", "smoke", "compare", "sysid", "loo", "train", "report", "status"])
+    ap.add_argument("--methods", type=lambda s: s.split(","), default=None,
+                    help="compare: default curator,uniform,lp; loo: default uniform")
+    ap.add_argument("--arms", type=lambda s: s.split(","), default=None, help="loo: arms to leave out (default all)")
+    ap.add_argument("--label", default=None, help=argparse.SUPPRESS)
     ap.add_argument("--seeds", type=lambda s: [int(x) for x in s.split(",")], default=[0])
     ap.add_argument("--method", default="curator")
     ap.add_argument("--seed", type=int, default=0)
@@ -448,7 +493,7 @@ def main(argv=None) -> int:
         args.deadline_unix = deadline_unix(args)
     if args.command != "train":
         load_hf_token()
-    return {"setup": cmd_setup, "smoke": cmd_smoke, "compare": cmd_compare, "sysid": cmd_sysid,
+    return {"setup": cmd_setup, "smoke": cmd_smoke, "compare": cmd_compare, "sysid": cmd_sysid, "loo": cmd_loo,
             "train": cmd_train, "report": cmd_report, "status": cmd_status}[args.command](args)
 
 

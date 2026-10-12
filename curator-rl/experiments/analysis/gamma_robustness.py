@@ -14,25 +14,22 @@ Writes reports/analysis/gamma_robustness.{json,md}.
 from __future__ import annotations
 
 import json
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
+
+from curator_rl.core.config import load_config  # noqa: E402
+from curator_rl.simulator.harness import run_episode  # noqa: E402
+from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
 from experiments import gate2_check  # noqa: E402
 from experiments.analysis.refit_diagnosis import variant_cfg  # noqa: E402
 from experiments.run_sim import (  # noqa: E402
     FROZEN_D68_D94,  # noqa: E402  (audit E-04: pre-registered config)
     make_scheduler,  # noqa: E402
 )
-
-from curator_rl.core.config import load_config  # noqa: E402
-from curator_rl.simulator.harness import run_episode  # noqa: E402
-from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
 
 SCENARIOS = ("sa", "sb", "sc", "sd", "se", "sf", "sh", "si", "sj")
 VARIANTS = {"gamma_0.95": dict(gamma=True, cost=True, status=True, calib=False, richness=True),

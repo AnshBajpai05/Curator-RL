@@ -21,8 +21,18 @@ import math
 from collections import deque
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import NotRequired, TypedDict
 
 from curator_rl.core.config import ProxyCfg
+
+
+class ProxyState(TypedDict):
+    mean: float
+    var: float
+    count: int
+    reservoir: list[float]
+    alpha: NotRequired[float]           # absent before the alpha/beta fit existed
+    beta: NotRequired[float]
 
 
 @dataclass(frozen=True)
@@ -128,7 +138,7 @@ class ProxyReward:
 
     # ------------------------------------------------------------- checkpoints
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> ProxyState:
         return {
             "mean": self._lp_mean,
             "var": self._lp_var,
@@ -138,11 +148,11 @@ class ProxyReward:
             "beta": self.beta,
         }
 
-    def load_checkpoint(self, state: dict[str, object]) -> None:
-        self._lp_mean = float(state["mean"])  # type: ignore[arg-type]
-        self._lp_var = float(state["var"])  # type: ignore[arg-type]
-        self._lp_count = int(state["count"])  # type: ignore[arg-type]
-        self._reservoir = deque((float(v) for v in state["reservoir"]), maxlen=self._reservoir.maxlen)  # type: ignore[list-item,union-attr]
+    def load_checkpoint(self, state: ProxyState) -> None:
+        self._lp_mean = float(state["mean"])
+        self._lp_var = float(state["var"])
+        self._lp_count = int(state["count"])
+        self._reservoir = deque((float(v) for v in state["reservoir"]), maxlen=self._reservoir.maxlen)
         # checkpoints from before the alpha/beta fit carry no weights: the configured ones apply
-        self.alpha = float(state.get("alpha", self._cfg.alpha))  # type: ignore[arg-type]
-        self.beta = float(state.get("beta", self._cfg.beta))  # type: ignore[arg-type]
+        self.alpha = float(state.get("alpha", self._cfg.alpha))
+        self.beta = float(state.get("beta", self._cfg.beta))

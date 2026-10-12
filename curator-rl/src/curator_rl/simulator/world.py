@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import TypeVar
 
 import numpy as np
 
@@ -38,6 +39,7 @@ from curator_rl.core.types import CalibrationObservation, EnvRoundObs, RoundObse
 from curator_rl.simulator.quotas import largest_remainder_quotas
 
 _EPS = 1e-6
+FloatOrArray = TypeVar("FloatOrArray", float, np.ndarray)
 
 
 def sigmoid(x: float) -> float:
@@ -48,7 +50,12 @@ def sigmoid(x: float) -> float:
     return z / (1.0 + z)
 
 
-def learnability(p: float) -> float:
+def _unset(value) -> bool:
+    """A benchmark parameter left to mirror the training env: None (direct construction) or nan."""
+    return value is None or (isinstance(value, float) and math.isnan(value))
+
+
+def learnability(p: FloatOrArray) -> FloatOrArray:
     """g = 4 p (1 - p): 1 at p = 0.5, 0 at p in {0, 1} (Roadmap F.2)."""
     return 4.0 * p * (1.0 - p)
 
@@ -97,9 +104,9 @@ class SimEnvParams:
     drift_shift: float = 0.0
     late_start_round: int = 0
     cost_skill_slope: float = 0.0
-    # benchmark slice of this env's domain (defaults mirror the training env)
-    bench_slope: float | None = None
-    bench_difficulty: float | None = None
+    # benchmark slice of this env's domain; None (or nan) mirrors the training env (__post_init__)
+    bench_slope: float = math.nan
+    bench_difficulty: float = math.nan
     bench_weight: float | None = None  # pi_d; None -> uniform over domains
     # calibration slice this arm is scored on when it has none of its own (audit E-03):
     # e.g. the real noisy arm uses GSM8K prompts and is scored on the GSM8K slice
@@ -113,10 +120,8 @@ class SimEnvParams:
         if self.cost_usd_per_prompt <= 0:
             raise ValueError(f"{self.env_id}: cost_usd_per_prompt must be > 0")
         self.slope = float(self.slope)
-        self.bench_slope = self.slope if self.bench_slope is None else float(self.bench_slope)
-        self.bench_difficulty = (
-            self.difficulty if self.bench_difficulty is None else float(self.bench_difficulty)
-        )
+        self.bench_slope = self.slope if _unset(self.bench_slope) else float(self.bench_slope)
+        self.bench_difficulty = self.difficulty if _unset(self.bench_difficulty) else float(self.bench_difficulty)
 
 
 class SimWorld:

@@ -572,46 +572,48 @@ A 2⁵ design switched discounting, cost normalisation, status layer, calibratio
 
 ## 11. What is new, precisely
 
-| Method | Arm signal | Cost-aware | Held-out calibration | Validated attribution |
-|---|---|---|---|---|
-| Graves 2017 / TSCL 2020 | learning progress | no | no | no |
-| DUMP 2025 | mean \|advantage\|, UCB | no | no | no |
-| SEC 2025/26 | mean \|advantage\|, TD(0) | no | no | no |
-| TAC 2026, HarnessBandit 2026 | learnability + gradient transfer | no | no | no |
-| **CURATOR** | LP + richness ÷ measured cost, D-UCB | yes | yes (own-slice WLS, S5) | planned (ROI vs leave-one-out) |
+| Method | Arm signal | Cost-aware | Reward sanity | Held-out calibration | Validated attribution |
+|---|---|---|---|---|---|
+| Graves 2017 / TSCL 2020 | learning progress | no | no | no | no |
+| DUMP 2025 | mean \|advantage\|, UCB | no | no | no | no |
+| SEC 2025/26 | mean \|advantage\|, TD(0) | no | no | no | no |
+| TAC 2026, HarnessBandit 2026 | learnability + gradient transfer | no | no | no | no |
+| **CURATOR** | LP + richness ÷ measured cost, D-UCB | yes | **reward audit** (prompt dependence, zero cost) | yes (paired items, transfer-aware credit, S5) | ROI leaderboard vs leave-one-out (built; H5) |
 
 Concrete contributions with evidence:
 1. **Measured-cost allocation.** Arms are whole environments, rewards are divided by measured GPU cost, and spend runs through a matched-budget ledger that charges calibration only to the method using it.
 2. **A failure mode of learnability bandits, demonstrated.** Mean-|advantage| allocators are drawn to a random-reward environment, because random rewards always produce mixed groups. It appears only with measured group polarisation (κ = 2.14), and it is why SEC/DUMP-style lose in the refit.
-3. **Two-timescale reward with spurious-reward detection.** The cheap proxy runs every round, paired held-out checks run every K = 10 rounds, a one-sided robust z-test drives S5, and claim-plus-staleness targeting detects the spurious arm in 78–86% of runs at 3.4% cost with ≤ 2.5% false flags.
-4. **Protocol.** A simulator with known optima, pre-registered gates on fresh seed ranges, equal tuning budgets, and negative results reported (CRE ×2, γ = 1).
+3. **A zero-cost reward audit that removes that failure mode.** A verifier's reward depends on the prompt (prompts differ in difficulty), so group pass rates are over-dispersed: D = (G + κ)/(κ + 1). A reward that ignores the prompt has D = 1. On the real pilot every verifier arm has D = 3.0–4.4 and the random-reward arm 1.0–1.09. Curator flags D's upper confidence bound below 1.5 and caps that arm at the exploration floor. At the GPU shape (tuning seeds) the random arm is caught in 90–100% of runs by round ~14–21; its budget share falls from about 0.3 to 0.06; Curator's gain over Uniform rises from +4.5% to +11–12%, about twice the best baseline (LP, +6%). No real arm was ever flagged by the audit.
+4. **Two layers, honestly scoped.** The audit catches rewards that ignore the prompt; benchmark calibration is the layer for rewards that depend on the prompt but reward the wrong thing. At the Level-1 budget (1,920 prompts) calibration detects such an arm only ~10% of the time, so the claim about it is restricted to measurement, not detection.
+5. **Protocol.** A simulator with known optima and realism switches (forgetting, finite datasets, κ-consistent learning), pre-registered gates on fresh seed ranges, equal tuning budgets, bit-exact reproduction of older results, and negative results reported (CRE ×2, γ = 1, α/β fit, drift discounting, longer LP window: no gain).
 
-DataFlex-RL (Sept 2026) found that no published selection or mixing policy beat uniform sampling with a significant paired interval. CURATOR's claim is therefore deliberately narrow: an advantage under a fixed budget with heterogeneous costs, plus detection and attribution. It is not "beats uniform everywhere".
+DataFlex-RL (Sept 2026) found that no published selection or mixing policy beat uniform sampling with a significant paired interval. CURATOR's claim is therefore deliberately narrow: an advantage under a fixed budget with heterogeneous costs and a spurious arm, plus detection and attribution. It is not "beats uniform everywhere", and the GPU runs have not happened yet.
 
 ---
 
 ## 12. Limitations
 
-1. **No real training under CURATOR yet.** All scheduler results are simulated. The cost meter, trainer adapter, ROI engine and LOO have no code.
-2. **Assumed simulator parameters:** learning speeds η and the GSM8K ↔ MATH35 transfer. The simulator also has no forgetting or between-round interference, so it never penalises concentrated allocations (mean max-weight ≈ 0.38 for Curator, 0.67 with γ = 1).
-3. **Unmeasured update cost.** The per-environment share of the policy update is bracketed (R1/R2), not measured; Gate 5 will measure it.
-4. **Full Curator is beaten by simpler relatives** (LP, Standard UCB) on the refit scenarios. The main cause is discounting (D-90).
-5. **S5 response is weak:** it halves the noisy arm's weight but does not remove it. A harder response needs a new pre-registration on seeds ≥ 700.
-6. **Proxy weights not fitted.** α/β refitting from calibration (with a trust region of 0.25) is designed and has config keys, but is not wired in; α = β = 0.5.
-7. **Spurious rewards are model-specific.** Their effects reported in the literature are specific to Qwen, so the noisy-arm finding needs a second model family (Llama-3.2-1B planned).
-8. **Static baseline:** size-proportional by pre-registration (D-61/D-63). In the refit portfolio it gives the noisy arm 29% and MBPP 1%, so it is a weak reference there.
-9. **Compute:** Level 1 needs about 125 GPU-hours on Kaggle T4s.
+1. **No real-GPU training under CURATOR yet.** The Phase F runner drives a real TRL GRPO trainer and is verified on CPU; every scheduler result is simulated.
+2. **Assumed simulator parameters:** learning speeds η, the GSM8K ↔ MATH35 transfer, the value of repeated passes (repeat_decay 0.5) and forgetting (0.002 per untrained round). The sysid run is designed to measure the first two on hardware.
+3. **Unmeasured update cost.** Bracketed (R1/R2) until the cost meter runs on GPU (Gate 5).
+4. **All advantages are on tuning seeds.** The confirmatory run (D-99, fresh seeds 700–799) needs the owner's sign-off.
+5. **Audit blind spot:** a reward that depends on the prompt but is wrong (a wrong answer key) passes the audit; at Level-1 budget calibration rarely catches it either.
+6. **Audit assumption:** real arms differ in prompt difficulty (κ ≲ 5). An arm with nearly uniform difficulty (κ = 10) would be flagged in up to 3% of runs; at the old placeholder κ = 25, in about half.
+7. **ROI from one run is weak:** pooled over seeds the in-run ROI ranks arms like leave-one-out (τ 0.6–1.0), but one run gives a median τ of only 0.4–0.6.
+8. **Spurious rewards are model-specific.** The noisy-arm finding needs a second model family (Llama-3.2-1B planned).
+9. **Compute:** Level 1 needs about 125 GPU-hours; the Kaggle plan is staged in about 27 GPU-hour steps.
 
 ---
 
-## 13. What remains (Roadmap v3 §6.3)
+## 13. What remains
 
-| Phase | Work | Gate |
+| Step | Work | Gate |
 |---|---|---|
-| F | `trainer/` TRL adapter; reward wrapper with a ≥ 4-thread verifier pool; prompt stream drawing each round's quotas; round-boundary callback that builds `RoundObservation` and calls the scheduler; checkpoint/resume across Kaggle sessions. `cost/` span meter (GEN, SCORE, UPDATE, EVAL, OVERHEAD; unattributed < 3%) | 3: static GRPO learns. 4: a passthrough Curator does not change GRPO (score within δ_S = 1 point, reward within 0.01, realised share within ±2 pp, overhead < 2%). 5: attributed cost within 10% of exact single-environment timing |
-| G | calibration on GPU; refit simulator from logs; write the analysis plan | 6, then freeze (10) |
-| H | main matrix: Uniform, Static, LP, SEC, DUMP, Std UCB, Curator × 5 paired seeds at matched budget; ablations (no cost, no calibration, no status); equal-cost regime; noisy arm on a second model family | 8 |
-| I | `roi/` leaderboard (estimated marginal gain per dollar with bootstrap intervals); leave-one-out on 4 arms; one sealed-test evaluation per final checkpoint; paper | 7, 9 |
+| GPU, Level 1 | `kaggle/run.py`: smoke → compare (Curator, Uniform, LP; seed 0) → sysid (P100) → ablations (`curator_nocal`, `pilot_uniform`) → seeds 1–2 → leave-one-out | 3, 4, 5 on hardware; first real comparison |
+| Simulator | refit η, transfer, κ, costs from the sysid run; run the pre-registered D-99 confirmation on seeds 700–799 | 6, then freeze (10) |
+| Main matrix | all methods × 5 paired seeds at matched budget; equal-cost regime; second model family | 8 |
+| Attribution | ROI vs leave-one-out on several seeds (H5); one sealed-test evaluation per final checkpoint; paper | 7, 9 |
+| Level 2 | tool-call arm with a ≥ 5× cost spread (B11) | after Level 1 |
 
 ---
 

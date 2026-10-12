@@ -23,23 +23,20 @@ import argparse
 import itertools
 import json
 import statistics
-import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
-from experiments.analysis.audit_impact import NOISY, Recorder  # noqa: E402
-from experiments.run_sim import make_scheduler  # noqa: E402
 
 from curator_rl.core.config import load_config, rescale_for_batch_shape  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
 from curator_rl.simulator.scenarios import CalibSimCfg, load_scenario  # noqa: E402
+from experiments.analysis.audit_impact import NOISY, Recorder  # noqa: E402
+from experiments.run_sim import make_scheduler  # noqa: E402
 
 SUITES = {
     "gpu": {"tune": {"S-I-R1-GPU": "scenario_si_r1_gpu.yaml", "S-I-R2-GPU": "scenario_si_r2_gpu.yaml"},

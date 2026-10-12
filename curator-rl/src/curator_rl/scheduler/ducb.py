@@ -16,8 +16,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from typing import Any, NotRequired, TypedDict
 
-from curator_rl.calibration.calibrator import CalibrationReport, Calibrator
+from curator_rl.calibration.calibrator import CalibrationReport, Calibrator, CalibratorState
 from curator_rl.calibration.cre import CalibratedRewardEngine
 from curator_rl.calibration.regression import FitRow, ProxyFit, ProxyWeightFitter
 from curator_rl.core.config import CalibCfg, CreCfg, ProxyCfg, SchedulerCfg, SignalsCfg
@@ -25,11 +26,33 @@ from curator_rl.core.types import (
     CalibrationObservation,
     MixtureDecision,
     RoundObservation,
+    SignalVector,
 )
 from curator_rl.scheduler.base import BaseScheduler, validate_weights
 from curator_rl.scheduler.mixture import apply_status_constraints, cap_weights, scores_to_weights
 from curator_rl.signals.drift import PageHinkley, standardised_surprise
-from curator_rl.signals.engine import SignalEngine
+from curator_rl.signals.engine import EngineState, SignalEngine
+
+
+class DUCBState(TypedDict):
+    round: int
+    steps: int
+    n_hat: dict[str, float]
+    s_hat: dict[str, float]
+    last_weights: dict[str, float]
+    engine: EngineState
+    # keys below are absent in checkpoints made before the feature that added them
+    win_x: NotRequired[dict[str, float]]
+    win_u: NotRequired[dict[str, float]]
+    calibrator: NotRequired[CalibratorState | None]
+    win_usd: NotRequired[dict[str, float]]
+    budget_total: NotRequired[float | None]
+    cre: NotRequired[Any]
+    fit_lp: NotRequired[dict[str, float]]
+    fit_sr: NotRequired[dict[str, float]]
+    fit_w: NotRequired[dict[str, float]]
+    drift: NotRequired[dict[str, dict[str, float]] | None]
+    prev_pass: NotRequired[dict[str, float]]
 
 
 class DiscountedUCB(BaseScheduler):
@@ -62,7 +85,7 @@ class DiscountedUCB(BaseScheduler):
         self._last_weights = {e: 1.0 / len(self.env_ids) for e in self.env_ids}
         self._prompts_per_round = prompts_per_round
         self.last_decision: MixtureDecision | None = None
-        self._latest_vectors: dict[str, object] = {}
+        self._latest_vectors: dict[str, SignalVector] = {}
         # calibration (Roadmap Part I, D-73): proxy signal accumulated per window
         self.uses_calibration = bool(calib_cfg.enabled)
         # domain_of maps an arm to the calibration slice it is scored on (None: no slice);
@@ -292,7 +315,7 @@ class DiscountedUCB(BaseScheduler):
 
     # ------------------------------------------------------------- checkpoints
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> DUCBState:
         return {
             "round": self._round,
             "steps": self._steps,
@@ -311,29 +334,32 @@ class DiscountedUCB(BaseScheduler):
             "prev_pass": dict(self._prev_pass),
         }
 
-    def load_checkpoint(self, state) -> None:
-        self._round = int(state["round"])  # type: ignore[arg-type]
-        self._steps = int(state["steps"])  # type: ignore[arg-type]
-        self._n_hat = {e: float(v) for e, v in state["n_hat"].items()}  # type: ignore[union-attr]
-        self._s_hat = {e: float(v) for e, v in state["s_hat"].items()}  # type: ignore[union-attr]
-        self._last_weights = {e: float(v) for e, v in state["last_weights"].items()}  # type: ignore[union-attr]
-        self._engine.load_checkpoint(state["engine"])  # type: ignore[arg-type]
-        self._win_x = {e: float(v) for e, v in state.get("win_x", {}).items()} or {e: 0.0 for e in self.env_ids}  # type: ignore[union-attr]
-        self._win_u = {e: float(v) for e, v in state.get("win_u", {}).items()} or {e: 0.0 for e in self.env_ids}  # type: ignore[union-attr]
-        if self._calibrator is not None and state.get("calibrator") is not None:
-            self._calibrator.load_checkpoint(state["calibrator"])  # type: ignore[arg-type]
-        self._win_usd = {e: float(v) for e, v in state.get("win_usd", {}).items()} or {  # type: ignore[union-attr]
+    def load_checkpoint(self, state: DUCBState) -> None:  # type: ignore[override]  (narrower than Mapping)
+        self._round = int(state["round"])
+        self._steps = int(state["steps"])
+        self._n_hat = {e: float(v) for e, v in state["n_hat"].items()}
+        self._s_hat = {e: float(v) for e, v in state["s_hat"].items()}
+        self._last_weights = {e: float(v) for e, v in state["last_weights"].items()}
+        self._engine.load_checkpoint(state["engine"])
+        self._win_x = {e: float(v) for e, v in state.get("win_x", {}).items()} or {e: 0.0 for e in self.env_ids}
+        self._win_u = {e: float(v) for e, v in state.get("win_u", {}).items()} or {e: 0.0 for e in self.env_ids}
+        calibrator_state = state.get("calibrator")
+        if self._calibrator is not None and calibrator_state is not None:
+            self._calibrator.load_checkpoint(calibrator_state)
+        self._win_usd = {e: float(v) for e, v in state.get("win_usd", {}).items()} or {
             e: 0.0 for e in self.env_ids}
-        self._budget_total = state.get("budget_total")  # type: ignore[assignment]
-        if self._cre is not None and state.get("cre") is not None:
-            self._cre.load_checkpoint(state["cre"])  # type: ignore[arg-type]
-        if self._drift is not None and state.get("drift") is not None:
-            for e, d in state["drift"].items():  # type: ignore[union-attr]
+        self._budget_total = state.get("budget_total")
+        cre_state, drift_state = state.get("cre"), state.get("drift")
+        if self._cre is not None and cre_state is not None:
+            self._cre.load_checkpoint(cre_state)
+        if self._drift is not None and drift_state is not None:
+            for e, d in drift_state.items():
                 self._drift[e].load_checkpoint(d)
-            self._prev_pass = {e: float(v) for e, v in state.get("prev_pass", {}).items()}  # type: ignore[union-attr]
-        for name in ("fit_lp", "fit_sr", "fit_w"):        # absent in checkpoints made before B4
-            if name in state:
-                setattr(self, f"_{name}", {e: float(v) for e, v in state[name].items()})  # type: ignore[union-attr]
+            self._prev_pass = {e: float(v) for e, v in state.get("prev_pass", {}).items()}
+        if "fit_w" in state:                               # absent in checkpoints made before B4
+            self._fit_lp = {e: float(v) for e, v in state.get("fit_lp", {}).items()}
+            self._fit_sr = {e: float(v) for e, v in state.get("fit_sr", {}).items()}
+            self._fit_w = {e: float(v) for e, v in state.get("fit_w", {}).items()}
 
     def state_hash(self) -> str:
         payload = json.dumps(
