@@ -9,9 +9,10 @@ Modes (config `data.envs.noisy`):
   outcome - the misalignment case the calibration step must catch.
 - `flip`: the true reward is flipped with probability flip_p.
 
-Draws are seeded by sha256 of (mode salt | prompt_id | response), so rewards
-are reproducible while remaining statistically independent of correctness
-for `random` mode (a uniform hash is independent of the true outcome).
+Draws are seeded by sha256 of (mode salt | prompt_id | rollout index | response),
+so rewards are reproducible while remaining statistically independent of
+correctness for `random` mode (a uniform hash is independent of the true
+outcome) and independent across the rollouts of a group (audit E-24).
 
 The true success is recorded in `verdict.info["diagnostic_true_success"]`
 for diagnosis; the Signal Engine must never read it (Roadmap D.2).
@@ -66,12 +67,22 @@ class NoisyRewardEnv(Environment):
     def generate_batch(self, split: str, n: int, rng, exclude: set[str] | None = None) -> list[Prompt]:
         return [self._relabel(p) for p in self._base.generate_batch(split, n, rng, exclude)]
 
+    def split_size(self, split: str) -> int | None:
+        return self._base.split_size(split)
+
+    def prompt_at(self, split: str, index: int) -> Prompt:
+        return self._relabel(self._base.prompt_at(split, index))
+
     def evaluate_response(self, prompt: Prompt, response: str) -> Verdict:
         verdict = self._base.evaluate_response(prompt, response)
-        # Key by (prompt_id, response) so every rollout gets its own draw
-        # while the reward stays reproducible. The marginal probability of a
-        # reward stays q for EVERY response, so the reward is statistically
-        # independent of the output (Roadmap D.2).
+        # Key by (prompt_id, rollout index, response): reproducible, and independent per rollout.
+        # Without the index, identical completions of one prompt got identical rewards (audit E-24):
+        # as a trained policy collapses onto one answer per prompt, the "random" reward became a
+        # fixed per-prompt value. The marginal probability stays q for every response (Roadmap D.2).
+        # Callers that pass no rollout index (pre-E-24) keep the old key.
+        index = prompt.meta.get("rollout_index")
+        key = (f"{prompt.prompt_id}|{response}" if index is None
+               else f"{prompt.prompt_id}|r{int(index)}|{response}")
         return Verdict(
             success=verdict.success,
             score=verdict.score,
@@ -80,7 +91,7 @@ class NoisyRewardEnv(Environment):
             info={
                 **verdict.info,
                 "diagnostic_true_success": bool(verdict.success),
-                "noise_key": f"{prompt.prompt_id}|{response}",
+                "noise_key": key,
             },
         )
 

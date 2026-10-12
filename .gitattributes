@@ -1,0 +1,3 @@
+# Split manifests and their checksum index must be byte-identical on every OS (Windows checkouts
+# used to get CRLF, so MANIFEST.sha256 verified on Windows only and failed on Linux CI / Kaggle).
+curator-rl/data/manifests/** text eol=lf

@@ -15,6 +15,7 @@ def make_cfg(alpha=0.5, beta=0.5, clip_l=3.0, q_lo=0.0, q_hi=1.0) -> ProxyCfg:
     return ProxyCfg(
         alpha=alpha, beta=beta, clip_l=clip_l,
         quantile_prior_lo=q_lo, quantile_prior_hi=q_hi,
+        fit={"enabled": False, "ridge": 1.0, "min_rows": 3},
     )
 
 

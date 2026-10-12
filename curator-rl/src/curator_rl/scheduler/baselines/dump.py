@@ -1,16 +1,19 @@
 """DUMP-style bandit baseline (Roadmap v3 section 4.4; Wang et al., DUMP).
 
 UCB over distributions (environments) with the mean absolute GRPO advantage as
-the arm reward: `score_i = mean_i + c * sqrt(ln(max(N, e)) / n_i)` with
-undiscounted prompt counts, then `softmax(score / tau)` with the shared
-exploration floor. A re-implementation from the paper's description ("style"):
-the exact windowing and constants of the original are not reproduced.
+the arm reward: `score_i = mean_i + c * sqrt(ln(max(N, e)) / n_i)`, then
+`softmax(score / tau)` with the shared exploration floor. A re-implementation from
+the paper's description ("style"). `window_rounds = 0` keeps all-time counts (D-68);
+`window_rounds = W > 0` uses only each arm's last W rounds with prompts, as DUMP
+estimates learnability from recent samples (audit E-16: the all-time mean reacts
+slowly once an arm saturates, which handicapped this baseline under drift).
 Cost-blind and uncalibrated by design.
 """
 
 from __future__ import annotations
 
 import math
+from collections import deque
 
 from curator_rl.core.config import DumpBaselineCfg, SchedulerCfg
 from curator_rl.core.types import RoundObservation
@@ -25,8 +28,10 @@ class DUMPStyleUCB(BaseScheduler):
         super().__init__(env_ids)
         self._cfg = dump_cfg
         self._sched = scheduler_cfg
-        self._n = {e: 0.0 for e in self.env_ids}      # prompts seen
+        self._n = {e: 0.0 for e in self.env_ids}      # prompts seen (in the window if W > 0)
         self._sum = {e: 0.0 for e in self.env_ids}    # sum of per-prompt mean |A|
+        self._window = int(dump_cfg.window_rounds)
+        self._recent: dict[str, deque] = {e: deque() for e in self.env_ids}
         self._round = 0
 
     def scores(self) -> dict[str, float]:
@@ -53,11 +58,21 @@ class DUMPStyleUCB(BaseScheduler):
             if obs.n_prompts > 0:
                 self._n[env_id] += obs.n_prompts
                 self._sum[env_id] += obs.sum_abs_adv
+                if self._window > 0:
+                    recent = self._recent[env_id]
+                    recent.append((float(obs.n_prompts), float(obs.sum_abs_adv)))
+                    if len(recent) > self._window:
+                        n_old, s_old = recent.popleft()
+                        self._n[env_id] -= n_old
+                        self._sum[env_id] -= s_old
 
     def get_state(self) -> dict[str, object]:
-        return {"round": self._round, "n": dict(self._n), "sum": dict(self._sum)}
+        return {"round": self._round, "n": dict(self._n), "sum": dict(self._sum),
+                "recent": {e: list(d) for e, d in self._recent.items()}}
 
     def load_checkpoint(self, state) -> None:
         self._round = int(state["round"])  # type: ignore[arg-type]
         self._n = {e: float(v) for e, v in state["n"].items()}  # type: ignore[union-attr]
         self._sum = {e: float(v) for e, v in state["sum"].items()}  # type: ignore[union-attr]
+        self._recent = {e: deque(tuple(x) for x in state.get("recent", {}).get(e, []))  # type: ignore[union-attr]
+                        for e in self.env_ids}

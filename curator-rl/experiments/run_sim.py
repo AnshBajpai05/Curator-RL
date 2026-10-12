@@ -13,13 +13,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from curator_rl.core.seeding import SeedManager  # noqa: E402
 from curator_rl.scheduler.baselines.random_baseline import RandomScheduler  # noqa: E402
@@ -34,8 +32,11 @@ from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
 
 DEFAULT_SEEDS = 20
 DEFAULT_METHODS = ("uniform", "random", "static_oracle", "myopic_oracle", "dp_oracle")
-_SCHEDULER_METHODS = ("static", "lp", "ucb", "sec", "dump", "curator")
+_SCHEDULER_METHODS = ("static", "pilot_uniform", "lp", "ucb", "sec", "dump", "curator")
 _BASE_CFG: dict | None = None
+# Configuration of every pre-registered gate and study from D-68 to D-94 (audit E-04): their
+# scripts load this frozen file, never the live base.yaml, so they keep reproducing.
+FROZEN_D68_D94 = REPO_ROOT / "configs" / "frozen" / "d68_d94.yaml"
 
 
 def _load_base_config():
@@ -64,6 +65,21 @@ def _static_weights(scenario) -> dict[str, float]:
     return {e.env_id: r / total for e, r in zip(envs, raw)}
 
 
+def _pilot_uniform_weights(scenario) -> dict[str, float]:
+    """Improvement B10: uniform over the arms the pilot could solve (pass@G > 0), zero elsewhere.
+
+    What a practitioner does after the pilot: drop arms with no signal (Countdown: 0 of 1,024
+    samples). The noisy arm stays in: the pilot shows it as the easiest arm (pass@8 = 0.98), and
+    nothing in a pilot reveals that its reward is random.
+    """
+    if any(e.pilot_pass_at_g is None for e in scenario.envs):
+        raise ValueError("pilot_uniform needs pilot_pass_at_g on every arm of the scenario")
+    keep = [e.env_id for e in scenario.envs if e.pilot_pass_at_g > 0]
+    if not keep:
+        raise ValueError("no arm has pilot pass@G > 0")
+    return {e.env_id: (1.0 / len(keep) if e.env_id in keep else 0.0) for e in scenario.envs}
+
+
 def make_scheduler(
     method: str, scenario, seed: int, *, dp_levels: int = 80, dp_units: int | None = None, cfg=None
 ):
@@ -88,6 +104,8 @@ def make_scheduler(
         prompts_per_round = scenario.steps_per_round * scenario.prompts_per_step
         if method == "static":
             return StaticMixtureScheduler(env_ids, _static_weights(scenario))
+        if method == "pilot_uniform":
+            return StaticMixtureScheduler(env_ids, _pilot_uniform_weights(scenario))
         if method == "lp":
             lp_sched = cfg.scheduler.model_copy(update={"tau": cfg.baselines.lp.tau})
             return LPCurriculum(env_ids, cfg.signals, cfg.proxy, lp_sched, cfg.calib, cfg.group_size)
@@ -106,9 +124,11 @@ def make_scheduler(
             return SECStyleBandit(env_ids, cfg.baselines.sec, cfg.scheduler)
         if method == "dump":
             return DUMPStyleUCB(env_ids, cfg.baselines.dump, cfg.scheduler)
+        from curator_rl.simulator.scenarios import domain_map
+
         return Curator(
             env_ids, cfg.signals, cfg.proxy, cfg.scheduler, cfg.calib, cfg.group_size,
-            prompts_per_round=prompts_per_round, cre_cfg=cfg.cre,
+            prompts_per_round=prompts_per_round, cre_cfg=cfg.cre, domain_of=domain_map(scenario),
         )
     if method == "static_oracle":
         from curator_rl.simulator.scenarios import build_world

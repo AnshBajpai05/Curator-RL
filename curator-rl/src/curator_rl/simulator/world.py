@@ -10,20 +10,36 @@ with T_ii = 1 and T_ji < 0 modelling interference. Costs are drawn per prompt
 with log-normal noise. The world exposes ONLY measured quantities through
 `RoundObservation`; true skills and true pass rates stay hidden from the
 scheduler (F.1) and exist solely for oracles, diagnostics and tests.
+
+Realism switches (improvement plan; every default reproduces the original world exactly):
+- `learnability: mixed_groups` (B8): g is the expected share of mixed prompt groups under the same
+  Beta-binomial model the rollouts use, normalised to peak at 1, so learning and observation agree;
+- `forget_rate` per arm (B7): s_j -= phi_j (1 - share_j) (s_j - s_j0) each round, so starving an arm
+  costs something and concentration is no longer free;
+- `train_items` per arm + `repeat_decay` (audit E-14): the k-th pass over a finite training set
+  teaches repeat_decay^(k-1) as much (MBPP has 314 items; a run can pass over it several times);
+- `noisy_transfer` (B9): random-reward training may move other arms' skills (T_{j, noisy});
+- `report_stream: separate` / `final_eval: paired_items` (B1, E9): uncharged evaluations draw from
+  their own random stream (they no longer shift the training draws), optionally on fixed test items
+  shared by every method on a seed, as on real hardware;
+- `rollout_draws: vectorized` (E10): one binomial call per round instead of one per prompt.
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import TypeVar
 
 import numpy as np
 
 from curator_rl.core.advantage import group_mean_abs_advantage
+from curator_rl.core.quotas import CarryQuotas
 from curator_rl.core.types import CalibrationObservation, EnvRoundObs, RoundObservation
 from curator_rl.simulator.quotas import largest_remainder_quotas
 
 _EPS = 1e-6
+FloatOrArray = TypeVar("FloatOrArray", float, np.ndarray)
 
 
 def sigmoid(x: float) -> float:
@@ -34,9 +50,29 @@ def sigmoid(x: float) -> float:
     return z / (1.0 + z)
 
 
-def learnability(p: float) -> float:
+def _unset(value) -> bool:
+    """A benchmark parameter left to mirror the training env: None (direct construction) or nan."""
+    return value is None or (isinstance(value, float) and math.isnan(value))
+
+
+def learnability(p: FloatOrArray) -> FloatOrArray:
     """g = 4 p (1 - p): 1 at p = 0.5, 0 at p in {0, 1} (Roadmap F.2)."""
     return 4.0 * p * (1.0 - p)
+
+
+def mixed_group_share(p: float, kappa: float, g: int) -> float:
+    """P(0 < k < G) for q ~ Beta(kappa p, kappa (1 - p)), k ~ Binomial(G, q) (closed form).
+
+    E[q^G] = prod_i (kappa p + i)/(kappa + i); E[(1-q)^G] likewise; kappa = inf gives 1 - p^G - (1-p)^G.
+    """
+    p = min(max(p, 0.0), 1.0)
+    if math.isinf(kappa):
+        return 1.0 - p**g - (1.0 - p) ** g
+    all_right = all_wrong = 1.0
+    for i in range(g):
+        all_right *= (kappa * p + i) / (kappa + i)
+        all_wrong *= (kappa * (1.0 - p) + i) / (kappa + i)
+    return max(1.0 - all_right - all_wrong, 0.0)
 
 
 @dataclass
@@ -68,10 +104,15 @@ class SimEnvParams:
     drift_shift: float = 0.0
     late_start_round: int = 0
     cost_skill_slope: float = 0.0
-    # benchmark slice of this env's domain (defaults mirror the training env)
-    bench_slope: float | None = None
-    bench_difficulty: float | None = None
+    # benchmark slice of this env's domain; None (or nan) mirrors the training env (__post_init__)
+    bench_slope: float = math.nan
+    bench_difficulty: float = math.nan
     bench_weight: float | None = None  # pi_d; None -> uniform over domains
+    # calibration slice this arm is scored on when it has none of its own (audit E-03):
+    # e.g. the real noisy arm uses GSM8K prompts and is scored on the GSM8K slice
+    bench_domain: str | None = None
+    forget_rate: float = 0.0          # phi (B7): skill decay toward skill0 while the arm is not trained
+    train_items: int | None = None    # finite training set size (E-14); None = inexhaustible
 
     def __post_init__(self) -> None:
         if self.noisy_q is not None and not (0.0 < self.noisy_q < 1.0):
@@ -79,10 +120,8 @@ class SimEnvParams:
         if self.cost_usd_per_prompt <= 0:
             raise ValueError(f"{self.env_id}: cost_usd_per_prompt must be > 0")
         self.slope = float(self.slope)
-        self.bench_slope = self.slope if self.bench_slope is None else float(self.bench_slope)
-        self.bench_difficulty = (
-            self.difficulty if self.bench_difficulty is None else float(self.bench_difficulty)
-        )
+        self.bench_slope = self.slope if _unset(self.bench_slope) else float(self.bench_slope)
+        self.bench_difficulty = self.difficulty if _unset(self.bench_difficulty) else float(self.bench_difficulty)
 
 
 class SimWorld:
@@ -102,7 +141,40 @@ class SimWorld:
         usd_per_gpu_hour: float = 1.0,
         rng: np.random.Generator | None = None,
         calib_rng: np.random.Generator | None = None,
+        learning_from: str = "requested",
+        rounding: str = "largest_remainder",
+        learnability_mode: str = "binary",
+        repeat_decay: float = 1.0,
+        noisy_transfer: bool = False,
+        report_rng: np.random.Generator | None = None,
+        test_item_rng: np.random.Generator | None = None,
+        final_eval: str = "binomial",
+        rollout_draws: str = "loop",
     ) -> None:
+        if learnability_mode not in ("binary", "mixed_groups"):
+            raise ValueError(f"learnability must be binary|mixed_groups, got {learnability_mode!r}")
+        if final_eval not in ("binomial", "paired_items"):
+            raise ValueError(f"final_eval must be binomial|paired_items, got {final_eval!r}")
+        if rollout_draws not in ("loop", "vectorized"):
+            raise ValueError(f"rollout_draws must be loop|vectorized, got {rollout_draws!r}")
+        if not 0.0 < repeat_decay <= 1.0:
+            raise ValueError("repeat_decay must be in (0, 1]")
+        self.learnability_mode = learnability_mode
+        self.repeat_decay = float(repeat_decay)
+        self.noisy_transfer = bool(noisy_transfer)
+        self.report_rng = report_rng            # None: reports draw from the training stream (legacy)
+        self._test_item_rng = test_item_rng
+        self._test_items: dict[str, np.ndarray] = {}
+        self.final_eval = final_eval
+        self.rollout_draws = rollout_draws
+        if learning_from not in ("requested", "delivered"):
+            raise ValueError(f"learning_from must be requested|delivered, got {learning_from!r}")
+        if rounding not in ("largest_remainder", "carry"):
+            raise ValueError(f"rounding must be largest_remainder|carry, got {rounding!r}")
+        # audit E-09: `requested` (legacy) trains on the requested weights while rollouts and
+        # costs follow the integer quotas; `delivered` trains on the quotas actually served
+        self.learning_from = learning_from
+        self._carry = CarryQuotas() if rounding == "carry" else None
         if not envs:
             raise ValueError("SimWorld needs at least one environment")
         ids = [e.env_id for e in envs]
@@ -132,7 +204,7 @@ class SimWorld:
         # reverse transfer map: T[target][source] = T_{target, source}; T_ii = 1 implicit
         self.transfer_in: dict[str, dict[str, float]] = {i: {} for i in self._order}
         for e in envs:
-            if e.env_id in self.noisy:
+            if e.env_id in self.noisy and not self.noisy_transfer:
                 continue
             for target, coeff in e.transfer_out.items():
                 if target in self.noisy:
@@ -141,6 +213,8 @@ class SimWorld:
         self.rounds_done = 0
         self.benchmark_evals = 0
         self.bench_weight: dict[str, float] = self._resolve_bench_weights()
+        self.prompts_seen: dict[str, int] = {i: 0 for i in self._order}   # delivered training prompts
+        self._g_norm = mixed_group_share(0.5, self.kappa_b, self.G)
 
     # ------------------------------------------------------------------ world
 
@@ -173,6 +247,29 @@ class SimWorld:
         s = self.skills[e.gate_prereq]
         return sigmoid(e.gate_slope * (s - e.gate_theta))
 
+    def learnability_of(self, env_id: str) -> float:
+        """g_i: how much a unit of training on arm i moves skills (mode `learnability`)."""
+        if env_id in self.noisy:
+            # random rewards: mixed groups at rate 1 - q^G - (1-q)^G; only used for transfer (B9)
+            q = float(self.envs[env_id].noisy_q or 0.0)
+            share = 1.0 - q**self.G - (1.0 - q) ** self.G
+            return share / self._g_norm if self.learnability_mode == "mixed_groups" else share
+        p = self.true_pass(env_id)
+        if self.learnability_mode == "mixed_groups":
+            return mixed_group_share(p, self.kappa_b, self.G) / self._g_norm
+        return learnability(p)
+
+    def repeat_factor(self, env_id: str) -> float:
+        """Value of training on arm i given the passes already made over its data (E-14)."""
+        items = self.envs[env_id].train_items
+        if items is None or self.repeat_decay >= 1.0:
+            return 1.0
+        passes = self.prompts_seen[env_id] / items
+        return self.repeat_decay ** max(passes - 1.0, 0.0)
+
+    def passes(self) -> dict[str, float | None]:
+        return {i: (self.prompts_seen[i] / e.train_items if e.train_items else None) for i, e in self.envs.items()}
+
     def unit_cost(self, env_id: str) -> float:
         """Mean unit cost now (cost-drifting type rises with skill)."""
         e = self.envs[env_id]
@@ -198,8 +295,20 @@ class SimWorld:
             raise ValueError(f"weights must sum to 1 (got {validate})")
 
         round_t = self.rounds_done
-        quotas = largest_remainder_quotas(weights, self.M, tie_break_seed=round_t)
-        g = {i: learnability(self.true_pass(i)) for i in self._order if i not in self.noisy}
+        if self._carry is not None:
+            quotas = self._carry.next(weights, self.M)
+        else:
+            quotas = largest_remainder_quotas(weights, self.M, tie_break_seed=round_t)
+        legacy = (self.learnability_mode == "binary" and self.repeat_decay >= 1.0 and not self.noisy_transfer)
+        if legacy:   # the original expression, kept verbatim so old scenarios reproduce bit for bit
+            g = {i: learnability(self.true_pass(i)) for i in self._order if i not in self.noisy}
+        else:
+            g = {i: self.learnability_of(i) * self.repeat_factor(i) for i in self._order
+                 if i not in self.noisy or self.noisy_transfer}
+        if self.learning_from == "delivered":
+            trained = {i: quotas.get(i, 0) / self.M for i in self._order}
+        else:
+            trained = weights
 
         # skill update for every env j: R * eta_j_eff * sum_i T_ji w_i g_i + xi
         # (T_jj = 1; each source i contributes its own allocation w_i * g_i)
@@ -207,14 +316,19 @@ class SimWorld:
             if j in self.noisy:
                 continue  # noisy envs never change skill (Roadmap F.2)
             e = self.envs[j]
-            inflow = weights.get(j, 0.0) * g.get(j, 0.0)  # T_jj = 1
+            inflow = trained.get(j, 0.0) * g.get(j, 0.0)  # T_jj = 1
             for i, t_ji in self.transfer_in[j].items():
-                if i in self.noisy:
+                if i in self.noisy and not self.noisy_transfer:
                     continue
-                inflow += t_ji * weights.get(i, 0.0) * g.get(i, 0.0)
+                inflow += t_ji * trained.get(i, 0.0) * g.get(i, 0.0)
             delta = self.R * e.eta * self.gate_factor(j) * inflow
             xi = self.rng.normal(0.0, self.skill_noise_std) if self.skill_noise_std > 0 else 0.0
             self.skills[j] += delta + xi
+            if e.forget_rate > 0.0:   # B7: an arm that is not trained drifts back toward where it started
+                share = trained.get(j, 0.0)
+                self.skills[j] -= e.forget_rate * (1.0 - share) * (self.skills[j] - e.skill0)
+        for i in self._order:
+            self.prompts_seen[i] += int(quotas.get(i, 0))
 
         self.rounds_done += 1
         # drift applies from the round AFTER the shift was scheduled
@@ -265,9 +379,12 @@ class SimWorld:
             a = self.kappa_b * p
             b = self.kappa_b * (1.0 - p)
             qs = self.rng.beta(a, b, size=m_i)  # per-prompt pass probability
-            ks = np.asarray(
-                [self.rng.binomial(self.G, float(q)) for q in qs], dtype=np.int64
-            )
+            if self.rollout_draws == "vectorized":
+                ks = self.rng.binomial(self.G, qs).astype(np.int64)
+            else:
+                ks = np.asarray(
+                    [self.rng.binomial(self.G, float(q)) for q in qs], dtype=np.int64
+                )
         for k in ks:
             rate = k / self.G
             k_success += int(k)
@@ -306,7 +423,33 @@ class SimWorld:
     def set_benchmark_items(self, n_items: int) -> None:
         self._n_b_default = int(n_items)
 
-    def evaluate_benchmark(self, *, observed: bool = True) -> tuple[float, float, dict[str, float], dict[str, float]]:
+    def evaluate_report(self) -> tuple[float, float]:
+        """Uncharged reporting / final evaluation (identical protocol for every method).
+
+        Legacy: Binomial noise from the training stream. `report_stream: separate` draws it from its own
+        stream; `final_eval: paired_items` scores fixed test items (latent u per item, solved iff u < p)
+        that every method on the same seed shares, as on real hardware (B1).
+        """
+        if self.final_eval == "paired_items":
+            n_b = self._n_b_default
+            total = var = 0.0
+            for env_id in self._order:
+                e = self.envs[env_id]
+                u = self._test_items.get(env_id)
+                if u is None:
+                    rng = self._test_item_rng if self._test_item_rng is not None else np.random.default_rng(0)
+                    u = self._test_items[env_id] = rng.random(n_b)
+                p = sigmoid(e.bench_slope * (self.skills[env_id] - e.bench_difficulty))
+                s_d = float(np.mean(u < p))
+                total += self.bench_weight[env_id] * s_d
+                var += (self.bench_weight[env_id] ** 2) * max(s_d * (1.0 - s_d), _EPS) / n_b
+            self.benchmark_evals += 1
+            return total, math.sqrt(var)
+        score, se, _, _ = self.evaluate_benchmark(observed=True, rng=self.report_rng)
+        return score, se
+
+    def evaluate_benchmark(self, *, observed: bool = True,
+                           rng: np.random.Generator | None = None) -> tuple[float, float, dict[str, float], dict[str, float]]:
         """Evaluate the benchmark: returns (S, SE, S_by_domain, SE_by_domain).
 
         With `observed=False` the noiseless expected value is returned with
@@ -314,6 +457,7 @@ class SimWorld:
         noise over n_b items per domain (Roadmap F.2).
         """
         n_b = self._n_b_default
+        draw = rng if rng is not None else self.rng
         s_by_domain: dict[str, float] = {}
         se_by_domain: dict[str, float] = {}
         total = 0.0
@@ -323,7 +467,7 @@ class SimWorld:
             p = sigmoid(e.bench_slope * (self.skills[env_id] - e.bench_difficulty))
             pi_d = self.bench_weight[env_id]
             if observed:
-                s_d = float(self.rng.binomial(n_b, p)) / n_b
+                s_d = float(draw.binomial(n_b, p)) / n_b
                 se_d = math.sqrt(max(p * (1.0 - p), _EPS) / n_b)
             else:
                 s_d, se_d = p, 0.0

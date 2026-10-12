@@ -26,23 +26,18 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from datetime import UTC, datetime
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
-from experiments.analysis import common  # noqa: E402
-from experiments.analysis.common import REPO_ROOT  # noqa: E402
 
 from curator_rl.core.config import StatusCfg, load_config  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
 from curator_rl.simulator.oracle import StaticOracle  # noqa: E402
 from curator_rl.simulator.scenarios import ReportEvalCfg, build_world, load_scenario  # noqa: E402
+from experiments.analysis import common  # noqa: E402
+from experiments.analysis.common import REPO_ROOT  # noqa: E402
+from experiments.run_sim import FROZEN_D68_D94  # noqa: E402  (audit E-04: pre-registered config)
 
 REPORT_DIR = REPO_ROOT / "reports" / "gate2"
 DELTA_GAP = 0.01         # pre-registered margin: 1 benchmark point = 0.01 in score units (D-69)
@@ -102,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-oracle", action="store_true", help="skip the static oracle dev target")
     args = parser.parse_args(argv)
     seeds = list(range(args.seed0, args.seed0 + args.seeds))
-    cfg = load_config(REPO_ROOT / "configs" / "base.yaml")
+    cfg = load_config(FROZEN_D68_D94)
 
     sim_dir = REPO_ROOT / "configs" / "sim"
     paths = {sid: sim_dir / f"scenario_{sid.replace('-', '').lower()}.yaml" for sid in ("S-A", "S-B", "S-C")}
@@ -213,9 +208,11 @@ def main(argv: list[str] | None = None) -> int:
                                   random_search_draws=scenario_a.oracle.random_search_draws,
                                   seed=seed)
             oracle_runs.append(run_episode(oracle, scenario_a, seed=seed, method="static_oracle").final_score)
-        uni_mean = report["means"]["S-A"]["uniform"]
-        cur_mean = report["means"]["S-A"]["curator"]
-        oracle_mean = sum(oracle_runs) / len(oracle_runs)
+        # same seeds for all three means (audit E-22: a 20-seed oracle against 50-seed methods)
+        n_or = len(oracle_runs)
+        uni_mean = sum(r.final_score for r in results["S-A"]["uniform"][:n_or]) / n_or
+        cur_mean = sum(r.final_score for r in results["S-A"]["curator"][:n_or]) / n_or
+        oracle_mean = sum(oracle_runs) / n_or
         gap = (cur_mean - uni_mean) / (oracle_mean - uni_mean)
         criteria["dev_oracle_gap_closure"] = {
             "oracle": oracle_mean, "uniform": uni_mean, "curator": cur_mean,
@@ -243,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
 def _make(method: str, scenario, seed: int, cfg):
     from experiments.run_sim import make_scheduler
 
-    return make_scheduler(method, scenario, seed)
+    return make_scheduler(method, scenario, seed, cfg=cfg)
 
 
 def _capture(scenario, seed: int, cfg):

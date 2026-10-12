@@ -1,0 +1,79 @@
+name: ci
+
+# Lives at the repository root: GitHub only runs workflows from .github/workflows/ here. It used to sit
+# in curator-rl/.github/, where it never ran (audit). The project itself is in curator-rl/.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: curator-rl
+
+jobs:
+  cpu-only:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: curator-rl/pyproject.toml
+      - name: Install
+        run: python -m pip install -e ".[dev,viz]"
+      - name: Lint
+        run: ruff check .
+      - name: Type check (pyright, basic; improvement E8)
+        run: pyright
+      - name: Test (CPU only; dataset contract tests and torch tests skip without data/torch)
+        run: python -m pytest tests -m "not gpu"
+
+  data:
+    # improvement E3: rebuild the datasets from their public sources, prove the committed split manifests
+    # are reproduced byte for byte, then run every test (dataset contracts, the fake-backend trainer runs)
+    # under the coverage gate (pyproject.toml: whole library, fail under 85%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: curator-rl/pyproject.toml
+      - name: Cache downloaded raw data
+        uses: actions/cache@v4
+        with:
+          path: curator-rl/data/raw
+          key: raw-data-${{ hashFiles('curator-rl/scripts/download_data*.py') }}
+      - name: Install
+        run: python -m pip install -e ".[dev,viz]"
+      - name: Download and build the splits
+        run: |
+          python scripts/download_data.py
+          python scripts/download_data_phase_e.py
+          python scripts/build_splits.py
+          python scripts/build_splits_phase_e.py
+      - name: The committed split manifests are reproduced exactly
+        run: git diff --exit-code -- data/manifests
+      - name: Test everything with coverage
+        run: python -m pytest tests -m "not gpu" --cov=curator_rl --cov-report=term
+
+  locked:
+    # the pinned CPU stack (requirements.lock) installs and passes on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install from the lock
+        run: |
+          python -m pip install -r requirements.lock
+          python -m pip install -e . --no-deps
+      - name: Test
+        run: python -m pytest tests -m "not gpu"

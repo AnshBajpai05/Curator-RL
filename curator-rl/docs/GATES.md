@@ -34,8 +34,14 @@ Legend: ✅ passed · 🟡 passed with a documented shortfall · ⏳ pending · 
 | 2 | — | 2026-10-02 | green | commit `35a8b6a` |
 | 3 | — | 2026-10-03 | 119 | commit `35a8b6a` |
 | 4 | — | 2026-10-05 | 183 | commit `2d3b40a` |
-| 5 / Phase A | `phase-5` (not yet created) | 2026-10-09 | 217 | Gate 2 at 50 seeds; D-44…D-51 and D-63…D-67 logged |
-| C | — (not yet created) | 2026-10-09 | 248 | SEC/DUMP-style baselines, fair tuning, S-I/S-J, Gate 2'' run (fails (i) on S-I); D-68…D-71 logged. No commit yet |
+| 5 / Phase A | — (proposed `phase-5`) | 2026-10-09 | 217 | Gate 2 at 50 seeds; D-44…D-51 and D-63…D-67 logged; commit `9cec931` |
+| C | — | 2026-10-09 | 248 | SEC/DUMP-style baselines, fair tuning, S-I/S-J, Gate 2'' run (fails (i) on S-I); D-68…D-71 logged; commit `9cec931` |
+| D/E | — (proposed `phase-e3`) | 2026-10-10 | 349 | calibration, CRE, refit scenarios, claim targeting (D-72…D-95); commits `30052e8`, `bd9099e` |
+| Audit + F | — | 2026-10-10 | 404 | audit fixes E-01…E-30, Phase F runner (CPU-verified), Kaggle package (D-96); commits `ff74171`…`54508c6` |
+| F (survival) + research | — | 2026-10-12 | see README | run survival (sync, resume, supervised restarts), reward audit, alpha/beta fit, drift discounting, realism-v2 scenarios, ROI + LOO, figures, lock, typing (D-98, D-99); commits `b259f9c` onward |
+
+Tags: none exist yet. Creating `spec-v1` needs the owner's sign-off of D-1…D-15 and D-52…D-62 first
+(improvement E12); `phase-e3` would point at `bd9099e`.
 
 ## Gate 2 detail (evaluation seeds 100–149, tuned config of D-68, `status_control: hard`)
 

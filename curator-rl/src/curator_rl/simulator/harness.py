@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, replace
-from typing import Protocol
+from typing import Protocol, cast
 
 from curator_rl.core.types import CalibrationObservation, RoundObservation
 from curator_rl.scheduler.base import BaseScheduler
@@ -23,9 +23,13 @@ from curator_rl.simulator.world import SimWorld
 
 
 class OracleScheduler(Protocol):
-    """Duck type shared by oracles: they read hidden world state by design."""
+    """Duck type shared by oracles and scheduler adapters: what the harness calls."""
 
     def select_mixture(self, observation: RoundObservation | None) -> dict[str, float]: ...
+
+    def update_observation(self, observation: RoundObservation) -> None: ...
+
+    def update_calibration(self, observation: CalibrationObservation) -> None: ...
 
 
 SchedulerLike = BaseScheduler | OracleScheduler
@@ -44,6 +48,12 @@ class EpisodeResult:
     total_cost_usd: float
     budget_usd: float
     benchmark_evals: int
+    # noiseless S_val(theta_T) of the final skills (audit E-10): the objective itself, with no
+    # Binomial evaluation noise drawn independently per method; use it as the primary metric
+    final_score_expected: float = float("nan")
+    # delivered training prompts per arm, and passes over each finite training set (audit E-14)
+    prompts_by_env: dict[str, int] = field(default_factory=dict)
+    passes_by_env: dict[str, float | None] = field(default_factory=dict)
     round_logs: list[dict] = field(default_factory=list)
     calib_logs: list[dict] = field(default_factory=list)
     report_logs: list[dict] = field(default_factory=list)
@@ -129,7 +139,9 @@ def run_episode(
         spend += obs.round_cost_usd
         window_cost += obs.round_cost_usd
         for env_id, w in weights.items():
-            exposure[env_id] = exposure.get(env_id, 0.0) + w * world.M
+            served = (obs.per_env[env_id].n_prompts if world.learning_from == "delivered"
+                      else w * world.M)
+            exposure[env_id] = exposure.get(env_id, 0.0) + served
         obs = replace(obs, budget_remaining_usd=max(world.budget_usd - spend, 0.0))
         scheduler.update_observation(obs)
         prev_obs = obs
@@ -160,7 +172,7 @@ def run_episode(
             and (round_t + 1) % calibration.interval_rounds == 0
         ):
             request_fn = getattr(scheduler, "calibration_request", None)
-            request = request_fn() if callable(request_fn) else None
+            request = cast("dict[str, int] | None", request_fn() if callable(request_fn) else None)
             default_items = calibration.items_per_slice or scenario.world.benchmark_items
             if request:
                 eval_cost = calibration.eval_cost_items(sum(request.values()))
@@ -187,6 +199,10 @@ def run_episode(
                     "eval_cost_usd": calib_obs.eval_cost_usd,
                     "evaluated": sorted(calib_obs.score_by_domain),
                     "exposure_by_env": dict(calib_obs.exposure_by_env),
+                    # per-slice detail for the ROI leaderboard (roi/leaderboard.py); same names as a GPU run's
+                    "scores": dict(calib_obs.score_by_domain), "se": dict(calib_obs.se_by_domain),
+                    "delta_se": dict(calib_obs.delta_se_by_domain or {}),
+                    "exposure": dict(calib_obs.exposure_by_env),
                 }
             )
             exposure = {i: 0.0 for i in world._order}
@@ -197,7 +213,7 @@ def run_episode(
         ):
             # uncharged reporting evaluation, identical protocol for every
             # method (Roadmap L.4) — gives the score-vs-cost curve
-            score_r, se_r, _, _ = world.evaluate_benchmark(observed=True)
+            score_r, se_r = world.evaluate_report()
             report_logs.append(
                 {
                     "round": round_t + 1,
@@ -209,7 +225,8 @@ def run_episode(
         if spend >= world.budget_usd:
             break
 
-    final_score, final_se, _, _ = world.evaluate_benchmark(observed=True)  # uncharged
+    final_score, final_se = world.evaluate_report()                       # uncharged
+    final_expected = world.expected_benchmark_score()                     # noiseless, no RNG
     return EpisodeResult(
         scenario_id=scenario.scenario_id,
         method=method,
@@ -220,6 +237,9 @@ def run_episode(
         total_cost_usd=spend,
         budget_usd=world.budget_usd,
         benchmark_evals=world.benchmark_evals,
+        final_score_expected=final_expected,
+        prompts_by_env=dict(world.prompts_seen),
+        passes_by_env=world.passes(),
         round_logs=logs,
         calib_logs=calib_logs,
         report_logs=report_logs,

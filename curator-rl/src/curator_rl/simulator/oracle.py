@@ -82,8 +82,11 @@ def _resolve_bench_weights(envs: list[SimEnvParams]) -> dict[str, float]:
     if all(w is None for w in raw):
         n = len(envs)
         return {e.env_id: 1.0 / n for e in envs}
-    total = sum(float(w) for w in raw)
-    return {e.env_id: float(w) / total for e, w in zip(envs, raw)}  # type: ignore[arg-type]
+    vals = [float(w) for w in raw if w is not None]
+    if len(vals) != len(raw):
+        raise ValueError("benchmark weights must be all set or all None")
+    total = sum(vals)
+    return {e.env_id: w / total for e, w in zip(envs, vals)}
 
 
 def max_rounds_cap(envs: list[SimEnvParams], *, prompts_per_round: int, budget_usd: float) -> int:

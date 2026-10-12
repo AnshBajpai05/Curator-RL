@@ -6,10 +6,17 @@ reinforcement learning on several task environments (math, code, puzzles), it de
 round which share of the GPU budget each environment gets. The aim is the highest held-out score
 when the budget runs out.
 
-> **Status (2026-10-10):** design, simulator, scheduler, baselines, calibration and all five
-> environments are built and tested (335 tests pass). The Kaggle measurements are
-> done: the environment portfolio is accepted on real costs. GRPO training under CURATOR's control (Phase F) is next. Nothing after commit `2d3b40a`
-> is committed yet.
+> **Status (2026-10-12, branch `audit-fixes-and-gpu-run`):** the code is complete for the Level-1 GPU
+> runs. Design, simulator, scheduler, baselines, calibration and all five environments are built and
+> tested; a full audit found and fixed 30+ errors (`../errors_found.md`). New since the audit: a
+> label-free **reward audit** that catches a reward which ignores the prompt (the random-reward arm)
+> at zero cost, the alpha/beta fit, drift-triggered discounting, realism-v2 simulator scenarios, the
+> ROI leaderboard and leave-one-out, figures, and runs that **survive a lost Kaggle session** (every
+> round checkpointed, mirrored to a Hugging Face dataset, resumed by rerunning the same command).
+> On tuning seeds, Curator with the audit gains +11-12% over Uniform at the GPU shape versus +6% for
+> the best baseline (`../CHANGES_AND_IMPACT.md`). Nothing has run on a real GPU yet: the Kaggle
+> package (`kaggle/`) is the next step. 481 tests pass (1 Linux-only skip) with the datasets
+> downloaded; pyright reports 0 errors; CI also rebuilds the datasets and enforces 85% coverage.
 
 ---
 
@@ -32,6 +39,20 @@ when the budget runs out.
 15. [Phase history](#15-phase-history)
 
 ---
+
+## 0. Audit and GPU runner (2026-10-10)
+
+- **Errors and fixes:** `../errors_found.md` (every error with evidence; most reproduced by `../audit/verify_errors.py`);
+  regression tests in `tests/unit/test_audit_fixes.py`. Corrected behaviour is the default; legacy behaviour
+  stays behind config switches and all pre-registered gates load `configs/frozen/d68_d94.yaml`, so earlier
+  reports still reproduce (verified on the D-94 gate).
+- **Most important finding:** at the GPU plan's batch shape (32 prompts per round) a status threshold tuned
+  at 80 prompts per round pinned Curator near Uniform (E-28); with it fixed and every method re-tuned at
+  that shape, Curator leads in the large-cost-spread scenario and is second to the LP curriculum otherwise
+  (tuning seeds; confirmation pre-registered as D-97). Spurious-arm detection by calibration does not
+  reach useful power at the Level-1 GPU budget.
+- **Run on Kaggle:** `python scripts/make_kaggle_gpu_bundle.py`, upload `dist/curator-gpu-kaggle.zip`, follow
+  `kaggle/README_KAGGLE.md` (`run.py setup`, `smoke`, `compare`, `sysid`).
 
 ## 1. The problem
 
@@ -159,9 +180,11 @@ Pre-registered hypotheses H1–H7, with the plan for negative results, are in
 | GRPO step time with vLLM on T4 | ✅ 42.2 s per step (16 prompts × 8, 512 tokens) |
 | Per-environment cost under vLLM | ✅ spread 2.67x (MATH35 is the expensive arm), `reports/pilot/phase_e_cost_probe.md` |
 | TRL GRPO smoke test; HF vs vLLM step time | ✅ passes; 83.5 s (HF) vs 42.2 s (vLLM) per step, so vLLM is the training backend |
-| Cost meter, trainer adapter, ROI, LOO, visualisation | ⬜ empty packages (Phase F onward) |
+| Phase F runner: TRL adapter, prompt stream, reward router, calibration on GPU, cost attribution + ledger, crash-safe checkpoints, sysid | ✅ built and tested on CPU (real TRL path with a tiny model; fake backend end to end) — not yet run on a GPU |
+| Kaggle GPU package (`kaggle/run.py`: setup, smoke, compare, sysid) | ✅ built; P100 supported via a PyTorch log-prob path (TRL's Triton kernel needs compute capability >= 7.0) |
+| ROI leaderboard, LOO, visualisation | ⬜ empty packages |
 | S-I / S-J refit from measured data, pre-registered re-evaluation (seeds 400–449) | ✅ primary criteria pass; Curator ranks 3rd behind LP and Standard UCB (D-88, D-89) |
-| Tests / lint | ✅ 349 passed, 1 skipped (POSIX-only) / ruff clean |
+| Tests / lint | ✅ 404 passed, 1 skipped (POSIX-only; 23 contract tests need the datasets downloaded) / ruff clean |
 
 ### Gates (`docs/GATES.md`)
 
@@ -405,7 +428,7 @@ Requires Python ≥ 3.11.
 ```bash
 pip install -e ".[dev]"      # or: make install
 make lint                    # ruff check .
-make test                    # pytest (349 pass, 1 POSIX-only skip on Windows)
+make test                    # pytest (404 pass with data, 1 POSIX-only skip on Windows)
 make smoke                   # init-run on configs/experiment/smoke.yaml
 ```
 

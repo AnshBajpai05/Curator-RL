@@ -144,6 +144,122 @@ HEADER = """# {sid} (D-88): refit of {base} from the Kaggle measurements (experi
 """
 
 
+# GPU shape (audit E-05): the Level-1 GPU plan is R = 2 steps x P = 16 prompts per round and about
+# 60 rounds (1,920 prompts per run), not the simulator's 80 prompts per round and ~5,600 per run.
+# Per-prompt learning is unchanged (the world's update R * eta per round over R * P prompts is eta / P
+# per prompt, independent of R), so eta is NOT rescaled. What changes: run length, per-round signal
+# noise, quota rounding (deficit carry + learning from delivered prompts, E-09), the noisy arm scored
+# on the GSM8K calibration slice as on real hardware (E-03), and calibration charged at
+# generation-only cost per item (E-15).
+GPU_STEPS_PER_ROUND = 2
+GPU_ROUNDS_UNDER_UNIFORM = 60
+# greedy calibration item = one completion: gen s/prompt / G + one verification (pooled), mean over slices
+CALIB_ITEM_SECONDS = sum((MEASURED[e][2] + MEASURED[e][3]) / G for e in ("gsm8k", "math35", "mbpp", "countdown")) / 4
+
+
+def gpu_scenario(sid: str, costs: dict[str, float], kappa: float, note: str) -> dict:
+    sc = scenario(sid, costs, kappa, note)
+    mean_cost = sum(costs.values()) / len(costs)
+    sc["budget_usd"] = float(f"{GPU_ROUNDS_UNDER_UNIFORM * GPU_STEPS_PER_ROUND * 16 * mean_cost:.6g}")
+    sc["steps_per_round"] = GPU_STEPS_PER_ROUND
+    sc["world"].update({"learning_from": "delivered", "rounding": "carry"})
+    sc["calib"] = {"enabled": True, "interval_rounds": 10, "paired": True, "churn": 0.02,
+                   "items_per_slice": 100, "cost_per_item_usd": float(f"{CALIB_ITEM_SECONDS / 3600.0:.6g}")}
+    for env in sc["envs"]:
+        if env["env_id"] == "noisy":
+            env["bench_domain"] = "gsm8k"
+    return sc
+
+
+def write_gpu_shape() -> int:
+    kappa, _ = fit_kappa()
+    r1, r2 = unit_costs(0.0), unit_costs(0.5)
+    homo = {e: sum(r1.values()) / len(r1) for e in r1}
+    header = ("# {sid} (audit E-05): GPU-shape refit = {base} at the Level-1 GPU plan's shape.\n"
+              "# GENERATED FILE - edit experiments/analysis/refit_scenarios.py (--shape gpu), not this file.\n"
+              "# R = 2, P = 16, ~60 rounds under Uniform; learning from delivered prompts with deficit-carry\n"
+              "# rounding; noisy arm scored on the GSM8K calibration slice; calibration offered at\n"
+              "# generation-only cost per item. Measured inputs as in {base}; eta and transfer still ASSUMED.\n")
+    for name, sid, base, costs in (("scenario_si_r1_gpu.yaml", "S-I-R1-GPU", "S-I-R1", r1),
+                                   ("scenario_si_r2_gpu.yaml", "S-I-R2-GPU", "S-I-R2", r2),
+                                   ("scenario_sj_r_gpu.yaml", "S-J-R-GPU", "S-J-R", homo)):
+        payload = gpu_scenario(sid, costs, kappa, f"{base} at the GPU shape (R=2, 60 rounds, shared noisy slice)")
+        (REPO_ROOT / "configs" / "sim" / name).write_text(header.format(sid=sid, base=base)
+                                                         + yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        print("wrote", name, "budget", payload["budget_usd"])
+    return 0
+
+
+# GPU shape v2 (improvement plan B1, B7, B8, B9, B10, E-14): the GPU-shape refit plus the simulator
+# realism switches. Measured: pilot pass@8 per arm (reports/pilot/phase_e_pilot.md, Qwen2.5-0.5B) and
+# the real training-split sizes. ASSUMED (not measured; the Phase F sysid run is designed to measure
+# them): eta and transfer as before, repeat_decay 0.5 (the second pass over a dataset teaches half as
+# much), forget_rate 0.002 per round while an arm is not trained.
+PILOT_PASS_AT_8 = {"gsm8k": 0.688, "math35": 0.344, "mbpp": 0.500, "countdown": 0.0, "noisy": 0.984}
+TRAIN_ITEMS = {"gsm8k": 6873, "math35": 4982, "mbpp": 314, "noisy": 6873}   # countdown: procedural
+REPEAT_DECAY = 0.5
+FORGET_RATE = 0.002
+
+
+def gpu2_scenario(sid: str, costs: dict[str, float], kappa: float, note: str, *, misaligned: bool = False,
+                  noisy_transfer: float | None = None) -> dict:
+    sc = gpu_scenario(sid, costs, kappa, note)
+    sc["world"].update({"learnability": "mixed_groups", "repeat_decay": REPEAT_DECAY, "report_stream": "separate",
+                        "final_eval": "paired_items", "rollout_draws": "vectorized"})
+    for env in sc["envs"]:
+        e = env["env_id"]
+        env["pilot_pass_at_g"] = PILOT_PASS_AT_8[e]
+        if e in TRAIN_ITEMS:
+            env["train_items"] = TRAIN_ITEMS[e]
+        if e != "noisy":
+            env["forget_rate"] = FORGET_RATE
+    if noisy_transfer is not None:
+        sc["world"]["noisy_transfer"] = True
+        next(env for env in sc["envs"] if env["env_id"] == "noisy")["transfer_out"] = {"gsm8k": noisy_transfer}
+    if misaligned:
+        # a reward that depends on the prompt (looks like a real verifier, learns, passes the audit) but
+        # teaches nothing the benchmark values: scored on the GSM8K slice, no transfer, no test weight.
+        # Only benchmark calibration can tell it apart (the audit's documented blind spot).
+        gsm = next(env for env in sc["envs"] if env["env_id"] == "gsm8k")
+        sc["envs"].append({"env_id": "format", "nominal_size": 6873, "difficulty": gsm["difficulty"],
+                           "eta": gsm["eta"], "cost_usd_per_prompt": gsm["cost_usd_per_prompt"],
+                           "bench_weight": 0.0, "bench_domain": "gsm8k", "pilot_pass_at_g": 0.7,
+                           "train_items": 6873, "forget_rate": FORGET_RATE})
+        mean_cost = sum(env["cost_usd_per_prompt"] for env in sc["envs"]) / len(sc["envs"])
+        sc["budget_usd"] = float(f"{GPU_ROUNDS_UNDER_UNIFORM * GPU_STEPS_PER_ROUND * 16 * mean_cost:.6g}")
+    return sc
+
+
+def write_gpu2_shape() -> int:
+    kappa, _ = fit_kappa()
+    r1, r2 = unit_costs(0.0), unit_costs(0.5)
+    homo = {e: sum(r1.values()) / len(r1) for e in r1}
+    header = "\n".join((
+        "# {sid}: GPU-shape refit v2 = {base}-GPU plus the simulator realism switches.",
+        "# GENERATED FILE - edit experiments/analysis/refit_scenarios.py (--shape gpu2), not this file.",
+        "# Measured: as {base}-GPU, plus pilot pass@8 per arm and real training-split sizes.",
+        "# Realism: learning from the mixed-group share at the measured kappa (B8), repeated passes over a",
+        "# finite dataset teach less (E-14), forgetting while untrained (B7), reports on their own random",
+        "# stream and paired test items (B1), vectorised draws (E10).",
+        "# ASSUMED (not measured): eta, transfer, repeat_decay {rd}, forget_rate {fr}{extra}.", ""))
+    jobs = (("scenario_si_r1_gpu2.yaml", "S-I-R1-GPU2", "S-I-R1", r1, {}, ""),
+            ("scenario_si_r2_gpu2.yaml", "S-I-R2-GPU2", "S-I-R2", r2, {}, ""),
+            ("scenario_sj_r_gpu2.yaml", "S-J-R-GPU2", "S-J-R", homo, {}, ""),
+            ("scenario_si_r1_gpu2_misaligned.yaml", "S-I-R1-GPU2-MIS", "S-I-R1", r1, {"misaligned": True},
+             "; the 'format' arm (prompt-dependent reward, no benchmark value) is a stress test"),
+            ("scenario_si_r1_gpu2_noisy_neg.yaml", "S-I-R1-GPU2-NN", "S-I-R1", r1, {"noisy_transfer": -0.2},
+             "; random-reward training transfers -0.2 to GSM8K (B9)"),
+            ("scenario_si_r1_gpu2_noisy_pos.yaml", "S-I-R1-GPU2-NP", "S-I-R1", r1, {"noisy_transfer": 0.2},
+             "; random-reward training transfers +0.2 to GSM8K (B9)"))
+    for name, sid, base, costs, kw, extra in jobs:
+        payload = gpu2_scenario(sid, costs, kappa, f"{base} at the GPU shape with realism v2", **kw)
+        text = header.format(sid=sid, base=base, rd=REPEAT_DECAY, fr=FORGET_RATE, extra=extra)
+        (REPO_ROOT / "configs" / "sim" / name).write_text(text + yaml.safe_dump(payload, sort_keys=False),
+                                                         encoding="utf-8")
+        print("wrote", name, "budget", payload["budget_usd"])
+    return 0
+
+
 def main() -> int:
     kappa, per_env_kappa = fit_kappa()
     r1 = unit_costs(0.0)
@@ -208,4 +324,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import sys
+
+    if "--shape" in sys.argv and "gpu2" in sys.argv:
+        raise SystemExit(write_gpu2_shape())
+    raise SystemExit(write_gpu_shape() if "--shape" in sys.argv and "gpu" in sys.argv else main())

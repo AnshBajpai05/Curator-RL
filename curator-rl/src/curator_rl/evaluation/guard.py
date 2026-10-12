@@ -19,8 +19,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from curator_rl.core.atomic import atomic_write_text
-
 
 class SealedTestError(RuntimeError):
     """Raised when sealed-test access is refused or repeated."""
@@ -94,12 +92,14 @@ class SealedTest:
             "checkpoint_hash": self.checkpoint_hash,
             "timestamp_utc": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
         }
-        atomic_write_text(
-            self._log_path,
-            self._log_path.read_text(encoding="utf-8") + json.dumps(entry) + "\n"
-            if self._log_path.exists()
-            else json.dumps(entry) + "\n",
-        )
+        # append-only (audit E-25): a read-modify-write rewrite could drop an entry written by a
+        # second process (two Kaggle GPUs) between the read and the rename
+        fd = os.open(self._log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, (json.dumps(entry) + "\n").encode("utf-8"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
 
     def _previous_accesses(self) -> set[tuple[str, str]]:
         if not self._log_path.exists():
@@ -110,8 +110,10 @@ class SealedTest:
                 continue
             try:
                 record = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+            except json.JSONDecodeError as exc:
+                # fail CLOSED (audit E-25): a corrupted entry must not permit a second opening
+                raise SealedTestError(f"sealed-test access log is corrupted ({self._log_path}); "
+                                      "refusing access until it is repaired by hand") from exc
             keys.add((record.get("checkpoint_hash", ""), record.get("split", "")))
         return keys
 

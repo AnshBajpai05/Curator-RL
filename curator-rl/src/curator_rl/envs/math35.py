@@ -1,6 +1,6 @@
 """MATH levels 3-5 environment (Roadmap v3 Phase E, D.2; env id `math35`).
 
-Data: `DigitalLearningGmbH/MATH-lighteval` train problems of level 3, 4 and 5 (5586 problems).
+Data: `DigitalLearningGmbH/MATH-lighteval` train problems of level 3, 4 and 5 (5,582 problems).
 The training pool is hash-split into train / calib / dev; the sealed test set is MATH-500
 (all levels, an out-of-distribution slice by level). The gold answer is the last balanced
 `\\boxed{...}` of the reference solution.
@@ -91,17 +91,42 @@ def normalize_answer(raw: str) -> str:
     return s
 
 
+_NUM = r"-?(?:\d+(?:\.\d*)?|\.\d+)"
+_PLAIN_RE = re.compile(rf"^{_NUM}$")
+_SLASH_RE = re.compile(rf"^({_NUM})/({_NUM})$")
+_FRAC_RE = re.compile(rf"^(-?)\(({_NUM})\)/\(({_NUM})\)$")          # what _sub_frac produces
+_MIXED_RE = re.compile(r"^(-?)(\d+)\((\d+)\)/\((\d+)\)$")            # 2\frac{1}{2} -> 2(1)/(2)
+_PAREN_RE = re.compile(rf"^\(({_NUM})\)$")
+
+
 def _numeric_value(s: str) -> Fraction | None:
-    """Exact rational value of a plain number / simple fraction, else None."""
+    """Exact rational value of a plain number / simple fraction / mixed number, else None.
+
+    Audit E-06: parentheses used to be deleted wholesale, so the mixed number 2\\frac{1}{2}
+    (= 5/2) became 21/2 and the product 2(3) became 23: wrong answers were accepted and
+    correct ones rejected. Parentheses are now accepted only in the exact shapes `_sub_frac`
+    produces; anything else is not a plain number and falls back to string comparison
+    (which can only cause false negatives, never false positives).
+    """
     t = s.replace(",", "") if re.fullmatch(r"-?\d{1,3}(,\d{3})+(\.\d+)?", s) else s
-    t = t.replace("(", "").replace(")", "")
     try:
-        if "/" in t:
-            num, den = t.split("/", 1)
-            return Fraction(Fraction(num), Fraction(den))
-        return Fraction(t)
+        if m := _MIXED_RE.match(t):
+            if int(m.group(4)) == 0:
+                return None
+            value = int(m.group(2)) + Fraction(int(m.group(3)), int(m.group(4)))
+            return -value if m.group(1) else value
+        if m := _FRAC_RE.match(t):
+            value = Fraction(m.group(2)) / Fraction(m.group(3))
+            return -value if m.group(1) else value
+        if m := _PAREN_RE.match(t):
+            return Fraction(m.group(1))
+        if m := _SLASH_RE.match(t):
+            return Fraction(m.group(1)) / Fraction(m.group(2))
+        if _PLAIN_RE.match(t):
+            return Fraction(t)
     except (ValueError, ZeroDivisionError):
         return None
+    return None
 
 
 def answers_equal(pred: str, gold: str) -> bool:
@@ -137,8 +162,9 @@ class Math35Env(FiniteJsonlEnv):
         start = time.perf_counter()
         try:
             boxed = extract_boxed(response)
+            pred: str = boxed or ""
             success = boxed is not None and run_with_timeout(
-                lambda: answers_equal(boxed, prompt.reference), self.cfg.verifier_timeout_s)
+                lambda: answers_equal(pred, prompt.reference), self.cfg.verifier_timeout_s)
             info: dict[str, Any] = {"boxed": boxed}
         except Exception:
             boxed, success, info = None, False, {"timeout": True}

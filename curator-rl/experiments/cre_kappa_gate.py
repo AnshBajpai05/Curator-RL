@@ -15,23 +15,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
+
+from curator_rl.simulator.harness import run_episode  # noqa: E402
 from experiments import gate2_check  # noqa: E402
 from experiments.analysis.calibration_power import S5Recorder  # noqa: E402
 from experiments.analysis.cre_kappa_tune import with_scheduler  # noqa: E402
 from experiments.cre_gate import method_cfg, scenario_variant  # noqa: E402
 from experiments.run_sim import make_scheduler  # noqa: E402
-
-from curator_rl.simulator.harness import run_episode  # noqa: E402
 
 REPORT_DIR = REPO_ROOT / "reports" / "gate2"
 SCENARIOS = ("S-A", "S-B", "S-C", "S-I", "S-J")

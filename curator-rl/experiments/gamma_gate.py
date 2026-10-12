@@ -21,24 +21,24 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
-from experiments import gate2_check  # noqa: E402
-from experiments.analysis.calibration_power import S5Recorder  # noqa: E402
-from experiments.refit_gate import scenario_with_calibration  # noqa: E402
-from experiments.run_sim import make_scheduler  # noqa: E402
 
 from curator_rl.core.config import load_config  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
 from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
+from experiments import gate2_check  # noqa: E402
+from experiments.analysis.calibration_power import S5Recorder  # noqa: E402
+from experiments.refit_gate import scenario_with_calibration  # noqa: E402
+from experiments.run_sim import (  # noqa: E402
+    FROZEN_D68_D94,  # noqa: E402  (audit E-04: pre-registered config)
+    make_scheduler,  # noqa: E402
+)
 
 REPORT_DIR = REPO_ROOT / "reports" / "gate2"
 REFIT = ("S-I-R1", "S-I-R2", "S-J-R")
@@ -51,7 +51,7 @@ BOOT_SEED = 7071
 
 
 def cfg_for(method: str):
-    base = load_config(REPO_ROOT / "configs" / "base.yaml")
+    base = load_config(FROZEN_D68_D94)
     if method == "curator_g1":
         return base.model_copy(update={"scheduler": base.scheduler.model_copy(update={"gamma": 1.0})})
     return base

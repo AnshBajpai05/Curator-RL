@@ -65,7 +65,8 @@ def write_manifests(data_root: Path, env_id: str, split_ids: dict[str, list[str]
     hashes: dict[str, str] = {}
     for split, ids in split_ids.items():
         path = base / f"{env_id}_{split}.txt"
-        path.write_text("\n".join(sorted(ids)) + ("\n" if ids else ""), encoding="utf-8")
+        # LF on every OS: in text mode Windows wrote CRLF, so the checksums verified only there
+        path.write_text("\n".join(sorted(ids)) + ("\n" if ids else ""), encoding="utf-8", newline="\n")
         hashes[f"{env_id}_{split}.txt"] = _file_sha256(path)
     return hashes
 
@@ -74,7 +75,7 @@ def rewrite_manifest_index(data_root: Path, records: dict[str, str]) -> None:
     """Write MANIFEST.sha256 as lines '<sha256>  <name>'."""
     base = manifest_dir(data_root)
     lines = [f"{sha}  {name}" for name, sha in sorted(records.items())]
-    (base / "MANIFEST.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (base / "MANIFEST.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
 def rebuild_manifest_index(data_root: Path) -> dict[str, str]:

@@ -1,0 +1,590 @@
+{
+  "generated_utc": "20261010T101858Z",
+  "seeds": [
+    0,
+    39
+  ],
+  "calibration_designs": [
+    {
+      "index": 0,
+      "design": {
+        "K": 10,
+        "items": 100,
+        "k_min": 2
+      },
+      "detected": 0.1375,
+      "false": 0.00625,
+      "cost": 0.02266089248574743,
+      "score": 0.2178854231757797
+    },
+    {
+      "index": 1,
+      "design": {
+        "K": 5,
+        "items": 100,
+        "k_min": 2
+      },
+      "detected": 0.2,
+      "false": 0.009375,
+      "cost": 0.04252336864163801,
+      "score": 0.2176286660051503
+    },
+    {
+      "index": 2,
+      "design": {
+        "K": 5,
+        "items": 200,
+        "k_min": 2
+      },
+      "detected": 0.2375,
+      "false": 0.03125,
+      "cost": 0.08303017931156495,
+      "score": 0.21590380744750717
+    },
+    {
+      "index": 3,
+      "design": {
+        "K": 3,
+        "items": 100,
+        "k_min": 2
+      },
+      "detected": 0.1375,
+      "false": 0.034375,
+      "cost": 0.06848948343102931,
+      "score": 0.21560444857612002
+    },
+    {
+      "index": 4,
+      "design": {
+        "K": 3,
+        "items": 200,
+        "k_min": 1
+      },
+      "detected": 0.275,
+      "false": 0.053125,
+      "cost": 0.12791629983458822,
+      "score": 0.21382061354718257
+    },
+    {
+      "index": 5,
+      "design": {
+        "K": 2,
+        "items": 200,
+        "k_min": 1
+      },
+      "detected": 0.275,
+      "false": 0.059375,
+      "cost": 0.18028612716180675,
+      "score": 0.21143332584000926
+    }
+  ],
+  "tuning": [
+    {
+      "method": "curator",
+      "index": 0,
+      "point": {
+        "gamma": 0.95,
+        "exploration_coef": 0.1,
+        "tau": 0.3
+      },
+      "objective": 0.04386668097814412,
+      "se": 0.01457073751662215,
+      "entropy": 0.42580201593831885
+    },
+    {
+      "method": "curator",
+      "index": 1,
+      "point": {
+        "gamma": 0.95,
+        "exploration_coef": 0.1,
+        "tau": 1.0
+      },
+      "objective": 0.03334902544127673,
+      "se": 0.008488168697656843,
+      "entropy": 0.7248291709702774
+    },
+    {
+      "method": "curator",
+      "index": 2,
+      "point": {
+        "gamma": 0.95,
+        "exploration_coef": 0.25,
+        "tau": 0.3
+      },
+      "objective": 0.041360174294824456,
+      "se": 0.007841258813866825,
+      "entropy": 0.5688532559727598
+    },
+    {
+      "method": "curator",
+      "index": 3,
+      "point": {
+        "gamma": 0.95,
+        "exploration_coef": 0.25,
+        "tau": 1.0
+      },
+      "objective": 0.03833561472338863,
+      "se": 0.006930942381513941,
+      "entropy": 0.7593877857826935
+    },
+    {
+      "method": "curator",
+      "index": 4,
+      "point": {
+        "gamma": 1.0,
+        "exploration_coef": 0.1,
+        "tau": 0.3
+      },
+      "objective": 0.06027865828478076,
+      "se": 0.01769008087900387,
+      "entropy": 0.45679380106213435
+    },
+    {
+      "method": "curator",
+      "index": 5,
+      "point": {
+        "gamma": 1.0,
+        "exploration_coef": 0.1,
+        "tau": 1.0
+      },
+      "objective": 0.03729386162594226,
+      "se": 0.009894681652154734,
+      "entropy": 0.7646286653910043
+    },
+    {
+      "method": "curator",
+      "index": 6,
+      "point": {
+        "gamma": 1.0,
+        "exploration_coef": 0.25,
+        "tau": 0.3
+      },
+      "objective": 0.04230638866389781,
+      "se": 0.01444592452179521,
+      "entropy": 0.4818110003564506
+    },
+    {
+      "method": "curator",
+      "index": 7,
+      "point": {
+        "gamma": 1.0,
+        "exploration_coef": 0.25,
+        "tau": 1.0
+      },
+      "objective": 0.032611007545954265,
+      "se": 0.01040715980972913,
+      "entropy": 0.7417274138242383
+    },
+    {
+      "method": "ucb",
+      "index": 0,
+      "point": {
+        "exploration_coef": 0.1,
+        "tau": 0.3
+      },
+      "objective": 0.07180619312110559,
+      "se": 0.025538900443071513,
+      "entropy": 0.38907752463870604
+    },
+    {
+      "method": "ucb",
+      "index": 1,
+      "point": {
+        "exploration_coef": 0.1,
+        "tau": 1.0
+      },
+      "objective": 0.027073621404806115,
+      "se": 0.012550043103889118,
+      "entropy": 0.8032129607033861
+    },
+    {
+      "method": "ucb",
+      "index": 2,
+      "point": {
+        "exploration_coef": 0.25,
+        "tau": 0.3
+      },
+      "objective": 0.04915641380797732,
+      "se": 0.022232991683934566,
+      "entropy": 0.425676427897408
+    },
+    {
+      "method": "ucb",
+      "index": 3,
+      "point": {
+        "exploration_coef": 0.25,
+        "tau": 1.0
+      },
+      "objective": 0.02149188165379666,
+      "se": 0.010564691547094433,
+      "entropy": 0.8041854129769345
+    },
+    {
+      "method": "ucb",
+      "index": 4,
+      "point": {
+        "exploration_coef": 0.5,
+        "tau": 0.3
+      },
+      "objective": 0.04249499350895392,
+      "se": 0.011197071401401363,
+      "entropy": 0.44724435672794965
+    },
+    {
+      "method": "ucb",
+      "index": 5,
+      "point": {
+        "exploration_coef": 0.5,
+        "tau": 1.0
+      },
+      "objective": 0.02150006087151598,
+      "se": 0.008354442985545005,
+      "entropy": 0.7930585806975117
+    },
+    {
+      "method": "ucb",
+      "index": 6,
+      "point": {
+        "exploration_coef": 1.0,
+        "tau": 0.3
+      },
+      "objective": 0.029043813016297444,
+      "se": 0.004443838825184513,
+      "entropy": 0.5342931792627341
+    },
+    {
+      "method": "ucb",
+      "index": 7,
+      "point": {
+        "exploration_coef": 1.0,
+        "tau": 1.0
+      },
+      "objective": 0.02727339778646125,
+      "se": 0.004474322948728062,
+      "entropy": 0.7765355943525822
+    },
+    {
+      "method": "lp",
+      "index": 0,
+      "point": {
+        "tau": 0.1
+      },
+      "objective": 0.06234780296560723,
+      "se": 0.00472232189337423,
+      "entropy": 0.28385513877149354
+    },
+    {
+      "method": "lp",
+      "index": 1,
+      "point": {
+        "tau": 0.2
+      },
+      "objective": 0.06452261288926987,
+      "se": 0.004228648587382369,
+      "entropy": 0.3193068009061385
+    },
+    {
+      "method": "lp",
+      "index": 2,
+      "point": {
+        "tau": 0.3
+      },
+      "objective": 0.06301948808613435,
+      "se": 0.004480289222178649,
+      "entropy": 0.3617825017869105
+    },
+    {
+      "method": "lp",
+      "index": 3,
+      "point": {
+        "tau": 0.5
+      },
+      "objective": 0.061489453492677884,
+      "se": 0.0057614823906768945,
+      "entropy": 0.48864655822797987
+    },
+    {
+      "method": "lp",
+      "index": 4,
+      "point": {
+        "tau": 0.75
+      },
+      "objective": 0.05883801330608808,
+      "se": 0.0038377994207785073,
+      "entropy": 0.6620514205429272
+    },
+    {
+      "method": "lp",
+      "index": 5,
+      "point": {
+        "tau": 1.0
+      },
+      "objective": 0.055628044013562084,
+      "se": 0.004548227719464655,
+      "entropy": 0.7714364861223478
+    },
+    {
+      "method": "lp",
+      "index": 6,
+      "point": {
+        "tau": 1.5
+      },
+      "objective": 0.047796640387434225,
+      "se": 0.004693575744247359,
+      "entropy": 0.8858636216610755
+    },
+    {
+      "method": "lp",
+      "index": 7,
+      "point": {
+        "tau": 2.0
+      },
+      "objective": 0.032416366378901815,
+      "se": 0.003873969955507581,
+      "entropy": 0.9342402534594928
+    },
+    {
+      "method": "sec",
+      "index": 0,
+      "point": {
+        "alpha": 0.1,
+        "tau": 0.1
+      },
+      "objective": -0.06670539741764141,
+      "se": 0.004194759450012767,
+      "entropy": 0.504931980680803
+    },
+    {
+      "method": "sec",
+      "index": 1,
+      "point": {
+        "alpha": 0.1,
+        "tau": 0.4
+      },
+      "objective": 0.007186233634374026,
+      "se": 0.0040857823707318485,
+      "entropy": 0.9237977783045611
+    },
+    {
+      "method": "sec",
+      "index": 2,
+      "point": {
+        "alpha": 0.3,
+        "tau": 0.1
+      },
+      "objective": -0.07118140083945748,
+      "se": 0.004358372260552965,
+      "entropy": 0.487583644425689
+    },
+    {
+      "method": "sec",
+      "index": 3,
+      "point": {
+        "alpha": 0.3,
+        "tau": 0.4
+      },
+      "objective": 0.014982169399634374,
+      "se": 0.0032548457729645254,
+      "entropy": 0.909256763366378
+    },
+    {
+      "method": "sec",
+      "index": 4,
+      "point": {
+        "alpha": 0.6,
+        "tau": 0.1
+      },
+      "objective": -0.05650861065315418,
+      "se": 0.0043825909093828,
+      "entropy": 0.5297913560019494
+    },
+    {
+      "method": "sec",
+      "index": 5,
+      "point": {
+        "alpha": 0.6,
+        "tau": 0.4
+      },
+      "objective": 0.013215381446004412,
+      "se": 0.004156007505184293,
+      "entropy": 0.9052720501804188
+    },
+    {
+      "method": "sec",
+      "index": 6,
+      "point": {
+        "alpha": 1.0,
+        "tau": 0.1
+      },
+      "objective": -0.016840497357352043,
+      "se": 0.004543269521994017,
+      "entropy": 0.537973475851702
+    },
+    {
+      "method": "sec",
+      "index": 7,
+      "point": {
+        "alpha": 1.0,
+        "tau": 0.4
+      },
+      "objective": 0.01942113222577559,
+      "se": 0.004054007199401609,
+      "entropy": 0.8966713362971914
+    },
+    {
+      "method": "dump",
+      "index": 0,
+      "point": {
+        "exploration_coef": 0.3,
+        "tau": 0.1,
+        "window_rounds": 0
+      },
+      "objective": -0.06847199646170701,
+      "se": 0.004586441122210087,
+      "entropy": 0.5031848719288711
+    },
+    {
+      "method": "dump",
+      "index": 1,
+      "point": {
+        "exploration_coef": 0.3,
+        "tau": 0.1,
+        "window_rounds": 10
+      },
+      "objective": -0.05807971179053837,
+      "se": 0.004288178340069146,
+      "entropy": 0.570806552241244
+    },
+    {
+      "method": "dump",
+      "index": 2,
+      "point": {
+        "exploration_coef": 0.3,
+        "tau": 0.4,
+        "window_rounds": 0
+      },
+      "objective": 0.013472857114024428,
+      "se": 0.004411690435691348,
+      "entropy": 0.9156121364317664
+    },
+    {
+      "method": "dump",
+      "index": 3,
+      "point": {
+        "exploration_coef": 0.3,
+        "tau": 0.4,
+        "window_rounds": 10
+      },
+      "objective": 0.01459923455997054,
+      "se": 0.004547207545695006,
+      "entropy": 0.9219724742670149
+    },
+    {
+      "method": "dump",
+      "index": 4,
+      "point": {
+        "exploration_coef": 2.0,
+        "tau": 0.1,
+        "window_rounds": 0
+      },
+      "objective": -0.014698432089471313,
+      "se": 0.005261446960483815,
+      "entropy": 0.749889233873712
+    },
+    {
+      "method": "dump",
+      "index": 5,
+      "point": {
+        "exploration_coef": 2.0,
+        "tau": 0.1,
+        "window_rounds": 10
+      },
+      "objective": 0.0008357434068955664,
+      "se": 0.004121526880003369,
+      "entropy": 0.8608670286818464
+    },
+    {
+      "method": "dump",
+      "index": 6,
+      "point": {
+        "exploration_coef": 2.0,
+        "tau": 0.4,
+        "window_rounds": 0
+      },
+      "objective": 0.008844624146351019,
+      "se": 0.004034724341164727,
+      "entropy": 0.9428824500026293
+    },
+    {
+      "method": "dump",
+      "index": 7,
+      "point": {
+        "exploration_coef": 2.0,
+        "tau": 0.4,
+        "window_rounds": 10
+      },
+      "objective": 0.008799550573872321,
+      "se": 0.0051014945017324115,
+      "entropy": 0.9603245252333142
+    }
+  ],
+  "chosen": {
+    "curator": {
+      "method": "curator",
+      "index": 4,
+      "point": {
+        "gamma": 1.0,
+        "exploration_coef": 0.1,
+        "tau": 0.3
+      },
+      "objective": 0.06027865828478076,
+      "se": 0.01769008087900387,
+      "entropy": 0.45679380106213435
+    },
+    "ucb": {
+      "method": "ucb",
+      "index": 2,
+      "point": {
+        "exploration_coef": 0.25,
+        "tau": 0.3
+      },
+      "objective": 0.04915641380797732,
+      "se": 0.022232991683934566,
+      "entropy": 0.425676427897408
+    },
+    "lp": {
+      "method": "lp",
+      "index": 3,
+      "point": {
+        "tau": 0.5
+      },
+      "objective": 0.061489453492677884,
+      "se": 0.0057614823906768945,
+      "entropy": 0.48864655822797987
+    },
+    "sec": {
+      "method": "sec",
+      "index": 7,
+      "point": {
+        "alpha": 1.0,
+        "tau": 0.4
+      },
+      "objective": 0.01942113222577559,
+      "se": 0.004054007199401609,
+      "entropy": 0.8966713362971914
+    },
+    "dump": {
+      "method": "dump",
+      "index": 3,
+      "point": {
+        "exploration_coef": 0.3,
+        "tau": 0.4,
+        "window_rounds": 10
+      },
+      "objective": 0.01459923455997054,
+      "se": 0.004547207545695006,
+      "entropy": 0.9219724742670149
+    }
+  },
+  "seconds": 29.5
+}
