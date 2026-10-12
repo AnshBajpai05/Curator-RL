@@ -22,7 +22,7 @@ BENCH_DOMAINS = ("gsm8k", "math35", "mbpp", "countdown")
 
 @dataclass
 class RunConfig:
-    method: str = "curator"              # curator | uniform | static | lp | ucb | sec | dump | dirichlet
+    method: str = "curator"              # curator | uniform | static | pilot_uniform | lp | ucb | sec | dump | dirichlet
     seed: int = 0
     model: str = "Qwen/Qwen2.5-0.5B-Instruct"
     backend: str = "auto"                # auto | vllm | hf | fake
@@ -41,7 +41,10 @@ class RunConfig:
     report_every: int = 20               # uncharged dev evaluation every N rounds (0 = final only)
     report_items: int = 100              # dev items per domain for the periodic reports
     final_items: int = 300               # dev items per domain for the final score
-    checkpoint_every: int = 5            # rounds
+    checkpoint_every: int = 1            # rounds; every round => a crash loses at most one round
+    sync_to: str = ""                    # mirror artifacts while training: hf://owner/repo[/prefix] or a directory
+    sync_every_min: float = 5.0          # minimum minutes between background uploads (a final one always runs)
+    deadline_unix: float = 0.0           # wall-clock limit (e.g. Kaggle's 12 h): stop cleanly before it; 0 = none
     verify_workers: int = 4              # MBPP verification is CPU-bound (D-87)
     vllm_gpu_memory_utilization: float = 0.3
     out_dir: str = "runs"

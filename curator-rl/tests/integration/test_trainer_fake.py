@@ -115,3 +115,86 @@ def test_sysid_recovers_the_cost_model_and_separates_the_noisy_arm(tmp_path):
     for e, a in SECONDS_PER_1K_TOKENS.items():
         assert cm["seconds_per_1k_tokens"][e] == pytest.approx(a, rel=0.05)
     assert rep["transfer"]["gsm8k"]["_windows"] >= 4
+
+
+def test_clean_stop_then_resume_reproduces_the_uninterrupted_run(tmp_path):
+    """A deadline / SIGTERM stop at a round boundary, then a resume, changes nothing."""
+    cfg = _cfg(tmp_path, checkpoint_every=1)
+    ctl_a, _ = _run(cfg, tmp_path / "full")
+    full = _lines(tmp_path / "full" / "rounds.jsonl")
+    final_a = ctl_a.report(cfg.final_items, tag="final")
+    ctl_a.close()
+
+    out = tmp_path / "cut"
+    ctl = _controller(cfg, out)
+    trainer = FakeTrainer(ctl, cfg.seed)
+    ctl.save_backend = trainer.save
+    ctl.begin_round()
+    end_round = ctl._end_round
+
+    def end_round_with_stop_request():
+        if ctl.round == 2:
+            ctl.request_stop("test: session deadline")
+        end_round()
+
+    ctl._end_round = end_round_with_stop_request
+    trainer.train(lambda: ctl.save(trainer.save))
+    assert ctl.preempted and ctl.round == 3 and ctl.last_checkpoint_round == 3
+    assert json.loads((out / "progress.json").read_text())["status"] == "preempting"
+    ctl.close()
+
+    ctl_b, _ = _run(cfg, out, resume=True)
+    final_b = ctl_b.report(cfg.final_items, tag="final")
+    ctl_b.close()
+    strip = lambda rows: [{k: v for k, v in r.items() if k != "_seq"} for r in rows]  # noqa: E731
+    assert strip(_lines(out / "rounds.jsonl")) == strip(full)
+    assert final_b["scores"] == final_a["scores"]
+
+
+def test_a_failed_calibration_is_skipped_and_its_exposure_carries_over(tmp_path):
+    cfg = _cfg(tmp_path)
+    ctl = _controller(cfg, tmp_path / "r")
+    trainer = FakeTrainer(ctl, cfg.seed)
+    real = ctl.generate
+
+    def flaky(items, cap):
+        if ctl.round <= 2:                        # the first calibration (round 2) fails on every slice
+            raise RuntimeError("generation backend hiccup")
+        return real(items, cap)
+
+    ctl.generate = flaky
+    ctl.begin_round()
+    trainer.train(lambda: ctl.save(trainer.save))
+    rows = _lines(tmp_path / "r" / "calibration.jsonl")
+    assert rows[0].get("skipped") is True and ctl.eval_errors >= 1
+    ok = [r for r in rows if "scores" in r]
+    assert ok and sum(ok[0]["exposure"].values()) == 4 * 2 * 8   # rounds 1-4: two windows of R x P prompts
+    assert ctl.round == cfg.max_rounds                            # the run finished regardless
+    ctl.close()
+
+
+def test_supervisor_restarts_a_crashed_run_and_mirrors_everything(tmp_path):
+    """run.py: a worker dies mid-run, is restarted from its checkpoint, finishes; the backup holds it."""
+    import os
+    import subprocess
+    import sys
+
+    out, backup = tmp_path / "out", tmp_path / "backup"
+    shape = {"prompts_per_step": 4, "group_size": 4, "steps_per_round": 1, "calib_interval": 2,
+             "calib_items": 6, "report_every": 0, "final_items": 6}
+    env = dict(os.environ, CURATOR_FAULT_AT_STEP="3")
+    cmd = [sys.executable, str(REPO / "kaggle" / "run.py"), "compare", "--backend", "fake", "--methods", "curator",
+           "--seeds", "0", "--rounds", "5", "--budget-gpu-hours", "10", "--out", str(out), "--sync-to", str(backup),
+           "--sync-every-min", "0", "--max-restarts", "2", "--shape", json.dumps(shape),
+           "--set", "signals.status.n_min=8"]
+    res = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=600)
+    assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-3000:]
+    assert "crashed" in res.stdout and "attempt 2" in res.stdout
+    log = (out / "logs" / "curator_s0.log").read_text(errors="replace")
+    assert "injected fault at step 3" in log and "resuming from round-0002" in log
+    summary = json.loads((out / "curator_s0" / "summary.json").read_text())
+    assert summary["rounds"] == 5 and summary["status"] == "finished"
+    assert json.loads((out / "curator_s0" / "progress.json").read_text())["status"] == "finished"
+    mirrored = backup / "curator_s0"
+    assert (mirrored / "summary.json").exists() and (mirrored / "checkpoints" / "latest.json").exists()
+    assert len(_lines(mirrored / "rounds.jsonl")) == 5

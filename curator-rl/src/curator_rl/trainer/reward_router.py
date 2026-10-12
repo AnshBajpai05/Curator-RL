@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from curator_rl.core.advantage import group_mean_abs_advantage
-from curator_rl.core.types import Prompt
+from curator_rl.core.types import Prompt, Verdict
 
 
 @dataclass
@@ -36,6 +36,7 @@ class ArmStats:
     true_success: int = 0          # honest verdicts (differs from k_success only on the noisy arm)
     rejected: int = 0              # sandbox screening refusals (reward-hacking attempts, E-07)
     truncated: int = 0
+    verifier_errors: int = 0       # verifier raised: scored 0 and counted, never allowed to stop training
 
     def merge(self, other: ArmStats) -> None:
         for f in self.__dataclass_fields__:
@@ -74,6 +75,7 @@ class RewardRouter:
         self.clock = clock
         self._record = StepRecord()
         self._prompt_tokens_cache: dict[str, int] = {}
+        self.errors_seen = 0
 
     def pop_step(self) -> StepRecord:
         rec, self._record = self._record, StepRecord()
@@ -82,17 +84,31 @@ class RewardRouter:
     def _verify(self, job):
         env_id, prompt, text = job
         env = self.envs[env_id]
-        verdict = env.evaluate_response(prompt, text)
-        reward = float(env.compute_reward(verdict))
+        try:
+            verdict = env.evaluate_response(prompt, text)
+            reward = float(env.compute_reward(verdict))
+        except Exception as exc:  # noqa: BLE001 - one bad completion must not kill a GPU run
+            self.errors_seen += 1
+            if self.errors_seen <= 20:
+                print(f"[reward] verifier error on {env_id}/{prompt.prompt_id}: {exc!r}", flush=True)
+            verdict = Verdict(success=False, score=0.0, parse_ok=False, verifier_seconds=0.0,
+                              info={"verifier_error": repr(exc)[:200]})
+            reward = 0.0
         return verdict, reward
 
     def __call__(self, prompts, completions, completion_ids=None, *, env_id, prompt_id, reference,
                  meta_json, **_kw) -> list[float]:
         start = self.clock()
         jobs = []
+        position = 0
         for i, comp in enumerate(completions):
+            # index of this rollout inside its prompt's group (groups are contiguous, at most G long):
+            # lets a reward that should be independent per rollout key on it (audit E-24)
+            position = position + 1 if i > 0 and prompt_id[i] == prompt_id[i - 1] and position + 1 < self.group_size else 0
+            meta = json.loads(meta_json[i] or "{}")
+            meta["rollout_index"] = position
             p = Prompt(prompt_id=prompt_id[i], env_id=env_id[i], split="train", messages=(),
-                       reference=reference[i], meta=json.loads(meta_json[i] or "{}"))
+                       reference=reference[i], meta=meta)
             jobs.append((env_id[i], p, _text(comp)))
         results = list(self.pool.map(self._verify, jobs))
         rewards = [r for _, r in results]
@@ -127,6 +143,7 @@ class RewardRouter:
                 arm.verifier_seconds += float(verdict.verifier_seconds)
                 arm.true_success += int(bool(verdict.info.get("diagnostic_true_success", verdict.success)))
                 arm.rejected += int(bool(verdict.info.get("rejected")))
+                arm.verifier_errors += int("verifier_error" in verdict.info)
                 n_tok = len(completion_ids[t]) if completion_ids is not None else len(jobs[t][2]) // 4
                 arm.completion_tokens += n_tok
                 if self.max_completion_tokens and n_tok >= self.max_completion_tokens:

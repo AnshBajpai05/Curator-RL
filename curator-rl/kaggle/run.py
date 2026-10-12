@@ -5,8 +5,22 @@
     python run.py smoke                      # ~10 min end-to-end check incl. checkpoint + resume (do this first)
     python run.py compare                    # Curator vs Uniform vs LP, same seed, matched GPU-hour budget
     python run.py sysid                      # randomized-mixture run -> costs, learning/transfer, kappa
+    python run.py status                     # where every run is (progress.json heartbeat)
     python run.py report                     # rebuild comparison.md / sysid_report.md from the outputs
-    python run.py compare --resume-from /kaggle/input/<previous-output>/curator_runs   # next session
+
+Never lose a run (recommended on Kaggle):
+    python run.py compare --sync-to hf://<you>/curator-runs
+Every round is checkpointed locally, and the newest checkpoint plus all logs are mirrored to a private
+Hugging Face dataset at most every --sync-every-min minutes (and always at the end). Training never
+waits for an upload. In the next session the same command fetches the newest state and resumes each run
+from its last checkpoint; `--resume-from <dir or hf://...>` does the same from any other location
+(e.g. a previous notebook output attached as an input). The token comes from $HF_TOKEN or the Kaggle
+secret named HF_TOKEN (Add-ons > Secrets).
+
+Never break mid-run: a crashed run is restarted from its last checkpoint (up to --max-restarts times;
+after a CUDA out-of-memory the micro-batch is halved, same effective batch). Before the session limit
+(--session-hours, counted from container start) every run stops at a round boundary, saves, syncs and
+exits as "preempted"; rerun the same command in a new session to continue.
 
 Hardware: on "GPU T4 x2" two runs go in parallel, one per GPU (vLLM colocate, ~42 s per GRPO step).
 On "GPU P100" (compute capability 6.0: no vLLM, no Triton) runs are sequential with the HF backend and
@@ -28,7 +42,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 CODE = HERE / "curator-rl" if (HERE / "curator-rl" / "src").exists() else HERE.parent   # bundle or repo layout
 PY_FILE = HERE / ".curator_python"
-DEFAULT_OUT = Path("/kaggle/working/curator_runs") if Path("/kaggle/working").exists() else HERE / "curator_runs"
+ON_KAGGLE = Path("/kaggle/working").exists()
+DEFAULT_OUT = Path("/kaggle/working/curator_runs") if ON_KAGGLE else HERE / "curator_runs"
+EXIT_PREEMPTED = 75            # a run stopped cleanly before the session limit (resumable)
+KAGGLE_SESSION_HOURS = 11.75   # Kaggle GPU sessions end at 12 h; leave a margin for the last upload
 
 # Each method at its own GPU-shape-tuned point (reports/sweeps/tune_gpu_shape.md: equal tuning budget,
 # tuning seeds, one-SE + least-concentrated rule). Exploratory until a pre-registered confirmation
@@ -67,13 +84,45 @@ def worker_python() -> str:
     return PY_FILE.read_text().strip() if PY_FILE.exists() else sys.executable
 
 
+def load_hf_token() -> None:
+    """$HF_TOKEN, else the Kaggle secret HF_TOKEN; exported so the training workers inherit it."""
+    if os.environ.get("HF_TOKEN"):
+        return
+    try:
+        from kaggle_secrets import UserSecretsClient  # type: ignore[import-not-found]
+
+        token = UserSecretsClient().get_secret("HF_TOKEN")
+        if token:
+            os.environ["HF_TOKEN"] = token
+            print("[run.py] HF_TOKEN loaded from Kaggle secrets")
+    except Exception as exc:  # noqa: BLE001 - not on Kaggle, or the secret is not attached
+        print(f"[run.py] no HF_TOKEN ({exc.__class__.__name__}); hf:// sync needs one", flush=True)
+
+
+def session_age_seconds() -> float:
+    """Seconds since this container started (Linux /proc; 0 elsewhere)."""
+    try:
+        start_ticks = float(Path("/proc/1/stat").read_text().rsplit(")", 1)[1].split()[19])
+        uptime = float(Path("/proc/uptime").read_text().split()[0])
+        return max(uptime - start_ticks / os.sysconf("SC_CLK_TCK"), 0.0)
+    except (OSError, ValueError, IndexError, AttributeError):
+        return 0.0
+
+
+def deadline_unix(args) -> float:
+    hours = args.session_hours if args.session_hours is not None else (KAGGLE_SESSION_HOURS if ON_KAGGLE else 0.0)
+    if not hours:
+        return 0.0
+    return time.time() - session_age_seconds() + hours * 3600.0
+
+
 # ----------------------------------------------------------------------------------------------- setup
 
 def cmd_setup(args) -> int:
     devices = gpus()
     print("GPUs:", devices or "none found")
     if devices and min(d["cc"] for d in devices) >= 7.0 and not args.hf:
-        venv = Path("/kaggle/working/venv_vllm") if Path("/kaggle/working").exists() else HERE / "venv_vllm"
+        venv = Path("/kaggle/working/venv_vllm") if ON_KAGGLE else HERE / "venv_vllm"
         if not (venv / "bin" / "python").exists():
             sh([sys.executable, "-m", "pip", "install", "-q", "virtualenv"])
             sh([sys.executable, "-m", "virtualenv", "-q", str(venv)])     # `python -m venv` fails on Kaggle 3.13
@@ -90,7 +139,7 @@ def cmd_setup(args) -> int:
         PY_FILE.write_text(sys.executable)
     py = worker_python()
     src = str(CODE / "src")
-    check = (f"import sys; sys.path.insert(0, {src!r}); import torch, trl, transformers, peft; "
+    check = (f"import sys; sys.path.insert(0, {src!r}); import torch, trl, transformers, peft, huggingface_hub; "
              "from curator_rl.trainer.runner import resolve_backend; "
              "print('torch', torch.__version__, '| trl', trl.__version__, '| transformers', transformers.__version__, "
              "'| backend', resolve_backend('auto'))")
@@ -108,7 +157,8 @@ def run_config(args, method: str, seed: int, **shape):
                     budget_gpu_hours=args.budget_gpu_hours, max_rounds=args.rounds, overrides=overrides,
                     micro_batch=args.micro_batch, max_completion_tokens=args.max_tokens,
                     calib_items=args.calib_items, final_items=args.final_items, report_items=args.report_items,
-                    report_every=args.report_every)
+                    report_every=args.report_every, sync_to=args.sync_to or "", sync_every_min=args.sync_every_min,
+                    deadline_unix=args.deadline_unix)
     for k, v in shape.items():
         setattr(cfg, k, v)
     return cfg
@@ -120,93 +170,208 @@ def cmd_train(args) -> int:
 
     shape = json.loads(args.shape) if args.shape else {}
     cfg = run_config(args, args.method, args.seed, **shape)
-    run_single(cfg, CODE, resume=not args.fresh, gradient_checkpointing=not args.no_grad_ckpt)
-    return 0
+    summary = run_single(cfg, CODE, resume=not args.fresh, gradient_checkpointing=not args.no_grad_ckpt)
+    return EXIT_PREEMPTED if summary.get("status") == "preempted" else 0
 
 
-def spawn(args, method: str, seed: int, gpu: int | None, shape: dict, extra: list[str]) -> subprocess.Popen:
+def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
+    method, seed = job["method"], job["seed"]
     cmd = [worker_python(), str(Path(__file__).resolve()), "train", "--method", method, "--seed", str(seed),
            "--out", str(args.out), "--preset", args.preset, "--model", args.model, "--backend", args.backend,
            "--budget-gpu-hours", str(args.budget_gpu_hours), "--rounds", str(args.rounds),
-           "--micro-batch", str(args.micro_batch), "--max-tokens", str(args.max_tokens),
+           "--micro-batch", str(job["micro_batch"]), "--max-tokens", str(args.max_tokens),
            "--calib-items", str(args.calib_items), "--final-items", str(args.final_items),
            "--report-items", str(args.report_items), "--report-every", str(args.report_every),
-           "--shape", json.dumps(shape), *extra]
+           "--sync-every-min", str(args.sync_every_min), "--deadline-unix", str(args.deadline_unix),
+           "--shape", json.dumps(job["shape"]), *job["extra"]]
+    if args.sync_to:
+        cmd += ["--sync-to", args.sync_to]
+    if args.no_grad_ckpt:
+        cmd += ["--no-grad-ckpt"]
     for s in args.set or []:
         cmd += ["--set", s]
     env = dict(os.environ)
     if gpu is not None:
         env["CUDA_VISIBLE_DEVICES"] = str(gpu)
-    log = Path(args.out) / "logs" / f"{method}_s{seed}.log"
+    log = log_path(args, method, seed)
     log.parent.mkdir(parents=True, exist_ok=True)
-    print(f"[run.py] {method} seed {seed} on GPU {gpu} -> {log}", flush=True)
+    print(f"[run.py] {method} seed {seed} on GPU {gpu} (attempt {job['attempt'] + 1}, micro-batch "
+          f"{job['micro_batch']}) -> {log}", flush=True)
     return subprocess.Popen(cmd, env=env, stdout=log.open("a"), stderr=subprocess.STDOUT)
 
 
-def run_jobs(args, jobs: list[tuple[str, int]], shape: dict | None = None, extra: list[str] | None = None) -> int:
+def log_path(args, method: str, seed: int) -> Path:
+    return Path(args.out) / "logs" / f"{method}_s{seed}.log"
+
+
+def _progress_round(args, job: dict) -> int | None:
+    try:
+        return json.loads((Path(args.out) / f"{job['method']}_s{job['seed']}" / "progress.json").read_text())["round"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def _out_of_memory(args, job: dict) -> bool:
+    try:
+        tail = log_path(args, job["method"], job["seed"]).read_text(errors="replace")[-20000:]
+    except OSError:
+        return False
+    return "out of memory" in tail.lower() or "OutOfMemoryError" in tail
+
+
+def _retry(args, job: dict) -> dict | None:
+    """The job to run after a crash (resumes from its checkpoint), or None to give up."""
+    round_now = _progress_round(args, job)
+    if job["attempt"] >= args.max_restarts:
+        print(f"[run.py] {job['method']} seed {job['seed']}: giving up after {job['attempt'] + 1} attempts", flush=True)
+        return None
+    if job["failed_at_round"] is not None and round_now == job["failed_at_round"]:
+        print(f"[run.py] {job['method']} seed {job['seed']}: crashed twice at round {round_now} with no progress; "
+              "giving up (see the log)", flush=True)
+        return None
+    nxt = dict(job, attempt=job["attempt"] + 1, failed_at_round=round_now,
+               extra=[x for x in job["extra"] if x != "--fresh"])     # a restart always resumes
+    p_g = int(job["shape"].get("prompts_per_step", 16)) * int(job["shape"].get("group_size", 8))
+    if _out_of_memory(args, job) and job["micro_batch"] > 1 and p_g % (job["micro_batch"] // 2) == 0:
+        nxt["micro_batch"] = job["micro_batch"] // 2
+        print(f"[run.py] out of memory: retrying with micro-batch {nxt['micro_batch']} (same effective batch)",
+              flush=True)
+    if args.deadline_unix and time.time() > args.deadline_unix - 900:
+        print("[run.py] too close to the session limit to restart; resume next session", flush=True)
+        return None
+    return nxt
+
+
+def run_jobs(args, jobs: list[tuple[str, int]], shape: dict | None = None, extra: list[str] | None = None) -> dict:
+    """Run jobs one per GPU; restart crashed ones from their checkpoint. Returns outcome lists."""
     devices = [d["index"] for d in gpus()] or [None]
-    pending, running, failed = list(jobs), [], 0
+    pending = [{"method": m, "seed": s, "attempt": 0, "failed_at_round": None, "micro_batch": args.micro_batch,
+                "shape": dict(shape or {}), "extra": list(extra or [])} for m, s in jobs]
+    running: list[tuple[subprocess.Popen, int | None, dict]] = []
+    outcome = {"finished": [], "preempted": [], "failed": []}
     while pending or running:
         while pending and len(running) < len(devices):
-            free = [d for d in devices if d not in {g for _, g in running}]
-            m, s = pending.pop(0)
-            running.append((spawn(args, m, s, free[0], shape or {}, extra or []), free[0]))
-        time.sleep(15)
-        for proc, g in list(running):
-            if proc.poll() is not None:
-                running.remove((proc, g))
-                failed += proc.returncode != 0
-                print(f"[run.py] job on GPU {g} finished with code {proc.returncode}", flush=True)
-    return failed
+            free = [d for d in devices if d not in {g for _, g, _ in running}]
+            job = pending.pop(0)
+            running.append((spawn(args, job, free[0]), free[0], job))
+        time.sleep(5 if args.backend == "fake" else 15)
+        for proc, g, job in list(running):
+            code = proc.poll()
+            if code is None:
+                continue
+            running.remove((proc, g, job))
+            name = f"{job['method']}_s{job['seed']}"
+            if code == 0:
+                outcome["finished"].append(name)
+            elif code == EXIT_PREEMPTED:
+                outcome["preempted"].append(name)
+                print(f"[run.py] {name} stopped cleanly before the session limit; rerun to resume", flush=True)
+            else:
+                print(f"[run.py] {name} crashed on GPU {g} with code {code}", flush=True)
+                nxt = _retry(args, job)
+                if nxt is None:
+                    outcome["failed"].append(name)
+                else:
+                    pending.insert(0, nxt)
+    return outcome
 
 
 def restore(args) -> None:
-    if args.resume_from:
-        src = Path(args.resume_from)
-        for d in src.iterdir():
-            dst = Path(args.out) / d.name
-            if not dst.exists():
-                shutil.copytree(d, dst) if d.is_dir() else shutil.copy2(d, dst)
-        print(f"[run.py] restored previous outputs from {src}")
+    """Bring back earlier state: from --resume-from, and from the sync target itself."""
+    sys.path.insert(0, str(CODE / "src"))
+    from curator_rl.trainer.artifacts import fetch_runs
+
+    for source in [s for s in (args.resume_from, args.sync_to) if s]:
+        try:
+            taken = fetch_runs(source, Path(args.out))
+            print(f"[run.py] {source}: {len(taken)} run(s) newer than the local copy restored", flush=True)
+        except Exception as exc:  # noqa: BLE001 - a missing backup must not block a fresh start
+            print(f"[run.py] could not fetch from {source}: {exc!r}", flush=True)
+
+
+def finish(args, outcome: dict) -> int:
+    print(f"[run.py] finished: {outcome['finished'] or '-'} | stopped for the session limit: "
+          f"{outcome['preempted'] or '-'} | failed: {outcome['failed'] or '-'}", flush=True)
+    if args.sync_to and args.squash and not outcome["preempted"]:
+        sys.path.insert(0, str(CODE / "src"))
+        from curator_rl.trainer.artifacts import squash_remote_history
+
+        squash_remote_history(args.sync_to)
+    if outcome["preempted"]:
+        print("[run.py] rerun the same command in a new session to continue (it resumes from the checkpoints"
+              + (f" synced to {args.sync_to})" if args.sync_to else ")"), flush=True)
+    return 1 if outcome["failed"] else (EXIT_PREEMPTED if outcome["preempted"] else 0)
+
+
+def _shape(args) -> dict:
+    return json.loads(args.shape) if args.shape else {}
 
 
 def cmd_compare(args) -> int:
     restore(args)
-    jobs = [(m, s) for s in args.seeds for m in args.methods]
-    failed = run_jobs(args, jobs)
+    outcome = run_jobs(args, [(m, s) for s in args.seeds for m in args.methods], _shape(args))
     cmd_report(args)
-    return 1 if failed else 0
+    return finish(args, outcome)
 
 
 def cmd_sysid(args) -> int:
     restore(args)
-    failed = run_jobs(args, [("dirichlet", s) for s in args.seeds])
+    outcome = run_jobs(args, [("dirichlet", s) for s in args.seeds], _shape(args))
     cmd_report(args)
-    return 1 if failed else 0
+    return finish(args, outcome)
 
 
 def cmd_smoke(args) -> int:
     """Tiny run on the first GPU: 3 rounds with calibration every round, then a resume to round 4."""
     args.out = Path(args.out) / "smoke"
     shutil.rmtree(args.out, ignore_errors=True)
+    args.out.mkdir(parents=True)
+    if not args.sync_to:                       # exercise the sync + restore path even without a token
+        args.sync_to = str(Path(args.out) / "_sync")
     shape = {"prompts_per_step": 4, "group_size": 4, "micro_batch": 8, "max_completion_tokens": 128,
              "steps_per_round": 1, "calib_interval": 1, "calib_items": 4, "report_every": 0, "final_items": 4,
              "checkpoint_every": 1}
     args.rounds, args.budget_gpu_hours, args.max_tokens, args.micro_batch = 3, 1.0, 128, 8
+    args.sync_every_min = 0.0
     t0 = time.time()
-    if run_jobs(args, [("curator", 0)], shape, ["--fresh"]):
-        print("SMOKE FAILED: see", Path(args.out) / "logs" / "curator_s0.log")
+    if run_jobs(args, [("curator", 0)], shape, ["--fresh"])["failed"]:
+        print("SMOKE FAILED: see", log_path(args, "curator", 0))
         return 1
+    # resume test: wipe the local run and bring it back from the synced copy, then extend to round 4
+    shutil.rmtree(Path(args.out) / "curator_s0")
+    restore(args)
     args.rounds = 4
-    if run_jobs(args, [("curator", 0)], shape):
+    if run_jobs(args, [("curator", 0)], shape)["failed"]:
         print("SMOKE FAILED on resume: see the log")
         return 1
     summary = json.loads((Path(args.out) / "curator_s0" / "summary.json").read_text())
     ok = summary["rounds"] == 4 and summary["calibrations"] >= 3
-    print(json.dumps({k: summary[k] for k in ("rounds", "steps", "calibrations", "charged_gpu_hours",
-                                              "backend", "logprob_path")}, indent=1))
-    print(f"SMOKE {'PASSED' if ok else 'FAILED'} in {time.time() - t0:.0f}s")
+    print(json.dumps({k: summary.get(k) for k in ("rounds", "steps", "calibrations", "charged_gpu_hours",
+                                                  "backend", "logprob_path", "verifier_errors", "eval_errors")},
+                     indent=1))
+    print(f"SMOKE {'PASSED' if ok else 'FAILED'} in {time.time() - t0:.0f}s "
+          "(including a restore of the run from its synced copy)")
     return 0 if ok else 1
+
+
+def cmd_status(args) -> int:
+    rows = []
+    for p in sorted(Path(args.out).glob("*/progress.json")):
+        try:
+            s = json.loads(p.read_text())
+        except (OSError, ValueError):
+            continue
+        sync = s.get("sync") or {}
+        rows.append(f"| {p.parent.name} | {s.get('status')} | {s.get('round')}/{s.get('max_rounds')} | "
+                    f"{s.get('charged_gpu_hours')}/{s.get('budget_gpu_hours')} | {s.get('last_checkpoint_round')} | "
+                    f"{sync.get('last_round', '-')} ({sync.get('last_ok_utc') or 'never'}) | "
+                    f"{s.get('stop_reason') or ''} | {s.get('updated_utc')} |")
+    print("| run | status | round | GPU-h used/budget | checkpoint | synced round (when) | stop reason | updated |")
+    print("|---|---|---|---|---|---|---|---|")
+    print("\n".join(rows) if rows else "| (no runs yet) |")
+    if args.deadline_unix:
+        print(f"\nsession time left: {(args.deadline_unix - time.time()) / 3600:.2f} h")
+    return 0
 
 
 def cmd_report(args) -> int:
@@ -220,6 +385,8 @@ def cmd_report(args) -> int:
         (out / "comparison.md").write_text(md, encoding="utf-8")
         print(md)
     for run in sorted(out.glob("dirichlet_s*")):
+        if not (run / "run_config.json").exists():
+            continue
         cfg = json.loads((run / "run_config.json").read_text())
         rep = analyse(run, cfg["envs"], cfg["group_size"])
         (run / "sysid_report.json").write_text(json.dumps(rep, indent=2), encoding="utf-8")
@@ -230,7 +397,7 @@ def cmd_report(args) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["setup", "smoke", "compare", "sysid", "train", "report"])
+    ap.add_argument("command", choices=["setup", "smoke", "compare", "sysid", "train", "report", "status"])
     ap.add_argument("--methods", type=lambda s: s.split(","), default=["curator", "uniform", "lp"])
     ap.add_argument("--seeds", type=lambda s: [int(x) for x in s.split(",")], default=[0])
     ap.add_argument("--method", default="curator")
@@ -247,7 +414,14 @@ def main(argv=None) -> int:
     ap.add_argument("--report-items", type=int, default=100, help="dev items per domain, periodic reports")
     ap.add_argument("--report-every", type=int, default=20, help="uncharged dev report every N rounds (0: final only)")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    ap.add_argument("--resume-from", default=None)
+    ap.add_argument("--resume-from", default=None, help="directory or hf://owner/repo[/prefix] with earlier runs")
+    ap.add_argument("--sync-to", default=None, help="mirror runs while training: hf://owner/repo[/prefix] or a dir")
+    ap.add_argument("--sync-every-min", type=float, default=5.0, help="minimum minutes between uploads")
+    ap.add_argument("--squash", action="store_true", help="squash the hf sync repo history when all runs finish")
+    ap.add_argument("--session-hours", type=float, default=None,
+                    help=f"session limit counted from container start (Kaggle default {KAGGLE_SESSION_HOURS}; 0 = none)")
+    ap.add_argument("--max-restarts", type=int, default=3, help="restarts of a crashed run from its checkpoint")
+    ap.add_argument("--deadline-unix", type=float, default=None, help=argparse.SUPPRESS)
     ap.add_argument("--set", action="append", help="extra base.yaml override, e.g. scheduler.gamma=0.95")
     ap.add_argument("--shape", default=None, help=argparse.SUPPRESS)
     ap.add_argument("--fresh", action="store_true", help="ignore existing checkpoints")
@@ -255,8 +429,12 @@ def main(argv=None) -> int:
     ap.add_argument("--hf", action="store_true", help="setup: force the HF backend even on a T4")
     args = ap.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
+    if args.deadline_unix is None:            # workers receive the supervisor's deadline explicitly
+        args.deadline_unix = deadline_unix(args)
+    if args.command != "train":
+        load_hf_token()
     return {"setup": cmd_setup, "smoke": cmd_smoke, "compare": cmd_compare, "sysid": cmd_sysid,
-            "train": cmd_train, "report": cmd_report}[args.command](args)
+            "train": cmd_train, "report": cmd_report, "status": cmd_status}[args.command](args)
 
 
 if __name__ == "__main__":

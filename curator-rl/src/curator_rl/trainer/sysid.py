@@ -58,6 +58,8 @@ def fit_transfer(calib_rows: Sequence[Mapping], env_ids: Sequence[str]) -> dict:
     by_domain: dict[str, list[tuple[np.ndarray, float, float]]] = {}
     prev: dict[str, float] = {}
     for row in calib_rows:
+        if "scores" not in row:          # a logged evaluation failure (skipped window), not a measurement
+            continue
         exp = row["exposure"]
         total = sum(exp.values()) or 1.0
         w = np.array([exp.get(e, 0.0) / total for e in env_ids])
@@ -83,7 +85,9 @@ def fit_transfer(calib_rows: Sequence[Mapping], env_ids: Sequence[str]) -> dict:
 def analyse(run_dir: Path, env_ids: Sequence[str], group_size: int = 8) -> dict:
     run_dir = Path(run_dir)
     steps, rounds, calib = _rows(run_dir / "steps.jsonl"), _rows(run_dir / "rounds.jsonl"), _rows(run_dir / "calibration.jsonl")
-    report: dict = {"n_steps": len(steps), "n_rounds": len(rounds), "n_calibrations": len(calib)}
+    report: dict = {"n_steps": len(steps), "n_rounds": len(rounds),
+                    "n_calibrations": sum(1 for c in calib if "scores" in c),
+                    "n_failed_evaluations": sum(1 for c in calib if "errors" in c)}
     try:
         cost = fit_step_cost_model(steps)
         tokens_per_prompt = {}

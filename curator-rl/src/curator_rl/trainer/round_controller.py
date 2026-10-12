@@ -13,27 +13,43 @@ every line of scheduling, accounting and calibration logic is exercised by CPU t
 
 The order inside a round boundary is the simulator harness's (simulator/harness.py), so a
 method's GPU behaviour is the behaviour its simulator gates measured.
+
+Surviving a long run on borrowed hardware:
+- `save()` checkpoints (retried once; three consecutive failures stop the run cleanly, since
+  progress could no longer be protected) and hands the new checkpoint to `ArtifactSync`;
+- `progress.json` is rewritten atomically every round: where the run is, what was last saved and
+  synced, and why it stopped;
+- a calibration or report evaluation that fails is logged and skipped; the training exposure of a
+  skipped calibration carries over into the next window, so no evidence is lost;
+- a wall-clock deadline (Kaggle's session limit) or an external stop request (SIGTERM) ends the
+  run at the next round boundary with a fresh checkpoint: `preempted`, resumable as is.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import asdict
 from pathlib import Path
 
+from curator_rl.core.atomic import atomic_write_json
 from curator_rl.core.jsonl import JsonlWriter
 from curator_rl.core.types import CalibrationObservation, EnvRoundObs, RoundObservation
 from curator_rl.cost.attribution import attribute_step
 from curator_rl.cost.ledger import Ledger
 from curator_rl.trainer.calibration_eval import EvalSuite, GenerateFn
+from curator_rl.trainer.checkpoint import save_checkpoint
 from curator_rl.trainer.prompt_stream import PromptStream
 from curator_rl.trainer.reward_router import ArmStats, RewardRouter
 from curator_rl.trainer.run_config import BENCH_DOMAINS, DOMAIN_OF, RunConfig
 from curator_rl.trainer.schedulers import make_run_scheduler
 
 LOG_FILES = ("steps", "rounds", "calibration", "reports")
+EXIT_PREEMPTED = 75            # EX_TEMPFAIL: stopped cleanly before a limit; resume to continue
+FAULT_ENV = "CURATOR_FAULT_AT_STEP"   # tests: raise once at this global step (a simulated crash)
+SYNC_RESERVE_SECONDS = 300.0   # time kept free before the deadline for the last checkpoint upload
 
 
 class RoundController:
@@ -80,6 +96,19 @@ class RoundController:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self.logs = {name: JsonlWriter(self.out_dir / f"{name}.jsonl", schema_version=1) for name in LOG_FILES}
         self._log_lines = {name: 0 for name in LOG_FILES}
+        # survival state (not checkpointed: it describes this process, not the experiment)
+        self.sync = None                                  # ArtifactSync, set by the runner
+        self.save_backend: Callable[[Path], None] | None = None
+        self.preempted = False
+        self.stop_reason = ""
+        self._stop_requested = False
+        self._checkpoint_failures = 0
+        self.last_checkpoint_round: int | None = None
+        self.eval_errors = 0
+        self._round_wall_start = time.time()
+        self._round_wall_seconds: float | None = None
+        fault = os.environ.get(FAULT_ENV, "")
+        self._fault_step = int(fault) if fault.strip().isdigit() else 0
 
     @property
     def uses_calibration(self) -> bool:
@@ -115,6 +144,10 @@ class RoundController:
             self._round_seconds[e] = self._round_seconds.get(e, 0.0) + per_env.get(e, 0.0)
         self.global_step += 1
         self.step_in_round += 1
+        marker = self.out_dir / ".fault_fired"
+        if self._fault_step and self.global_step == self._fault_step and not marker.exists():
+            marker.write_text(str(self.global_step), encoding="utf-8")
+            raise RuntimeError(f"injected fault at step {self.global_step} ({FAULT_ENV})")
         self._write("steps", {"step": self.global_step, "round": self.round + 1, "seconds": step_seconds,
                               "score_wall_seconds": rec.score_wall_seconds,
                               "gen_update_seconds": max(step_seconds - rec.score_wall_seconds, 0.0),
@@ -160,13 +193,79 @@ class RoundController:
             self._calibrate()
         if self.cfg.report_every and self.round % self.cfg.report_every == 0:
             self.report(self.cfg.report_items, tag="periodic")
+        now = time.time()
+        self._round_wall_seconds = now - self._round_wall_start
+        self._round_wall_start = now
         if self.ledger.exhausted() or self.round >= self.cfg.max_rounds:
             self.stop = True
+            self.stop_reason = "budget" if self.ledger.exhausted() else "max_rounds"
+            self.write_progress("finishing")
             return
         self.begin_round()
         # checkpoint AFTER the next mixture is chosen: a resumed run continues with exactly it
         if self.cfg.checkpoint_every and self.round % self.cfg.checkpoint_every == 0:
             self.checkpoint_due = True
+        reason = self._preempt_reason(now)
+        if reason:
+            # stop at this boundary with a checkpoint of exactly this state; the next session resumes it
+            self.preempted, self.stop, self.stop_reason, self.checkpoint_due = True, True, reason, True
+            print(f"[curator] stopping cleanly at round {self.round}: {reason}", flush=True)
+        self.write_progress("preempting" if self.preempted else "running")
+
+    # ---------------------------------------------------------------- survival
+
+    def request_stop(self, reason: str = "stop requested (signal)") -> None:
+        """Ask the run to stop at the next round boundary (signal handlers call this)."""
+        self._stop_requested = reason or "stop requested"
+
+    def _preempt_reason(self, now: float) -> str:
+        if self._stop_requested:
+            return str(self._stop_requested)
+        if self.cfg.deadline_unix:
+            per_round = self._round_wall_seconds or 0.0
+            reserve = 1.5 * per_round + SYNC_RESERVE_SECONDS
+            if now + reserve >= self.cfg.deadline_unix:
+                left = (self.cfg.deadline_unix - now) / 60
+                return f"session deadline in {left:.0f} min (one round takes {per_round / 60:.1f} min)"
+        return ""
+
+    def save(self, backend_save: Callable[[Path], None] | None = None) -> bool:
+        """Checkpoint now (retried once), then start a background artifact sync. Never raises."""
+        backend_save = backend_save or self.save_backend or (lambda d: None)
+        for attempt in range(2):
+            try:
+                save_checkpoint(self.out_dir, self, backend_save)
+                self._checkpoint_failures = 0
+                self.last_checkpoint_round = self.round
+                self.write_progress("preempting" if self.preempted else "running")
+                if self.sync is not None:
+                    self.sync.request(force=self.preempted, label=f"round {self.round}")
+                return True
+            except Exception as exc:  # noqa: BLE001 - e.g. disk full; retried, then counted
+                print(f"[curator] checkpoint at round {self.round} failed (attempt {attempt + 1}): {exc!r}",
+                      flush=True)
+        self._checkpoint_failures += 1
+        if self._checkpoint_failures >= 3:
+            self.preempted, self.stop = True, True
+            self.stop_reason = "three consecutive checkpoint failures: progress can no longer be protected"
+            print(f"[curator] {self.stop_reason}; stopping", flush=True)
+        return False
+
+    def write_progress(self, status: str, **extra) -> None:
+        """Atomically rewrite progress.json (a heartbeat; never raises)."""
+        try:
+            atomic_write_json(self.out_dir / "progress.json", {
+                "status": status, "method": self.cfg.method, "seed": self.cfg.seed, "round": self.round,
+                "max_rounds": self.cfg.max_rounds, "global_step": self.global_step,
+                "charged_gpu_hours": round(self.ledger.charged_gpu_hours, 5),
+                "budget_gpu_hours": self.cfg.budget_gpu_hours,
+                "last_checkpoint_round": self.last_checkpoint_round,
+                "round_wall_seconds": self._round_wall_seconds, "stop_reason": self.stop_reason,
+                "eval_errors": self.eval_errors, "verifier_errors": self.router.errors_seen,
+                "sync": dict(self.sync.status) if self.sync is not None else None,
+                "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **extra})
+        except Exception as exc:  # noqa: BLE001
+            print(f"[curator] progress.json not written: {exc!r}", flush=True)
 
     def _calib_interval(self) -> int:
         return self.cfg.calib_interval if self.cfg.method != "dirichlet" else max(self.cfg.calib_interval // 2, 1)
@@ -179,7 +278,7 @@ class RoundController:
                        "true_pass_rate": (a.true_success / o.n_rollouts) if o.n_rollouts else None,
                        "mixed": (o.n_groups_mixed / o.n_prompts) if o.n_prompts else None,
                        "gpu_seconds": o.gpu_seconds, "tokens": o.prompt_tokens + o.completion_tokens,
-                       "rejected": a.rejected, "truncated": a.truncated}
+                       "rejected": a.rejected, "truncated": a.truncated, "verifier_errors": a.verifier_errors}
         # statuses after this round's update, read from the signal engine's output (part of the
         # checkpointed state), not from the last MixtureDecision (which is not), so a resumed run
         # logs exactly what an uninterrupted one does
@@ -196,9 +295,19 @@ class RoundController:
         if not request:
             return
         t0 = self.clock()
-        res = self.calib_suite.evaluate(request, self.generate)
+        try:
+            res = self.calib_suite.evaluate(request, self.generate)
+        except Exception as exc:  # noqa: BLE001 - e.g. generation backend hiccup; the run goes on
+            res = {"score_by_domain": {}, "errors": {"*": repr(exc)[:300]}}
         secs = self.clock() - t0
-        self.ledger.charge("calib", secs)
+        self.ledger.charge("calib", secs)           # spent compute is charged even when it failed
+        if res.get("errors"):
+            self.eval_errors += len(res["errors"])
+            self._write("calibration", {"round": self.round, "request": dict(request), "seconds": secs,
+                                        "errors": res["errors"], "skipped": not res["score_by_domain"]})
+        if not res["score_by_domain"]:
+            # nothing scored: skip this window; its exposure carries over into the next one
+            return
         self.calib_k += 1
         scores = res["score_by_domain"]
         obs = CalibrationObservation(
@@ -223,13 +332,21 @@ class RoundController:
         if self.generate is None:
             return {}
         t0 = self.clock()
-        res = self.report_suite.evaluate({d: n_items for d in self.bench}, self.generate)
+        try:
+            res = self.report_suite.evaluate({d: n_items for d in self.bench}, self.generate,
+                                             retries=2 if tag == "final" else 1)
+        except Exception as exc:  # noqa: BLE001
+            res = {"score_by_domain": {}, "se_by_domain": {}, "errors": {"*": repr(exc)[:300]}}
         secs = self.clock() - t0
         self.ledger.charge("report", secs)
         scores = res["score_by_domain"]
+        missing = [d for d in self.bench if d not in scores]
+        self.eval_errors += len(res.get("errors") or {})
+        # a macro over a subset of domains is not the benchmark: leave it empty and say why
         row = {"tag": tag, "round": self.round, "charged_gpu_hours": self.ledger.charged_gpu_hours,
-               "scores": scores, "se": res["se_by_domain"], "n_items": n_items,
-               "macro": sum(scores.values()) / len(scores), "seconds": secs}
+               "scores": scores, "se": res.get("se_by_domain", {}), "n_items": n_items,
+               "macro": (sum(scores.values()) / len(scores)) if scores and not missing else None,
+               "missing": missing, "errors": res.get("errors") or {}, "seconds": secs}
         self._write("reports", row)
         return row
 
@@ -292,10 +409,12 @@ class RoundController:
                       for e in self.env_ids}
         s5 = sorted({e for r in rounds for e, s in (r.get("statuses") or {}).items() if str(s).startswith("S5")})
         rejected = {e: sum(r["arms"][e]["rejected"] for r in rounds) for e in self.env_ids}
+        verr = {e: sum(r["arms"][e].get("verifier_errors", 0) for r in rounds) for e in self.env_ids}
         return {"method": self.cfg.method, "seed": self.cfg.seed, "rounds": self.round, "steps": self.global_step,
                 "charged_gpu_hours": self.ledger.charged_gpu_hours, "ledger_seconds": dict(self.ledger.seconds),
                 "final": dict(final or {}), "mean_delivered_share": mean_share, "ever_s5": s5,
-                "sandbox_rejections": rejected, "calibrations": self.calib_k, "logprob_path": self.logprob_path,
+                "sandbox_rejections": rejected, "verifier_errors": verr, "eval_errors": self.eval_errors,
+                "calibrations": self.calib_k, "logprob_path": self.logprob_path, "stop_reason": self.stop_reason,
                 "run_config": json.loads(self.cfg.to_json())}
 
     def close(self) -> None:

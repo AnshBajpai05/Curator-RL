@@ -43,6 +43,14 @@ def paired_se(prev: Sequence[bool], cur: Sequence[bool]) -> float:
     return math.sqrt(max(n01 + n10 - (n01 - n10) ** 2 / n, 1.0)) / n
 
 
+def _safe_verdict(env, prompt: Prompt, text: str) -> bool:
+    """One item's correctness; a verifier that raises counts the answer as wrong."""
+    try:
+        return bool(env.evaluate_response(prompt, text).success)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 class EvalSuite:
     """Fixed items per domain for one split; remembers the last verdicts for paired SEs."""
 
@@ -55,16 +63,32 @@ class EvalSuite:
         self._last: dict[str, list[bool]] = {}
         self._pool = ThreadPoolExecutor(max_workers=max(int(workers), 1))
 
-    def evaluate(self, request: Mapping[str, int], generate: GenerateFn) -> dict:
-        """Score the requested domains: {domain: n_items}. Returns scores, SEs and paired SEs."""
-        scores, ses, dses, n_total = {}, {}, {}, 0
+    def evaluate(self, request: Mapping[str, int], generate: GenerateFn, *, retries: int = 1) -> dict:
+        """Score the requested domains: {domain: n_items}. Returns scores, SEs and paired SEs.
+
+        A domain whose generation or scoring raises is retried `retries` times, then left out and
+        listed under "errors" (the caller decides what a missing domain means). Paired-item state
+        is committed only for domains that succeeded, so a failed evaluation never corrupts the
+        next paired SE.
+        """
+        scores, ses, dses, n_total, errors = {}, {}, {}, 0, {}
         for d, n in request.items():
             items = self.items[d][: max(int(n), 1)]
-            texts = generate(items, self.caps.get(d, 512))
             env = self.envs[d]
-            verdicts = list(self._pool.map(lambda pt, env=env: env.evaluate_response(pt[0], pt[1]),
-                                           zip(items, texts)))
-            correct = [bool(v.success) for v in verdicts]
+            correct = None
+            for attempt in range(retries + 1):
+                try:
+                    texts = generate(items, self.caps.get(d, 512))
+                    verdicts = list(self._pool.map(lambda pt, env=env: _safe_verdict(env, pt[0], pt[1]),
+                                                   zip(items, texts)))
+                    correct = [bool(v) for v in verdicts]
+                    break
+                except Exception as exc:  # noqa: BLE001 - reported; the run goes on
+                    errors[d] = f"attempt {attempt + 1}: {exc!r}"[:300]
+                    print(f"[eval] {self.split}/{d} failed ({errors[d]})", flush=True)
+            if correct is None:
+                continue
+            errors.pop(d, None)
             s = sum(correct) / len(correct)
             scores[d], ses[d] = s, math.sqrt(max(s * (1 - s), 1e-6) / len(correct))
             prev = self._last.get(d)
@@ -73,7 +97,7 @@ class EvalSuite:
             self._last[d] = correct
             n_total += len(correct)
         return {"score_by_domain": scores, "se_by_domain": ses, "delta_se_by_domain": dses or None,
-                "n_items": n_total}
+                "n_items": n_total, "errors": errors}
 
     def get_state(self) -> dict:
         return {"last": {d: list(v) for d, v in self._last.items()}}

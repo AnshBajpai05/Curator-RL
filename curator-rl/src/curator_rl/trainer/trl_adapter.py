@@ -26,8 +26,6 @@ from peft import LoraConfig, PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainerCallback
 from trl import GRPOConfig, GRPOTrainer
 
-from curator_rl.trainer.checkpoint import save_checkpoint
-
 
 class CuratorGRPOTrainer(GRPOTrainer):
     """GRPOTrainer whose generation batches are filled by the CURATOR controller."""
@@ -70,7 +68,7 @@ class CuratorCallback(TrainerCallback):
         _sync()
         self.ctl.on_step_end(time.perf_counter() - self._t0)
         if self.ctl.checkpoint_due:
-            save_checkpoint(self.out_dir, self.ctl, lambda d: self.save_backend(d, kw))
+            self.ctl.save(lambda d: self.save_backend(d, kw))     # retried, then synced; never raises
             self.ctl.checkpoint_due = False
         if self.ctl.stop:
             control.should_training_stop = True
