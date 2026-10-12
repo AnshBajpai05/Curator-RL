@@ -68,6 +68,12 @@ class SimEnvCfg(_StrictModel):
     # Declared dataset size (D-63): the a-priori, scheduler-visible quantity the
     # Static baseline is proportional to. Never used by the world or oracles.
     nominal_size: float | None = Field(default=None, gt=0)
+    # B7: per-round skill decay toward skill0 while the arm is not trained (0 = no forgetting)
+    forget_rate: float = Field(default=0.0, ge=0, le=1)
+    # E-14: finite training set the world counts passes over (None = inexhaustible)
+    train_items: int | None = Field(default=None, ge=1)
+    # B10: pass@G measured in the pilot, visible before training (pilot_uniform drops arms at 0)
+    pilot_pass_at_g: float | None = Field(default=None, ge=0, le=1)
 
 
 class CalibSimCfg(_StrictModel):
@@ -117,6 +123,13 @@ class SimWorldCfg(_StrictModel):
     # rounding; `delivered` + `carry` train on the prompts actually served, as a real trainer does
     learning_from: Literal["requested", "delivered"] = "requested"
     rounding: Literal["largest_remainder", "carry"] = "largest_remainder"
+    # realism switches (world.py docstring); defaults reproduce the original world exactly
+    learnability: Literal["binary", "mixed_groups"] = "binary"           # B8
+    repeat_decay: float = Field(default=1.0, gt=0, le=1)                  # E-14 (needs train_items)
+    noisy_transfer: bool = False                                          # B9
+    report_stream: Literal["shared", "separate"] = "shared"               # B1 / E9
+    final_eval: Literal["binomial", "paired_items"] = "binomial"          # B1
+    rollout_draws: Literal["loop", "vectorized"] = "loop"                 # E10
 
 
 class OracleCfg(_StrictModel):
@@ -167,6 +180,8 @@ def load_scenario(path: Path) -> ScenarioCfg:
                 raise ValueError(f"{path}: transfer target '{target}' is not a scenario env")
             if target == env.env_id:
                 raise ValueError(f"{path}: T_ii = 1 is implicit; remove self-transfer on '{env.env_id}'")
+        if env.noisy_q is not None and env.transfer_out and not cfg.world.noisy_transfer:
+            raise ValueError(f"{path}: transfer_out on noisy arm '{env.env_id}' needs world.noisy_transfer: true")
         if env.bench_domain is not None:
             owner = next((o for o in cfg.envs if o.env_id == env.bench_domain), None)
             if owner is None or owner.env_id == env.env_id or owner.bench_domain is not None:
@@ -204,6 +219,8 @@ def scenario_env_params(cfg: ScenarioCfg) -> list[SimEnvParams]:
                 bench_difficulty=e.bench_difficulty,
                 bench_weight=e.bench_weight,
                 bench_domain=e.bench_domain,
+                forget_rate=e.forget_rate,
+                train_items=e.train_items,
             )
         )
     return envs
@@ -225,6 +242,13 @@ def build_world(cfg: ScenarioCfg, seed: int) -> SimWorld:
         calib_rng=seeds.rng("sim_calib"),
         learning_from=cfg.world.learning_from,
         rounding=cfg.world.rounding,
+        learnability_mode=cfg.world.learnability,
+        repeat_decay=cfg.world.repeat_decay,
+        noisy_transfer=cfg.world.noisy_transfer,
+        report_rng=seeds.rng("sim_report") if cfg.world.report_stream == "separate" else None,
+        test_item_rng=seeds.rng("sim_test_items"),
+        final_eval=cfg.world.final_eval,
+        rollout_draws=cfg.world.rollout_draws,
     )
     world.set_benchmark_items(cfg.world.benchmark_items)
     return world

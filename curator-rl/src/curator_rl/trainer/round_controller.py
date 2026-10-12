@@ -284,6 +284,10 @@ class RoundController:
         # logs exactly what an uninterrupted one does
         vectors = getattr(self.scheduler, "_latest_vectors", None) or {}
         statuses = {e: sv.status.value for e, sv in vectors.items()} or None
+        for e, sv in vectors.items():          # reward-audit dispersion (1 = reward ignores the prompt)
+            if e in arms and sv.reward_dispersion == sv.reward_dispersion:
+                arms[e]["dispersion"] = round(float(sv.reward_dispersion), 4)
+                arms[e]["audit_flag"] = bool(sv.audit_flag)
         return {"round": obs.round, "step": obs.steps, "requested": dict(self.weights), "delivered": dict(delivered),
                 "arms": arms, "statuses": statuses, "charged_gpu_hours": self.ledger.charged_gpu_hours}
 
@@ -323,7 +327,9 @@ class RoundController:
             "scores": scores, "se": res["se_by_domain"], "delta_se": res["delta_se_by_domain"],
             "exposure": dict(self._exposure), "window_cost_gpu_hours": self._window_cost,
             "z": getattr(report, "z", None), "mismatch": getattr(report, "mismatch", None),
-            "gain_hat": getattr(report, "gain_hat", None), "ready": getattr(report, "ready", None)})
+            "gain_hat": getattr(report, "gain_hat", None), "ready": getattr(report, "ready", None),
+            "proxy_weights": getattr(self.scheduler, "proxy_weights", None),
+            "proxy_fit": (fit.as_log() if (fit := getattr(self.scheduler, "last_proxy_fit", None)) else None)})
         self._exposure = {e: 0.0 for e in self.env_ids}
         self._window_cost = 0.0
 

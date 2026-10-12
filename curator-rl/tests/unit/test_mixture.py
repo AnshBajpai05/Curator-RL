@@ -24,6 +24,8 @@ def make_cfg(**kwargs) -> SchedulerCfg:
         warmup_rounds=6, score_norm="zscore", cost_exponent=1.0,
         status_control="soft", pull_unit="round",
         s3_multiplier=0.5, s4_multiplier=0.5, s5_shrink=0.5, s5_cap="none", s1_quota=0.30,
+        max_weight=1.0, smoothing=1.0,
+        drift={"enabled": False, "delta": 0.5, "threshold": 8.0, "decay": 0.3},
     )
     base.update(kwargs)
     return SchedulerCfg(**base)

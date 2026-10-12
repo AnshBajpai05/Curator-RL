@@ -19,6 +19,7 @@ import math
 
 from curator_rl.calibration.calibrator import CalibrationReport, Calibrator
 from curator_rl.calibration.cre import CalibratedRewardEngine
+from curator_rl.calibration.regression import FitRow, ProxyFit, ProxyWeightFitter
 from curator_rl.core.config import CalibCfg, CreCfg, ProxyCfg, SchedulerCfg, SignalsCfg
 from curator_rl.core.types import (
     CalibrationObservation,
@@ -26,7 +27,8 @@ from curator_rl.core.types import (
     RoundObservation,
 )
 from curator_rl.scheduler.base import BaseScheduler, validate_weights
-from curator_rl.scheduler.mixture import apply_status_constraints, scores_to_weights
+from curator_rl.scheduler.mixture import apply_status_constraints, cap_weights, scores_to_weights
+from curator_rl.signals.drift import PageHinkley, standardised_surprise
 from curator_rl.signals.engine import SignalEngine
 
 
@@ -77,7 +79,24 @@ class DiscountedUCB(BaseScheduler):
             if (cre_cfg is not None and cre_cfg.enabled and calib_cfg.enabled)
             else None
         )
+        # alpha/beta fit (improvement B4): run-long exposure-weighted means of LP' and SR per arm
+        self._fitter = (
+            ProxyWeightFitter(proxy_cfg.alpha, proxy_cfg.beta, ridge=proxy_cfg.fit.ridge,
+                              trust_region=calib_cfg.trust_region, min_rows=proxy_cfg.fit.min_rows)
+            if (proxy_cfg.fit.enabled and calib_cfg.enabled) else None
+        )
+        self._fit_lp = {e: 0.0 for e in self.env_ids}
+        self._fit_sr = {e: 0.0 for e in self.env_ids}
+        self._fit_w = {e: 0.0 for e in self.env_ids}
+        self.last_proxy_fit: ProxyFit | None = None
         self._win_usd = {e: 0.0 for e in self.env_ids}   # dollars charged since last calibration
+        # drift-triggered discounting (improvement B2): per-arm change detector on pass-rate surprises
+        drift = scheduler_cfg.drift
+        self._drift = ({e: PageHinkley(drift.delta, drift.threshold) for e in self.env_ids}
+                       if drift.enabled else None)
+        self._group_size = int(group_size)
+        self._prev_pass: dict[str, float] = {}
+        self.drift_alarms: list[tuple[int, str]] = []
         self._budget_total: float | None = None
         self.cost_override: dict[str, float] | None = None  # privileged ablation (exact cost)
         self.reward_log: list[dict[str, object]] = []        # per round: reward and its source
@@ -97,6 +116,9 @@ class DiscountedUCB(BaseScheduler):
             scores, self.cfg.tau, self.cfg.epsilon, list(self.env_ids),
             score_norm=self.cfg.score_norm,
         )
+        if self.cfg.smoothing < 1.0:          # improvement B7: w = (1 - s) w_prev + s w_new
+            s = self.cfg.smoothing
+            weights = {e: (1.0 - s) * self._last_weights[e] + s * weights[e] for e in self.env_ids}
         vectors = self._latest_vectors
         if vectors and self.cfg.status_control != "off":
             weights, intents = apply_status_constraints(
@@ -104,13 +126,16 @@ class DiscountedUCB(BaseScheduler):
             )
         else:
             intents = {e: "hold" for e in self.env_ids}
+        if self.cfg.max_weight < 1.0:          # improvement B7: no single arm above the cap
+            weights = cap_weights(weights, self.cfg.max_weight,
+                                  frozen={e for e, i in intents.items() if i == "shrink"})
         validate_weights(weights, self.env_ids)
         self._last_weights = dict(weights)
         self.last_decision = self._decision(weights, scores, vectors or {}, intents)
         return weights
 
     def _n_min(self) -> int:
-        return self._engine._signals_cfg.status.n_min  # noqa: SLF001 (same package)
+        return self._engine.n_min
 
     def compute_scores(self) -> dict[str, float]:
         """μ̂ + bonus per environment (Roadmap E.6); exposed for debugging.
@@ -160,6 +185,20 @@ class DiscountedUCB(BaseScheduler):
 
     def update_observation(self, observation: RoundObservation) -> None:
         vectors = self._engine.update(observation)
+        if self._drift is not None:
+            for env_id, env_obs in observation.per_env.items():
+                if env_id not in self._prev_pass:
+                    continue
+                x = standardised_surprise(env_obs.k_success, env_obs.n_rollouts, env_obs.n_prompts,
+                                          self._group_size, self._prev_pass[env_id],
+                                          float(vectors[env_id].reward_dispersion))
+                if self._drift[env_id].update(x):
+                    # a detected change: this arm's evidence is stale, the others' is not
+                    self._n_hat[env_id] *= self.cfg.drift.decay
+                    self._s_hat[env_id] *= self.cfg.drift.decay
+                    self.drift_alarms.append((observation.round, env_id))
+            # checkpointed (not the vectors): a resumed run computes exactly the same surprises
+            self._prev_pass = {e: float(v.pass_rate) for e, v in vectors.items()}
         self._latest_vectors = vectors
         self._steps = observation.steps
         if self._budget_total is None:
@@ -192,6 +231,9 @@ class DiscountedUCB(BaseScheduler):
             if share > 0.0:
                 self._win_x[env_id] += share * float(vectors[env_id].proxy_raw)
                 self._win_u[env_id] += share
+                self._fit_lp[env_id] += share * float(vectors[env_id].lp_scaled)
+                self._fit_sr[env_id] += share * float(vectors[env_id].richness)
+                self._fit_w[env_id] += share
         self.reward_log.append(round_log)
 
     def _unit_cost(self, sv) -> float:
@@ -217,8 +259,7 @@ class DiscountedUCB(BaseScheduler):
         report = self._calibrator.observe(observation, proxy_x, self._win_usd)
         self.last_calibration = report
         if self._cre is not None:
-            costs = {e: (self.cost_override or {}).get(e, self._engine._unit_cost[e])  # noqa: SLF001
-                     for e in self.env_ids}
+            costs = {e: (self.cost_override or {}).get(e, self._engine.unit_cost(e)) for e in self.env_ids}
             self._cre.ingest(report.span_gain, proxy_x, costs, ready=report.ready,
                              window_k=report.window_k)
         if report.ready:
@@ -228,9 +269,26 @@ class DiscountedUCB(BaseScheduler):
                        else [e for e in self.env_ids if e in report.evaluated])
             for env_id in updated:
                 self._engine.set_calibration_mismatch(env_id, report.mismatch.get(env_id, False))
+            if self._fitter is not None:
+                self._fit_proxy(report)
         self._win_x = {e: 0.0 for e in self.env_ids}
         self._win_u = {e: 0.0 for e in self.env_ids}
         self._win_usd = {e: 0.0 for e in self.env_ids}
+
+    def _fit_proxy(self, report: CalibrationReport) -> None:
+        rows = [FitRow(e, report.gain_hat[e], report.gain_se[e], self._fit_lp[e] / self._fit_w[e],
+                       self._fit_sr[e] / self._fit_w[e])
+                for e in self.env_ids
+                if self._fit_w[e] > 0 and e in report.gain_hat and report.gain_se.get(e, float("inf")) < float("inf")]
+        fit = self._fitter.fit(rows, self._engine.proxy_weights)  # type: ignore[union-attr]
+        if fit.accepted:
+            self._engine.set_proxy_weights(fit.alpha, fit.beta)
+        self.last_proxy_fit = fit
+        self.reward_log.append({"round": self._round, "proxy_fit": fit.as_log()})
+
+    @property
+    def proxy_weights(self) -> tuple[float, float]:
+        return self._engine.proxy_weights
 
     # ------------------------------------------------------------- checkpoints
 
@@ -248,6 +306,9 @@ class DiscountedUCB(BaseScheduler):
             "win_usd": dict(self._win_usd),
             "budget_total": self._budget_total,
             "cre": None if self._cre is None else self._cre.get_state(),
+            "fit_lp": dict(self._fit_lp), "fit_sr": dict(self._fit_sr), "fit_w": dict(self._fit_w),
+            "drift": None if self._drift is None else {e: d.get_state() for e, d in self._drift.items()},
+            "prev_pass": dict(self._prev_pass),
         }
 
     def load_checkpoint(self, state) -> None:
@@ -266,6 +327,13 @@ class DiscountedUCB(BaseScheduler):
         self._budget_total = state.get("budget_total")  # type: ignore[assignment]
         if self._cre is not None and state.get("cre") is not None:
             self._cre.load_checkpoint(state["cre"])  # type: ignore[arg-type]
+        if self._drift is not None and state.get("drift") is not None:
+            for e, d in state["drift"].items():  # type: ignore[union-attr]
+                self._drift[e].load_checkpoint(d)
+            self._prev_pass = {e: float(v) for e, v in state.get("prev_pass", {}).items()}  # type: ignore[union-attr]
+        for name in ("fit_lp", "fit_sr", "fit_w"):        # absent in checkpoints made before B4
+            if name in state:
+                setattr(self, f"_{name}", {e: float(v) for e, v in state[name].items()})  # type: ignore[union-attr]
 
     def state_hash(self) -> str:
         payload = json.dumps(

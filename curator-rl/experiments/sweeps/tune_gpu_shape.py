@@ -10,6 +10,11 @@ calibration design for detection (exploratory). Nothing here is adopted: the out
 pre-registration on fresh seeds (>= 700).
 
     python experiments/sweeps/tune_gpu_shape.py --seeds 40
+    python experiments/sweeps/tune_gpu_shape.py --seeds 40 --suite gpu2   # realism v2 + reward audit
+
+Suite `gpu2` re-tunes every method on the realism-v2 scenarios (configs/sim/*_gpu2.yaml), with Curator
+carrying the components the component study kept (reports/analysis/component_study_gpu2.md): the
+reward audit with S5 capped at the floor, and calibration flags after 3 consecutive mismatch windows.
 """
 
 from __future__ import annotations
@@ -36,7 +41,15 @@ from curator_rl.core.config import load_config, rescale_for_batch_shape  # noqa:
 from curator_rl.simulator.harness import run_episode  # noqa: E402
 from curator_rl.simulator.scenarios import CalibSimCfg, load_scenario  # noqa: E402
 
-TUNE = {"S-I-R1-GPU": "scenario_si_r1_gpu.yaml", "S-I-R2-GPU": "scenario_si_r2_gpu.yaml"}
+SUITES = {
+    "gpu": {"tune": {"S-I-R1-GPU": "scenario_si_r1_gpu.yaml", "S-I-R2-GPU": "scenario_si_r2_gpu.yaml"},
+            "curator_extra": {}, "out": "tune_gpu_shape", "calibration_designs": True},
+    "gpu2": {"tune": {"S-I-R1-GPU2": "scenario_si_r1_gpu2.yaml", "S-I-R2-GPU2": "scenario_si_r2_gpu2.yaml"},
+             "curator_extra": {"signals.reward_audit.enabled": True, "scheduler.s5_cap": "floor",
+                               "calib.mismatch_windows": 3},
+             "out": "tune_gpu2", "calibration_designs": False},
+}
+TUNE = SUITES["gpu"]["tune"]
 SKIP = 6
 GRIDS = {
     "curator": [{"gamma": g, "exploration_coef": k, "tau": t}
@@ -51,13 +64,14 @@ CALIB_DESIGNS = [{"K": k, "items": n, "k_min": m}
                  for k, n, m in ((10, 100, 2), (5, 100, 2), (5, 200, 2), (3, 100, 2), (3, 200, 1), (2, 200, 1))]
 
 
-def _base():
+def _base(extra: dict | None = None):
     # GPU shape (32 prompts per round): status evidence threshold rescaled (audit E-28)
-    return rescale_for_batch_shape(load_config(REPO_ROOT / "configs" / "base.yaml"), 32)
+    ov = [f"{k}={v}" for k, v in (extra or {}).items()]
+    return rescale_for_batch_shape(load_config(REPO_ROOT / "configs" / "base.yaml", ov), 32)
 
 
-def _variant(method: str, point: dict):
-    base = _base()
+def _variant(method: str, point: dict, suite: str = "gpu"):
+    base = _base(SUITES[suite]["curator_extra"] if method == "curator" else None)
     if method == "curator":
         return base.model_copy(update={"scheduler": base.scheduler.model_copy(update=point)})
     sec = getattr(base.baselines, method).model_copy(update=point)
@@ -70,12 +84,12 @@ def _episode(method, cfg, sc, seed):
 
 
 def tune_point(task) -> dict:
-    method, idx, point, seeds, uniform = task
-    cfg = _variant(method, point)
+    method, idx, point, seeds, uniform, suite = task
+    cfg = _variant(method, point, suite)
     per_seed, ent = [], []
     for i, s in enumerate(seeds):
         rel = []
-        for sid, f in TUNE.items():
+        for sid, f in SUITES[suite]["tune"].items():
             sc = load_scenario(REPO_ROOT / "configs" / "sim" / f)
             _, r = _episode(method, cfg, sc, s)
             rel.append((r.final_score_expected - uniform[sid][i]) / uniform[sid][i])
@@ -114,27 +128,36 @@ def select(points):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=40)
+    ap.add_argument("--suite", choices=sorted(SUITES), default="gpu")
     args = ap.parse_args(argv)
+    suite = SUITES[args.suite]
     seeds = list(range(args.seeds))
     t0 = time.perf_counter()
     uniform = {sid: [run_episode(make_scheduler("uniform", load_scenario(REPO_ROOT / "configs" / "sim" / f), s),
                                  load_scenario(REPO_ROOT / "configs" / "sim" / f), seed=s).final_score_expected
-                     for s in seeds] for sid, f in TUNE.items()}
+                     for s in seeds] for sid, f in suite["tune"].items()}
     with ProcessPoolExecutor() as pool:
-        calib = list(pool.map(calib_point, [(i, d, seeds) for i, d in enumerate(CALIB_DESIGNS)]))
-        tuned = list(pool.map(tune_point, [(m, i, p, seeds, uniform) for m, grid in GRIDS.items()
+        calib = (list(pool.map(calib_point, [(i, d, seeds) for i, d in enumerate(CALIB_DESIGNS)]))
+                 if suite["calibration_designs"] else [])
+        tuned = list(pool.map(tune_point, [(m, i, p, seeds, uniform, args.suite) for m, grid in GRIDS.items()
                                            for i, p in enumerate(grid)]))
     chosen = {m: select([p for p in tuned if p["method"] == m]) for m in GRIDS}
     rep = {"generated_utc": datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"), "seeds": [0, args.seeds - 1],
            "calibration_designs": calib, "tuning": tuned, "chosen": chosen,
            "seconds": round(time.perf_counter() - t0, 1)}
+    rep["suite"], rep["curator_extra"] = args.suite, suite["curator_extra"]
     out = REPO_ROOT / "reports" / "sweeps"
-    (out / "tune_gpu_shape.json").write_text(json.dumps(rep, indent=2), encoding="utf-8")
-    lines = ["# Tuning at the GPU shape (tuning seeds; exploratory, nothing adopted)", "",
-             f"Seeds 0..{args.seeds - 1}; scenarios {list(TUNE)} (S-J-R-GPU held out); objective = mean relative "
-             "noiseless-score gain over Uniform; rule = best within one SE, then least concentrated (D-55).", "",
+    (out / f"{suite['out']}.json").write_text(json.dumps(rep, indent=2), encoding="utf-8")
+    title = ("# Tuning at the GPU shape (tuning seeds; exploratory, nothing adopted)" if args.suite == "gpu" else
+             "# Tuning at the GPU shape, realism v2 (tuning seeds; exploratory)")
+    lines = [title, "",
+             f"Seeds 0..{args.seeds - 1}; scenarios {list(suite['tune'])} (the S-J-R twin held out); objective = mean "
+             "relative noiseless-score gain over Uniform; rule = best within one SE, then least concentrated (D-55)."
+             + (f" Curator also carries {json.dumps(suite['curator_extra'])}." if suite["curator_extra"] else ""), "",
              "## A. Calibration design vs noisy-arm detection (post-audit Curator)", "",
              "| K | items/slice | k_min | detected (S5) | false flags | calib cost | score |", "|---|---|---|---|---|---|---|"]
+    if not calib:
+        lines[-4:] = []
     for c in calib:
         d = c["design"]
         lines.append(f"| {d['K']} | {d['items']} | {d['k_min']} | {c['detected']:.2f} | {c['false']:.3f} | "
@@ -148,7 +171,7 @@ def main(argv=None) -> int:
         lines.append(f"| {p['method']} | `{json.dumps(p['point'])}` | {p['objective']:+.4f} | {p['se']:.4f} | "
                      f"{p['entropy']:.2f} |")
     md = "\n".join(lines) + "\n"
-    (out / "tune_gpu_shape.md").write_text(md, encoding="utf-8")
+    (out / f"{suite['out']}.md").write_text(md, encoding="utf-8")
     print(md)
     return 0
 

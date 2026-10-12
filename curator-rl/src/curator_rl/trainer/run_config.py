@@ -22,7 +22,7 @@ BENCH_DOMAINS = ("gsm8k", "math35", "mbpp", "countdown")
 
 @dataclass
 class RunConfig:
-    method: str = "curator"              # curator | uniform | static | pilot_uniform | lp | ucb | sec | dump | dirichlet
+    method: str = "curator"              # curator[_variant] | uniform | static | pilot_uniform | lp | ucb | sec | dump | dirichlet
     seed: int = 0
     model: str = "Qwen/Qwen2.5-0.5B-Instruct"
     backend: str = "auto"                # auto | vllm | hf | fake

@@ -43,6 +43,8 @@ class StatusClassifier:
         self._s4_run = 0
         self._hot = 0
         self._clear = 0
+        self._audit = False            # reward audit: the reward does not depend on the prompt
+        self._s5_from_audit = False    # the current S5 was entered by the audit, not by calibration
         self._q_mis = mismatch_windows
         self._q_clear = clear_windows
         self._n_min = float(cfg.n_min)
@@ -60,6 +62,10 @@ class StatusClassifier:
         else:
             self._hot = 0
             self._clear += 1
+
+    def set_audit(self, flag: bool) -> None:
+        """Engine-forwarded reward-audit verdict (signals/audit.py), once per round."""
+        self._audit = bool(flag)
 
     # -------------------------------------------------------------------- step
 
@@ -109,6 +115,16 @@ class StatusClassifier:
         sr: float,
     ) -> EnvStatus:
         cfg = self._cfg
+
+        # 0. a reward shown not to depend on the prompt is unreliable whatever else holds. It takes
+        # priority over S1: the audit has its own evidence requirement (min_df), and exploring an arm
+        # whose reward is noise wastes exactly the budget S1 would spend.
+        if self._audit:
+            self._s5_from_audit = True
+            return EnvStatus.S5
+        if current == EnvStatus.S5 and self._s5_from_audit and self._hot < self._q_mis:
+            current = EnvStatus.S2          # audit cleared: classify afresh (no calibration streak to wait for)
+        self._s5_from_audit = False
 
         # 1. S1 keeps its E.5 priority over S5 for fresh arms, but evidence
         # decay alone does NOT demote an established S3/S4 arm to S1 (D-51): a
@@ -182,6 +198,8 @@ class StatusClassifier:
             "s4_run": self._s4_run,
             "hot": self._hot,
             "clear": self._clear,
+            "audit": self._audit,
+            "s5_from_audit": self._s5_from_audit,
         }
 
     def load_checkpoint(self, state: dict[str, object]) -> None:
@@ -191,3 +209,5 @@ class StatusClassifier:
         self._s4_run = int(state["s4_run"])  # type: ignore[arg-type]
         self._hot = int(state["hot"])  # type: ignore[arg-type]
         self._clear = int(state["clear"])  # type: ignore[arg-type]
+        self._audit = bool(state.get("audit", False))  # absent in pre-audit checkpoints
+        self._s5_from_audit = bool(state.get("s5_from_audit", False))

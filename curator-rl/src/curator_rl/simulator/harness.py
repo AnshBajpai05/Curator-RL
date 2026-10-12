@@ -47,6 +47,9 @@ class EpisodeResult:
     # noiseless S_val(theta_T) of the final skills (audit E-10): the objective itself, with no
     # Binomial evaluation noise drawn independently per method; use it as the primary metric
     final_score_expected: float = float("nan")
+    # delivered training prompts per arm, and passes over each finite training set (audit E-14)
+    prompts_by_env: dict[str, int] = field(default_factory=dict)
+    passes_by_env: dict[str, float | None] = field(default_factory=dict)
     round_logs: list[dict] = field(default_factory=list)
     calib_logs: list[dict] = field(default_factory=list)
     report_logs: list[dict] = field(default_factory=list)
@@ -202,7 +205,7 @@ def run_episode(
         ):
             # uncharged reporting evaluation, identical protocol for every
             # method (Roadmap L.4) — gives the score-vs-cost curve
-            score_r, se_r, _, _ = world.evaluate_benchmark(observed=True)
+            score_r, se_r = world.evaluate_report()
             report_logs.append(
                 {
                     "round": round_t + 1,
@@ -214,7 +217,7 @@ def run_episode(
         if spend >= world.budget_usd:
             break
 
-    final_score, final_se, _, _ = world.evaluate_benchmark(observed=True)  # uncharged
+    final_score, final_se = world.evaluate_report()                       # uncharged
     final_expected = world.expected_benchmark_score()                     # noiseless, no RNG
     return EpisodeResult(
         scenario_id=scenario.scenario_id,
@@ -227,6 +230,8 @@ def run_episode(
         budget_usd=world.budget_usd,
         benchmark_evals=world.benchmark_evals,
         final_score_expected=final_expected,
+        prompts_by_env=dict(world.prompts_seen),
+        passes_by_env=world.passes(),
         round_logs=logs,
         calib_logs=calib_logs,
         report_logs=report_logs,

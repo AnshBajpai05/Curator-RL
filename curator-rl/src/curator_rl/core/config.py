@@ -37,6 +37,15 @@ class BudgetCfg(_StrictModel):
     n_gpus: int = Field(ge=1)
 
 
+class SchedulerDriftCfg(_StrictModel):
+    """Drift-triggered discounting (improvement B2): gamma stays 1, an arm forgets only on a detected change."""
+
+    enabled: bool
+    delta: float = Field(ge=0)          # Page-Hinkley tolerance, in standardised-residual units
+    threshold: float = Field(gt=0)      # Page-Hinkley alarm level (lambda)
+    decay: float = Field(gt=0, le=1)    # rho: the arm's bandit counters are multiplied by it on an alarm
+
+
 class SchedulerCfg(_StrictModel):
     gamma: float = Field(gt=0, le=1)
     exploration_coef: float = Field(ge=0)
@@ -55,6 +64,11 @@ class SchedulerCfg(_StrictModel):
     # S5 hard response (improvement B5): none = multiplier only; floor = also cap at eps/N under `hard`
     s5_cap: Literal["none", "floor"]
     s1_quota: float = Field(ge=0)
+    # concentration control (improvement B7): cap on any single weight (1 = off) and exponential
+    # smoothing of the mixture, w_t = (1 - s) w_{t-1} + s w_new (smoothing 1 = off)
+    max_weight: float = Field(gt=0, le=1)
+    smoothing: float = Field(gt=0, le=1)
+    drift: SchedulerDriftCfg
 
 
 class UcbBaselineCfg(_StrictModel):
@@ -124,6 +138,15 @@ class StatusCfg(_StrictModel):
     s1_entry_ratio: float = Field(ge=0, le=1)
 
 
+class RewardAuditCfg(_StrictModel):
+    """Prompt-dependence audit of each arm's reward (signals/audit.py): flags rewards that ignore the prompt."""
+
+    enabled: bool
+    d_max: float = Field(gt=1)   # dispersion ratio separating prompt-independent (D=1) from real (D~3-4) rewards
+    z: float = Field(gt=0)       # one-sided confidence multiplier on log D (enter below, clear above)
+    min_df: int = Field(ge=2)    # pooled degrees of freedom before any decision
+
+
 class PriorCfg(_StrictModel):
     alpha0: float = Field(gt=0)
     beta0: float = Field(gt=0)
@@ -144,6 +167,15 @@ class SignalsCfg(_StrictModel):
     richness: RichnessCfg
     prior: PriorCfg
     status: StatusCfg
+    reward_audit: RewardAuditCfg
+
+
+class ProxyFitCfg(_StrictModel):
+    """alpha/beta fitted to calibrated gains (improvement B4, calibration/regression.py)."""
+
+    enabled: bool
+    ridge: float = Field(ge=0)     # penalty (in units of prediction precision) toward the prior direction
+    min_rows: int = Field(ge=2)    # arms with calibrated evidence needed before any fit
 
 
 class ProxyCfg(_StrictModel):
@@ -152,6 +184,7 @@ class ProxyCfg(_StrictModel):
     clip_l: float = Field(gt=0)
     quantile_prior_lo: float = Field(ge=0)
     quantile_prior_hi: float = Field(gt=0)
+    fit: ProxyFitCfg
 
     @field_validator("quantile_prior_hi")
     @classmethod
@@ -166,7 +199,7 @@ class CalibCfg(_StrictModel):
     enabled: bool  # Curator consumes calibration (ablation `calib.enabled: false`, Roadmap 12)
     interval_rounds: int = Field(ge=1)
     k_min: int = Field(ge=1)
-    trust_region: float = Field(gt=0, le=1)  # reserved for the alpha/beta fitter (not yet read)
+    trust_region: float = Field(gt=0, le=1)  # max relative change of alpha and beta per fit (proxy.fit)
     z_mis: float = Field(gt=0)
     mismatch_windows: int = Field(ge=1)
     mismatch_clear_windows: int = Field(ge=1)

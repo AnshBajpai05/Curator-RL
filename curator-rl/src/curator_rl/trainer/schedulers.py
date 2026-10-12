@@ -74,7 +74,7 @@ def make_run_scheduler(method: str, cfg, env_ids: Sequence[str], *, seed: int,
         return SECStyleBandit(env_ids, cfg.baselines.sec, cfg.scheduler)
     if method == "dump":
         return DUMPStyleUCB(env_ids, cfg.baselines.dump, cfg.scheduler)
-    if method == "curator":
+    if method == "curator" or method.startswith("curator_"):   # variants differ only in config (e.g. curator_nocal)
         return Curator(env_ids, cfg.signals, cfg.proxy, cfg.scheduler, cfg.calib, cfg.group_size,
                        prompts_per_round=prompts_per_round, cre_cfg=cfg.cre, domain_of=dict(domain_of))
     raise ValueError(f"unknown method '{method}'")

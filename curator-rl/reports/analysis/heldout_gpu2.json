@@ -1,0 +1,654 @@
+{
+  "generated_utc": "20261012T132916Z",
+  "seeds": [
+    0,
+    39
+  ],
+  "methods": {
+    "uniform": [
+      "uniform",
+      {}
+    ],
+    "pilot_uniform": [
+      "pilot_uniform",
+      {}
+    ],
+    "curator_nocal": [
+      "curator",
+      {
+        "scheduler.gamma": 1.0,
+        "scheduler.exploration_coef": 0.25,
+        "scheduler.tau": 1.0,
+        "signals.reward_audit.enabled": true,
+        "scheduler.s5_cap": "floor",
+        "calib.mismatch_windows": 3,
+        "calib.enabled": false
+      }
+    ],
+    "curator": [
+      "curator",
+      {
+        "scheduler.gamma": 1.0,
+        "scheduler.exploration_coef": 0.25,
+        "scheduler.tau": 1.0,
+        "signals.reward_audit.enabled": true,
+        "scheduler.s5_cap": "floor",
+        "calib.mismatch_windows": 3
+      }
+    ],
+    "ucb": [
+      "ucb",
+      {
+        "baselines.ucb.exploration_coef": 1.0,
+        "baselines.ucb.tau": 0.3
+      }
+    ],
+    "lp": [
+      "lp",
+      {
+        "baselines.lp.tau": 0.75
+      }
+    ],
+    "sec": [
+      "sec",
+      {
+        "baselines.sec.alpha": 0.1,
+        "baselines.sec.tau": 0.4
+      }
+    ],
+    "dump": [
+      "dump",
+      {
+        "baselines.dump.exploration_coef": 2.0,
+        "baselines.dump.tau": 0.4,
+        "baselines.dump.window_rounds": 10
+      }
+    ]
+  },
+  "table": {
+    "uniform|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.19988729508196723,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "uniform|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.19988217213114756,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "uniform|S-J-R-GPU2": {
+      "rel_gain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.19988729508196723,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "uniform|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.16658128415300547,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0,
+        "format": 0.0
+      }
+    },
+    "uniform|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.19988729508196723,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "uniform|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "noisy_share": 0.1998924180327869,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "pilot_uniform|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.03610519115079488,
+        0.028022847691163547,
+        0.04418753461042621
+      ],
+      "noisy_share": 0.25,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "pilot_uniform|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.038515560098528606,
+        0.03029272587928119,
+        0.04673839431777602
+      ],
+      "noisy_share": 0.25,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "pilot_uniform|S-J-R-GPU2": {
+      "rel_gain": [
+        0.044604132812685146,
+        0.03641086879104674,
+        0.05279739683432355
+      ],
+      "noisy_share": 0.25,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "pilot_uniform|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.02722467422008239,
+        0.01728765896153179,
+        0.03716168947863299
+      ],
+      "noisy_share": 0.1998134771332554,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0,
+        "format": 0.0
+      }
+    },
+    "pilot_uniform|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        0.030612550496577302,
+        0.02204457113985634,
+        0.039180529853298264
+      ],
+      "noisy_share": 0.25,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "pilot_uniform|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.042080644492931106,
+        0.03493373264409464,
+        0.04922755634176757
+      ],
+      "noisy_share": 0.25,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "curator_nocal|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.12438000715802952,
+        0.10841603050475003,
+        0.14034398381130903
+      ],
+      "noisy_share": 0.06107766940435415,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator_nocal|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.12066061332965591,
+        0.10120763210385411,
+        0.14011359455545772
+      ],
+      "noisy_share": 0.06792871825916583,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator_nocal|S-J-R-GPU2": {
+      "rel_gain": [
+        0.12623843870123447,
+        0.10859911385049081,
+        0.14387776355197812
+      ],
+      "noisy_share": 0.06150102459016393,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator_nocal|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.05951281318655717,
+        0.04263377943475617,
+        0.07639184693835817
+      ],
+      "noisy_share": 0.05600948185950956,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 1.0,
+        "format": 0.0
+      }
+    },
+    "curator_nocal|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        0.13144404290973166,
+        0.11488041725106653,
+        0.1480076685683968
+      ],
+      "noisy_share": 0.0612657094492108,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator_nocal|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.09721489424138499,
+        0.0810008236049653,
+        0.11342896487780468
+      ],
+      "noisy_share": 0.06167640397247014,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.11931187778559171,
+        0.1039887024451035,
+        0.13463505312607993
+      ],
+      "noisy_share": 0.062183216542570155,
+      "false_flags": 0.0125,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.11202635367710503,
+        0.09385705542215218,
+        0.1301956519320579
+      ],
+      "noisy_share": 0.0690245464000354,
+      "false_flags": 0.0125,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator|S-J-R-GPU2": {
+      "rel_gain": [
+        0.1184963276162216,
+        0.10156940477110682,
+        0.13542325046133638
+      ],
+      "noisy_share": 0.06259004237288136,
+      "false_flags": 0.00625,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.054461163763674825,
+        0.0376487477535243,
+        0.07127357977382534
+      ],
+      "noisy_share": 0.0569927064417687,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 1.0,
+        "format": 0.0
+      }
+    },
+    "curator|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        0.12320229752800198,
+        0.10647735159206412,
+        0.13992724346393984
+      ],
+      "noisy_share": 0.06241238752082569,
+      "false_flags": 0.0125,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "curator|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.08770616575418552,
+        0.07280901941523477,
+        0.10260331209313628
+      ],
+      "noisy_share": 0.06292304947486968,
+      "false_flags": 0.05,
+      "detected": {
+        "noisy": 1.0
+      }
+    },
+    "ucb|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.03957833732857318,
+        0.030497662891694394,
+        0.04865901176545197
+      ],
+      "noisy_share": 0.230290489252697,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "ucb|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.04009310419674702,
+        0.03135733993986399,
+        0.04882886845363005
+      ],
+      "noisy_share": 0.23015618956020084,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "ucb|S-J-R-GPU2": {
+      "rel_gain": [
+        0.04199147490984374,
+        0.03344363163469025,
+        0.05053931818499723
+      ],
+      "noisy_share": 0.22975922131147541,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "ucb|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.02021681493887703,
+        0.011154973756919876,
+        0.029278656120834187
+      ],
+      "noisy_share": 0.18638739068885468,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0,
+        "format": 0.0
+      }
+    },
+    "ucb|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        0.02539718631170711,
+        0.01431804303165954,
+        0.03647632959175468
+      ],
+      "noisy_share": 0.2389058169996146,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "ucb|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.04038553248172868,
+        0.031955996403382717,
+        0.04881506856007464
+      ],
+      "noisy_share": 0.22894004644039828,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "lp|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.05714772888268397,
+        0.05020996829036542,
+        0.06408548947500252
+      ],
+      "noisy_share": 0.16547367953036898,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "lp|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.05984359760448722,
+        0.05281610760445149,
+        0.06687108760452296
+      ],
+      "noisy_share": 0.1654842346844535,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "lp|S-J-R-GPU2": {
+      "rel_gain": [
+        0.06533310747920837,
+        0.05743751220290391,
+        0.07322870275551283
+      ],
+      "noisy_share": 0.16584336577868852,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "lp|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.03357539508528347,
+        0.02381821027593732,
+        0.043332579894629616
+      ],
+      "noisy_share": 0.13056933697175874,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0,
+        "format": 0.0
+      }
+    },
+    "lp|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        0.058671780426128174,
+        0.05204875602817066,
+        0.06529480482408569
+      ],
+      "noisy_share": 0.17111058596811016,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "lp|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.05836171295961663,
+        0.0492004538260022,
+        0.06752297209323106
+      ],
+      "noisy_share": 0.1659918261342243,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "sec|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.012417152063435095,
+        0.004407341428293564,
+        0.020426962698576627
+      ],
+      "noisy_share": 0.3529501066346935,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "sec|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.01087203423078059,
+        0.003042470049648619,
+        0.01870159841191256
+      ],
+      "noisy_share": 0.352785948792526,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "sec|S-J-R-GPU2": {
+      "rel_gain": [
+        0.007284164102050843,
+        -0.0004091603319576658,
+        0.01497748853605935
+      ],
+      "noisy_share": 0.3521981728142077,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "sec|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.0011231405332377,
+        -0.006913472023787719,
+        0.00915975309026312
+      ],
+      "noisy_share": 0.28569188428059394,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0,
+        "format": 0.0
+      }
+    },
+    "sec|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        -0.009351115420665173,
+        -0.01781546980774569,
+        -0.0008867610335846557
+      ],
+      "noisy_share": 0.3530388338296274,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "sec|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.017708984269757998,
+        0.008802175850941013,
+        0.02661579268857498
+      ],
+      "noisy_share": 0.35094395221622054,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "dump|S-I-R1-GPU2": {
+      "rel_gain": [
+        0.012515374997557754,
+        0.003878968595181456,
+        0.021151781399934053
+      ],
+      "noisy_share": 0.30271991505817025,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "dump|S-I-R2-GPU2": {
+      "rel_gain": [
+        0.011410804500571331,
+        0.0029266686669296264,
+        0.019894940334213036
+      ],
+      "noisy_share": 0.3026651738498149,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "dump|S-J-R-GPU2": {
+      "rel_gain": [
+        0.009599780441201008,
+        0.001080475669791043,
+        0.018119085212610974
+      ],
+      "noisy_share": 0.3026120645491803,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "dump|S-I-R1-GPU2-MIS": {
+      "rel_gain": [
+        0.002250622288862382,
+        -0.005561442521676262,
+        0.010062687099401026
+      ],
+      "noisy_share": 0.24448022706240083,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0,
+        "format": 0.0
+      }
+    },
+    "dump|S-I-R1-GPU2-NN": {
+      "rel_gain": [
+        -0.000467259816250986,
+        -0.01054187085215677,
+        0.009607351219654798
+      ],
+      "noisy_share": 0.3038099881015336,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    },
+    "dump|S-I-R1-GPU2-NP": {
+      "rel_gain": [
+        0.02158475143631041,
+        0.013353302688446471,
+        0.02981620018417435
+      ],
+      "noisy_share": 0.3020202604442094,
+      "false_flags": 0.0,
+      "detected": {
+        "noisy": 0.0
+      }
+    }
+  }
+}

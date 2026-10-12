@@ -4,6 +4,7 @@
     python run.py setup                      # install the right stack for this GPU (T4: vLLM venv; P100: HF)
     python run.py smoke                      # ~10 min end-to-end check incl. checkpoint + resume (do this first)
     python run.py compare                    # Curator vs Uniform vs LP, same seed, matched GPU-hour budget
+                                             # (--methods curator,curator_nocal,pilot_uniform,ucb,sec,dump,static too)
     python run.py sysid                      # randomized-mixture run -> costs, learning/transfer, kappa
     python run.py status                     # where every run is (progress.json heartbeat)
     python run.py report                     # rebuild comparison.md / sysid_report.md from the outputs
@@ -47,11 +48,25 @@ DEFAULT_OUT = Path("/kaggle/working/curator_runs") if ON_KAGGLE else HERE / "cur
 EXIT_PREEMPTED = 75            # a run stopped cleanly before the session limit (resumable)
 KAGGLE_SESSION_HOURS = 11.75   # Kaggle GPU sessions end at 12 h; leave a margin for the last upload
 
-# Each method at its own GPU-shape-tuned point (reports/sweeps/tune_gpu_shape.md: equal tuning budget,
-# tuning seeds, one-SE + least-concentrated rule). Exploratory until a pre-registered confirmation
-# (DECISIONS.md D-96, proposed); `--preset base` uses configs/base.yaml unchanged.
+# Each method at its own tuned point on the realism-v2 GPU-shape scenarios (reports/sweeps/tune_gpu2.md:
+# equal tuning budget, tuning seeds, one-SE + least-concentrated rule; held-out check in
+# reports/analysis/heldout_gpu2.md). Curator carries the reward audit (S5 for a reward that ignores the
+# prompt, capped at the exploration floor) and needs 3 consecutive calibration mismatches to flag
+# (reports/analysis/component_study_gpu2.md). `curator_nocal` is the same without calibration (ablation).
+# Exploratory until a pre-registered confirmation (DECISIONS.md D-98, proposed). `gpu_tuned_v1` is the
+# previous preset (pre-audit components, reports/sweeps/tune_gpu_shape.md); `base` uses configs/base.yaml.
+_CURATOR_V2 = ["scheduler.gamma=1.0", "scheduler.exploration_coef=0.25", "scheduler.tau=1.0",
+               "signals.reward_audit.enabled=true", "scheduler.s5_cap=floor", "calib.mismatch_windows=3"]
 PRESETS = {
     "gpu_tuned": {
+        "curator": _CURATOR_V2,
+        "curator_nocal": _CURATOR_V2 + ["calib.enabled=false"],
+        "lp": ["baselines.lp.tau=0.75"],
+        "ucb": ["baselines.ucb.exploration_coef=1.0", "baselines.ucb.tau=0.3"],
+        "sec": ["baselines.sec.alpha=0.1", "baselines.sec.tau=0.4"],
+        "dump": ["baselines.dump.exploration_coef=2.0", "baselines.dump.tau=0.4", "baselines.dump.window_rounds=10"],
+    },
+    "gpu_tuned_v1": {
         "curator": ["scheduler.gamma=1.0", "scheduler.exploration_coef=0.1", "scheduler.tau=0.3"],
         "lp": ["baselines.lp.tau=0.5"],
         "ucb": ["baselines.ucb.exploration_coef=0.25", "baselines.ucb.tau=0.3"],
