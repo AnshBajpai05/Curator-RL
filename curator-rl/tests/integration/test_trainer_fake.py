@@ -190,6 +190,9 @@ def test_supervisor_restarts_a_crashed_run_and_mirrors_everything(tmp_path):
     res = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=600)
     assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-3000:]
     assert "crashed" in res.stdout and "attempt 2" in res.stdout
+    # the notebook sees progress lines (the workers' own output goes to their logs)
+    assert "curator_s0 finished: 5 rounds" in res.stdout and "1 crash(es)" in res.stdout
+    assert "compare: 1/1 runs finished, 0 running, 0 waiting" in res.stdout
     log = (out / "logs" / "curator_s0.log").read_text(errors="replace")
     assert "injected fault at step 3" in log and "resuming from round-0002" in log
     summary = json.loads((out / "curator_s0" / "summary.json").read_text())

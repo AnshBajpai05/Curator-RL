@@ -58,6 +58,7 @@ ON_KAGGLE = Path("/kaggle/working").exists()
 DEFAULT_OUT = Path("/kaggle/working/curator_runs") if ON_KAGGLE else HERE / "curator_runs"
 EXIT_PREEMPTED = 75            # a run stopped cleanly before the session limit (resumable)
 KAGGLE_SESSION_HOURS = 11.75   # Kaggle GPU sessions end at 12 h; leave a margin for the last upload
+CLOCK_TZ = os.environ.get("CURATOR_TZ", "Asia/Kolkata")   # clock of the progress lines (the team is in India)
 LEVEL1_ENVS = ("gsm8k", "math35", "mbpp", "countdown", "noisy")   # = curator_rl.trainer.run_config.LEVEL1_ENVS
 
 # Each method at its own tuned point on the realism-v2 GPU-shape scenarios (reports/sweeps/tune_gpu2.md:
@@ -332,6 +333,7 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
                         "extra": list(extra or [])})
     running: list[tuple[subprocess.Popen, int | None, dict]] = []
     outcome = {"finished": [], "preempted": [], "failed": []}
+    board = progress_board(args, len(pending), len(devices))
     last_export = time.time()
     last_launch = 0.0
     while pending or running:
@@ -342,7 +344,9 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
             if args.backend != "fake" and running and wait > 0:
                 time.sleep(wait)            # never two model downloads / vLLM start-ups at the same moment
             running.append((spawn(args, job, free[0]), free[0], job))
+            board.launched(f"{job['name']}_s{job['seed']}", free[0])
             last_launch = time.time()
+        board.tick(len(pending))
         time.sleep(5 if args.backend == "fake" else 15)
         if time.time() - last_export > RESULTS_EVERY_SECONDS:
             refresh_results(args)                # progress snapshot of long runs
@@ -352,9 +356,10 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
             if code is None:
                 continue
             running.remove((proc, g, job))
+            name = f"{job['name']}_s{job['seed']}"
+            board.ended(name, code, preempted_code=EXIT_PREEMPTED)
             refresh_results(args)                # a run ended (finished, stopped or crashed)
             last_export = time.time()
-            name = f"{job['name']}_s{job['seed']}"
             if code == 0:
                 outcome["finished"].append(name)
             elif code == EXIT_PREEMPTED:
@@ -367,11 +372,20 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
                     outcome["failed"].append(name)
                 else:
                     pending.insert(0, nxt)
+    board.tick(0)                                # the closing summary of the step
     return outcome
 
 
 RESULTS_EVERY_SECONDS = 20 * 60
 LAUNCH_STAGGER_SECONDS = 45
+
+
+def progress_board(args, n_jobs: int, n_gpus: int):
+    """Progress lines in the notebook while the runs train (their own output goes to the log files)."""
+    sys.path.insert(0, str(CODE / "src"))
+    from curator_rl.trainer.progress_view import ProgressBoard
+
+    return ProgressBoard(Path(args.out), args.command, n_jobs, n_gpus, args.budget_gpu_hours, tz=CLOCK_TZ)
 
 
 def free_port(start: int, tries: int = 100) -> int:

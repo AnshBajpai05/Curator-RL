@@ -33,6 +33,21 @@ the results, the error of any run that crashed, and where the zip is; cell 8 rem
 install in background runs so only results are saved. Every cell stops with a plain instruction when
 something needs fixing (dataset not attached, old package, no GPU, no or read-only token).
 
+**While cell 6 runs** it prints a line per run after every round (about every 3 minutes), and again
+after 5 quiet minutes (loading the model, the final evaluation), plus a step summary when a run starts
+or ends and every 15 minutes (clock in IST; set the environment variable `CURATOR_TZ` for another zone):
+
+```
+[00:05 IST] curator_s0  GPU0 ██████████████████░░  93%  round 30  training, ~14 min to go  checkpoint 30 · backed up 28
+[00:05 IST] uniform_s0  GPU1 ████████████████████ 100%  round 35  final evaluation, ~4 min to go  checkpoint 35 · backed up 35
+[00:05 IST] compare: 0/3 runs finished, 2 running, 1 waiting · step done in ~2 h 05 min (about 02:10 IST)
+[00:09 IST] ✓ uniform_s0 finished: 35 rounds, 1.50 GPU-h, dev score 0.412
+```
+
+The bar is the share of the run's GPU-hour budget used. "backed up" is the newest round in the Hugging
+Face backup; `backup FAILING` means the backup stopped working (the run itself continues). The workers'
+full output is in `/kaggle/working/curator_runs/logs/<run>.log`.
+
 ## Nothing is lost if the session dies
 
 - **Every round is checkpointed** (LoRA adapter, optimizer, scheduler, prompt-stream positions, RNG
