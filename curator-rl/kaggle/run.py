@@ -41,6 +41,7 @@ import argparse
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -221,6 +222,11 @@ def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
     env = dict(os.environ)
     if gpu is not None:
         env["CUDA_VISIBLE_DEVICES"] = str(gpu)
+    # vLLM colocate initialises torch.distributed on a local port. TRL picks the first free one from a
+    # fixed list, so two runs started together could both pick 29500 and the second crashed; each GPU
+    # now gets its own port range, chosen here
+    env["MASTER_ADDR"] = "127.0.0.1"
+    env["MASTER_PORT"] = str(free_port(29500 + 100 * (gpu or 0)))
     log = log_path(args, name, seed)
     log.parent.mkdir(parents=True, exist_ok=True)
     print(f"[run.py] {name} seed {seed} on GPU {gpu} (attempt {job['attempt'] + 1}, micro-batch "
@@ -290,11 +296,16 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
     running: list[tuple[subprocess.Popen, int | None, dict]] = []
     outcome = {"finished": [], "preempted": [], "failed": []}
     last_export = time.time()
+    last_launch = 0.0
     while pending or running:
         while pending and len(running) < len(devices):
             free = [d for d in devices if d not in {g for _, g, _ in running}]
             job = pending.pop(0)
+            wait = LAUNCH_STAGGER_SECONDS - (time.time() - last_launch)
+            if args.backend != "fake" and running and wait > 0:
+                time.sleep(wait)            # never two model downloads / vLLM start-ups at the same moment
             running.append((spawn(args, job, free[0]), free[0], job))
+            last_launch = time.time()
         time.sleep(5 if args.backend == "fake" else 15)
         if time.time() - last_export > RESULTS_EVERY_SECONDS:
             refresh_results(args)                # progress snapshot of long runs
@@ -323,6 +334,19 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
 
 
 RESULTS_EVERY_SECONDS = 20 * 60
+LAUNCH_STAGGER_SECONDS = 45
+
+
+def free_port(start: int, tries: int = 100) -> int:
+    """First TCP port >= start that is free now on localhost."""
+    for port in range(start, start + tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+                return port
+            except OSError:
+                continue
+    return 0                         # 0: let TRL choose
 
 
 def results_dir(args) -> Path:
