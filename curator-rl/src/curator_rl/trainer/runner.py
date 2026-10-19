@@ -138,6 +138,7 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
         if ctl.preempted:
             ctl.write_progress("preempted")
             ok = sync.flush(label=f"preempted at round {ctl.round}")
+            ctl.write_progress("preempted")               # again, with the final sync recorded
             print(f"[curator] {cfg.name} seed {cfg.seed}: stopped cleanly at round {ctl.round} "
                   f"({ctl.stop_reason}); checkpoint saved{', synced' if ok else ''}. Resume to continue.",
                   flush=True)
@@ -151,6 +152,7 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
         atomic_write_json(out / "summary.json", summary)
         ctl.write_progress("finished")
         sync.flush(label="finished")
+        ctl.write_progress("finished")                    # again, with the final sync recorded
     except BaseException as exc:
         # save what exists (logs, the last checkpoint) before the process dies; the supervisor
         # in run.py restarts the run from that checkpoint
