@@ -240,7 +240,7 @@ class RoundController:
         backend_save = backend_save or self.save_backend or (lambda d: None)
         for attempt in range(2):
             try:
-                save_checkpoint(self.out_dir, self, backend_save)
+                save_checkpoint(self.out_dir, self, backend_save, keep=self.cfg.keep_checkpoints)
                 self._checkpoint_failures = 0
                 self.last_checkpoint_round = self.round
                 self.write_progress("preempting" if self.preempted else "running")

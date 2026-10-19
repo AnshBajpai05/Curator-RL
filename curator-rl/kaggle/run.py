@@ -10,6 +10,11 @@
     python run.py status                     # where every run is (progress.json heartbeat)
     python run.py report                     # rebuild comparison.md / sysid_report.md from the outputs
 
+Results: after every finished run, every 20 minutes during long runs and at the end, the folder
+`results/` next to the runs (on Kaggle /kaggle/working/results) is rebuilt: comparison.md, status.md,
+figures, every run's summary and logs, and one downloadable `curator_results.zip`. Each run keeps only
+its newest 3 checkpoints (--keep-checkpoints); older ones are deleted automatically.
+
 Never lose a run (recommended on Kaggle):
     python run.py compare --sync-to hf://<you>/curator-runs
 Every round is checkpointed locally, and the newest checkpoint plus all logs are mirrored to a private
@@ -177,7 +182,8 @@ def run_config(args, method: str, seed: int, **shape):
                     micro_batch=args.micro_batch, max_completion_tokens=args.max_tokens,
                     calib_items=args.calib_items, final_items=args.final_items, report_items=args.report_items,
                     report_every=args.report_every, sync_to=args.sync_to or "", sync_every_min=args.sync_every_min,
-                    deadline_unix=args.deadline_unix, label=getattr(args, "label", None) or "")
+                    deadline_unix=args.deadline_unix, label=getattr(args, "label", None) or "",
+                    keep_checkpoints=args.keep_checkpoints)
     for k, v in shape.items():
         setattr(cfg, k, v)
     return cfg
@@ -202,6 +208,7 @@ def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
            "--calib-items", str(args.calib_items), "--final-items", str(args.final_items),
            "--report-items", str(args.report_items), "--report-every", str(args.report_every),
            "--sync-every-min", str(args.sync_every_min), "--deadline-unix", str(args.deadline_unix),
+           "--keep-checkpoints", str(args.keep_checkpoints),
            "--shape", json.dumps(job["shape"]), *job["extra"]]
     if job["label"]:
         cmd += ["--label", job["label"]]
@@ -282,17 +289,23 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
                         "extra": list(extra or [])})
     running: list[tuple[subprocess.Popen, int | None, dict]] = []
     outcome = {"finished": [], "preempted": [], "failed": []}
+    last_export = time.time()
     while pending or running:
         while pending and len(running) < len(devices):
             free = [d for d in devices if d not in {g for _, g, _ in running}]
             job = pending.pop(0)
             running.append((spawn(args, job, free[0]), free[0], job))
         time.sleep(5 if args.backend == "fake" else 15)
+        if time.time() - last_export > RESULTS_EVERY_SECONDS:
+            refresh_results(args)                # progress snapshot of long runs
+            last_export = time.time()
         for proc, g, job in list(running):
             code = proc.poll()
             if code is None:
                 continue
             running.remove((proc, g, job))
+            refresh_results(args)                # a run ended (finished, stopped or crashed)
+            last_export = time.time()
             name = f"{job['name']}_s{job['seed']}"
             if code == 0:
                 outcome["finished"].append(name)
@@ -307,6 +320,23 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
                 else:
                     pending.insert(0, nxt)
     return outcome
+
+
+RESULTS_EVERY_SECONDS = 20 * 60
+
+
+def results_dir(args) -> Path:
+    return Path(args.results_dir) if args.results_dir else Path(args.out).parent / "results"
+
+
+def refresh_results(args, *, quiet: bool = True) -> None:
+    """Rebuild comparison, figures, the results folder and its zip (uploaded when syncing). Never raises."""
+    if getattr(args, "no_results", False):
+        return
+    try:
+        cmd_report(args, quiet=quiet)
+    except Exception as exc:  # noqa: BLE001 - results are a convenience; never stop the runs over them
+        print(f"[run.py] results not refreshed: {exc!r}", flush=True)
 
 
 def restore(args) -> None:
@@ -344,7 +374,7 @@ def cmd_compare(args) -> int:
     restore(args)
     args.methods = args.methods or ["curator", "uniform", "lp"]
     outcome = run_jobs(args, [(m, s) for s in args.seeds for m in args.methods], _shape(args))
-    cmd_report(args)
+    refresh_results(args, quiet=False)
     return finish(args, outcome)
 
 
@@ -360,24 +390,29 @@ def cmd_loo(args) -> int:
     arms = args.arms or list(LEVEL1_ENVS)
     jobs = [j for s in args.seeds for m in args.methods for j in [(m, s)] + [(m, s, a) for a in arms]]
     outcome = run_jobs(args, jobs, _shape(args))
-    cmd_report(args)
+    refresh_results(args, quiet=False)
     return finish(args, outcome)
 
 
 def cmd_sysid(args) -> int:
     restore(args)
     outcome = run_jobs(args, [("dirichlet", s) for s in args.seeds], _shape(args))
-    cmd_report(args)
+    refresh_results(args, quiet=False)
     return finish(args, outcome)
 
 
 def cmd_smoke(args) -> int:
     """Tiny run on the first GPU: 3 rounds with calibration every round, then a resume to round 4."""
     args.out = Path(args.out) / "smoke"
+    args.no_results = True                      # a check, not a result
     shutil.rmtree(args.out, ignore_errors=True)
     args.out.mkdir(parents=True)
     if not args.sync_to:                       # exercise the sync + restore path even without a token
         args.sync_to = str(Path(args.out) / "_sync")
+    else:
+        # its own folder in the sync target: the smoke run is also called curator_s0, and must never be
+        # restored as the real curator_s0 by a later compare
+        args.sync_to = args.sync_to.rstrip("/") + "/smoke"
     shape = {"prompts_per_step": 4, "group_size": 4, "micro_batch": 8, "max_completion_tokens": 128,
              "steps_per_round": 1, "calib_interval": 1, "calib_items": 4, "report_every": 0, "final_items": 4,
              "checkpoint_every": 1}
@@ -405,26 +440,18 @@ def cmd_smoke(args) -> int:
 
 
 def cmd_status(args) -> int:
-    rows = []
-    for p in sorted(Path(args.out).glob("*/progress.json")):
-        try:
-            s = json.loads(p.read_text())
-        except (OSError, ValueError):
-            continue
-        sync = s.get("sync") or {}
-        rows.append(f"| {p.parent.name} | {s.get('status')} | {s.get('round')}/{s.get('max_rounds')} | "
-                    f"{s.get('charged_gpu_hours')}/{s.get('budget_gpu_hours')} | {s.get('last_checkpoint_round')} | "
-                    f"{sync.get('last_round', '-')} ({sync.get('last_ok_utc') or 'never'}) | "
-                    f"{s.get('stop_reason') or ''} | {s.get('updated_utc')} |")
-    print("| run | status | round | GPU-h used/budget | checkpoint | synced round (when) | stop reason | updated |")
-    print("|---|---|---|---|---|---|---|---|")
-    print("\n".join(rows) if rows else "| (no runs yet) |")
+    sys.path.insert(0, str(CODE / "src"))
+    from curator_rl.trainer.results import ZIP_NAME, status_table
+
+    print(status_table(Path(args.out)), end="")
+    zip_path = results_dir(args) / ZIP_NAME
+    print(f"\nresults zip: {zip_path if zip_path.exists() else 'not written yet'}")
     if args.deadline_unix:
         print(f"\nsession time left: {(args.deadline_unix - time.time()) / 3600:.2f} h")
     return 0
 
 
-def cmd_report(args) -> int:
+def cmd_report(args, *, quiet: bool = False) -> int:
     sys.path.insert(0, str(CODE / "src"))
     from curator_rl.trainer.runner import compare_report
     from curator_rl.trainer.sysid import analyse, render
@@ -433,12 +460,14 @@ def cmd_report(args) -> int:
     if any(out.glob("*/summary.json")):
         md = compare_report(out)
         (out / "comparison.md").write_text(md, encoding="utf-8")
-        print(md)
+        if not quiet:
+            print(md)
     try:
         from curator_rl.viz.plots import render_run_plots
 
         _, note = render_run_plots(out)
-        print(f"[run.py] figures: {note}")
+        if not quiet:
+            print(f"[run.py] figures: {note}")
     except Exception as exc:  # noqa: BLE001 - figures are a convenience; never fail a report over them
         print(f"[run.py] figures skipped: {exc!r}")
     for run in sorted(out.glob("dirichlet_s*")):
@@ -448,8 +477,28 @@ def cmd_report(args) -> int:
         rep = analyse(run, cfg["envs"], cfg["group_size"])
         (run / "sysid_report.json").write_text(json.dumps(rep, indent=2), encoding="utf-8")
         (run / "sysid_report.md").write_text(render(rep), encoding="utf-8")
-        print(render(rep))
+        if not quiet:
+            print(render(rep))
+    _export(args, quiet)
     return 0
+
+
+def _export(args, quiet: bool) -> None:
+    """Rebuild the results folder and its zip from what is on disk, and upload it when syncing."""
+    if getattr(args, "no_results", False):
+        return
+    try:
+        from curator_rl.trainer.results import export_results
+
+        zip_path = export_results(Path(args.out), results_dir(args))
+        if args.sync_to:
+            from curator_rl.trainer.artifacts import ArtifactSync
+
+            ArtifactSync(results_dir(args), args.sync_to, min_interval_s=0.0).flush(timeout=600.0, label="results")
+        if not quiet:
+            print(f"[run.py] results: {zip_path}", flush=True)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[run.py] results not written: {exc!r}", flush=True)
 
 
 def main(argv=None) -> int:
@@ -474,6 +523,10 @@ def main(argv=None) -> int:
     ap.add_argument("--report-items", type=int, default=100, help="dev items per domain, periodic reports")
     ap.add_argument("--report-every", type=int, default=20, help="uncharged dev report every N rounds (0: final only)")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    ap.add_argument("--results-dir", type=Path, default=None,
+                    help="where results + curator_results.zip go (default: 'results' next to --out)")
+    ap.add_argument("--keep-checkpoints", type=int, default=3, help="newest checkpoints kept per run")
+    ap.add_argument("--quiet", action="store_true", help="report: write the files, print only their location")
     ap.add_argument("--resume-from", default=None, help="directory or hf://owner/repo[/prefix] with earlier runs")
     ap.add_argument("--sync-to", default=None, help="mirror runs while training: hf://owner/repo[/prefix] or a dir")
     ap.add_argument("--sync-every-min", type=float, default=5.0, help="minimum minutes between uploads")
@@ -494,7 +547,7 @@ def main(argv=None) -> int:
     if args.command != "train":
         load_hf_token()
     return {"setup": cmd_setup, "smoke": cmd_smoke, "compare": cmd_compare, "sysid": cmd_sysid, "loo": cmd_loo,
-            "train": cmd_train, "report": cmd_report, "status": cmd_status}[args.command](args)
+            "train": cmd_train, "report": lambda a: cmd_report(a, quiet=a.quiet), "status": cmd_status}[args.command](args)
 
 
 if __name__ == "__main__":

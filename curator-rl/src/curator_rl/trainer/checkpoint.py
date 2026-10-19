@@ -4,7 +4,8 @@ Layout:  <out>/checkpoints/round-0005/{controller.json, backend files...}
          <out>/checkpoints/latest.json -> {"dir": "round-0005", "round": 5}
 A checkpoint is written into `round-0005.tmp`, then renamed; `latest.json` is replaced atomically
 afterwards. A session killed at any moment leaves either the previous checkpoint or the new one,
-never a half-written one. The last `keep` checkpoints are kept. The controller state is versioned
+never a half-written one. Only the newest `keep` checkpoints (default 3) are kept: older ones and
+half-written `.tmp` leftovers are deleted automatically, the one `latest.json` names never is. The controller state is versioned
 and refuses to load into a run with a different method, seed or batch shape.
 """
 
@@ -21,13 +22,19 @@ from curator_rl.core.atomic import atomic_write_json
 LATEST = "latest.json"
 
 
-def save_checkpoint(out_dir: Path, controller, backend_save: Callable[[Path], None], *, keep: int = 2) -> Path:
+DEFAULT_KEEP = 3
+
+
+def save_checkpoint(out_dir: Path, controller, backend_save: Callable[[Path], None], *,
+                    keep: int = DEFAULT_KEEP) -> Path:
+    """Write a checkpoint atomically, then delete all but the newest `keep` (never the one just written)."""
+    keep = max(keep, 1)
     root = Path(out_dir) / "checkpoints"
     root.mkdir(parents=True, exist_ok=True)
     name = f"round-{controller.round:04d}"
     tmp, final = root / f"{name}.tmp", root / name
-    if tmp.exists():
-        shutil.rmtree(tmp)
+    for stale in root.glob("*.tmp"):           # half-written leftovers of a crash or a killed session
+        shutil.rmtree(stale, ignore_errors=True)
     tmp.mkdir()
     atomic_write_json(tmp / "controller.json", controller.get_state())
     backend_save(tmp)
@@ -39,7 +46,8 @@ def save_checkpoint(out_dir: Path, controller, backend_save: Callable[[Path], No
     done = sorted(p for p in root.iterdir() if p.is_dir() and p.name.startswith("round-")
                   and not p.name.endswith(".tmp"))
     for old in done[:-keep]:
-        shutil.rmtree(old, ignore_errors=True)
+        if old != final:                        # the checkpoint latest.json points to is never removed
+            shutil.rmtree(old, ignore_errors=True)
     return final
 
 

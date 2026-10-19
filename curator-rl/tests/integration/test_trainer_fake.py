@@ -238,3 +238,33 @@ def test_a_finished_run_is_never_overwritten_and_a_lost_final_is_recomputed(tmp_
     path.unlink()                                       # the session died during the final evaluation
     redo = run_single(cfg, REPO)
     assert redo["final"]["scores"] == first["final"]["scores"] and redo["rounds"] == 3
+
+
+def test_smoke_then_compare_with_the_same_sync_target(tmp_path):
+    """The first Kaggle session: smoke and compare share --sync-to; the smoke run (also curator_s0,
+    tiny shape) must never be restored as the real curator_s0."""
+    import subprocess
+    import sys
+
+    out, backup = tmp_path / "out", tmp_path / "backup"
+    base = [sys.executable, str(REPO / "kaggle" / "run.py")]
+    common = ["--backend", "fake", "--out", str(out), "--sync-to", str(backup)]
+    res = subprocess.run(base + ["smoke"] + common, capture_output=True, text=True, timeout=900)
+    assert res.returncode == 0 and "SMOKE PASSED" in res.stdout, res.stdout[-2000:] + res.stderr[-2000:]
+    assert (backup / "smoke" / "curator_s0" / "summary.json").exists() and not (backup / "curator_s0").exists()
+    shape = {"prompts_per_step": 8, "group_size": 4, "steps_per_round": 1, "calib_interval": 2,
+             "calib_items": 6, "report_every": 0, "final_items": 6}
+    res = subprocess.run(base + ["compare", "--methods", "curator", "--seeds", "0", "--rounds", "3",
+                                 "--budget-gpu-hours", "10", "--shape", json.dumps(shape),
+                                 "--set", "signals.status.n_min=8"] + common,
+                         capture_output=True, text=True, timeout=900)
+    assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-2000:]
+    summary = json.loads((out / "curator_s0" / "summary.json").read_text())
+    assert summary["rounds"] == 3 and summary["run_config"]["prompts_per_step"] == 8
+    assert (backup / "curator_s0" / "summary.json").exists()
+    # at most 3 checkpoints per run; the results folder and its zip next to the runs, and uploaded
+    assert len([p for p in (out / "curator_s0" / "checkpoints").iterdir() if p.is_dir()]) <= 3
+    results = tmp_path / "results"
+    assert (results / "curator_results.zip").exists() and (results / "runs" / "curator_s0" / "summary.json").exists()
+    assert (backup / "results" / "curator_results.zip").exists()
+    assert not (out / "smoke" / "results").exists() and not (tmp_path / "out" / "results").exists()

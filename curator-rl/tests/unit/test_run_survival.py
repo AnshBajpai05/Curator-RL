@@ -254,3 +254,55 @@ def test_eval_suite_skips_a_failing_domain_and_keeps_its_paired_state():
     assert suite.get_state()["last"]["b"] == [True] * 6      # untouched by the failed attempt
     third = suite.evaluate({"b": 6}, good)
     assert third["delta_se_by_domain"] is not None and "b" in third["delta_se_by_domain"]
+
+
+# ------------------------------------------------------------------- checkpoint retention and results
+
+class _Ctl:
+    def __init__(self):
+        self.round, self.global_step = 0, 0
+
+    def get_state(self):
+        return {"round": self.round}
+
+
+def test_only_the_newest_three_checkpoints_are_kept(tmp_path):
+    from curator_rl.trainer.checkpoint import latest_checkpoint, save_checkpoint
+
+    ctl = _Ctl()
+    (tmp_path / "checkpoints" / "round-0000.tmp").mkdir(parents=True)        # leftover of a killed session
+    for r in range(1, 8):
+        ctl.round = ctl.global_step = r
+        save_checkpoint(tmp_path, ctl, lambda d: (d / "adapter.bin").write_bytes(b"x" * 100))
+    kept = sorted(p.name for p in (tmp_path / "checkpoints").iterdir() if p.is_dir())
+    assert kept == ["round-0005", "round-0006", "round-0007"]
+    assert latest_checkpoint(tmp_path).name == "round-0007"
+    ctl.round = 8
+    save_checkpoint(tmp_path, ctl, lambda d: None, keep=1)
+    assert sorted(p.name for p in (tmp_path / "checkpoints").iterdir() if p.is_dir()) == ["round-0008"]
+
+
+def test_results_folder_and_zip(tmp_path):
+    import zipfile
+
+    from curator_rl.trainer.results import ZIP_NAME, export_results
+
+    runs = tmp_path / "curator_runs"
+    run = _fake_run(runs, "curator_s0", finished=True)
+    (run / "progress.json").write_text(json.dumps({"status": "finished", "round": 5, "max_rounds": 5}))
+    (runs / "comparison.md").write_text("# CURATOR GPU comparison\n")
+    (runs / "plots").mkdir()
+    (runs / "plots" / "curator_s0_mixture.png").write_bytes(b"\x89PNG")
+    (runs / "logs").mkdir()
+    (runs / "logs" / "curator_s0.log").write_text("training log")
+    zip_path = export_results(runs, tmp_path / "results")
+    res = tmp_path / "results"
+    assert zip_path == res / ZIP_NAME and (res / "comparison.md").exists() and (res / "status.md").exists()
+    assert (res / "runs" / "curator_s0" / "summary.json").exists()
+    assert not list(res.rglob("*checkpoint*")) and not list(res.rglob("weights.bin"))
+    names = zipfile.ZipFile(zip_path).namelist()
+    assert "curator_results/runs/curator_s0/rounds.jsonl" in names and "curator_results/plots/curator_s0_mixture.png" in names
+    assert not any(ZIP_NAME in n for n in names)                       # the zip does not contain itself
+    assert "finished" in (res / "status.md").read_text()
+    export_results(runs, res)                                          # repeatable; replaces the zip
+    assert len(list(res.glob("*.zip"))) == 1 and not list(res.glob("*.tmp"))

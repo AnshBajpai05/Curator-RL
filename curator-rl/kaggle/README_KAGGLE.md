@@ -9,27 +9,34 @@ on Kaggle's free GPUs. It answers two questions no simulator can:
 2. **What are the real learning speeds, transfers and per-arm costs** that the simulator still assumes
    (the system-identification run)?
 
-## Steps (about 10 minutes of setup, then the runs)
+## Steps (about 15 minutes of setup, then the runs)
 
-1. Upload `curator-gpu-kaggle.zip` as a **Kaggle Dataset** (Datasets -> New Dataset; keep it Private).
-2. **Recommended: a place to mirror the runs.** Create a Hugging Face *write* token
-   (huggingface.co -> Settings -> Access Tokens) and add it to the notebook as a Kaggle secret named
-   `HF_TOKEN` (Add-ons -> Secrets). `run.py` creates the private dataset repo you name on first use.
-3. New Notebook -> **File -> Import notebook** -> `curator_gpu.ipynb` (inside the zip), or paste the cells below.
-4. Settings: **Accelerator GPU T4 x2** (or GPU P100, see below), **Internet On**, add your dataset.
-5. Run the cells in order:
+1. **Upload the package.** kaggle.com -> Datasets -> New Dataset -> drop `curator-gpu-kaggle.zip`
+   (title e.g. `curator-gpu`, keep it Private) -> Create. Kaggle usually unzips it; the notebook handles
+   both cases.
+2. **Recommended: somewhere to mirror the runs.** huggingface.co -> Settings -> Access Tokens -> New
+   token, type **Write**. In the Kaggle notebook: Add-ons -> Secrets -> Add a secret named `HF_TOKEN`
+   with that token, and switch it on for the notebook. `run.py` creates the private dataset repo
+   `<your-hf-username>/curator-runs` on first use.
+3. **Create the notebook.** Code -> New Notebook -> File -> Import Notebook -> upload `curator_gpu.ipynb`
+   (in the package; on your PC it is `curator-rl/kaggle/curator_gpu.ipynb`).
+4. **Settings (right panel).** Session options -> Accelerator: **GPU T4 x2** (GPU P100 only for the sysid
+   step); Internet: **On** (needs a phone-verified Kaggle account); Input -> Add Input -> your dataset.
+5. **Edit two cells.** Cell 2: `SYNC = "hf://<your-hf-username>/curator-runs"`. Cell 5: `STEP` (first
+   session: `"compare"`; leave `RUN_SMOKE = True` in cell 4 the first time).
+6. **Run All**, or for long steps **Save Version -> Save & Run All (Commit)**, which keeps running in the
+   background with the browser closed (up to 12 hours).
+7. **Watch progress**: the Logs/Output view, or the files under `<run>/progress.json`, or your
+   Hugging Face dataset. `python run.py status` prints a table.
+8. **Next session**: change `STEP` (and `RUN_SMOKE = False`), Run All again. A step that was cut short
+   is resumed automatically when you run the same `STEP` again.
+
+The same, as plain commands (from `/kaggle/working/curator`):
 
 ```bash
-# 1. unpack
-mkdir -p /kaggle/working/curator && cd /kaggle/working/curator && unzip -q -o /kaggle/input/*/curator-gpu-kaggle.zip
-# 2. install the stack for this GPU (T4: vLLM in its own virtualenv; P100: HF backend)
-python run.py setup
-# 3. ~10 min end-to-end check on the GPU: 3 rounds, calibration each round, checkpoint, a restore of the
-#    run from its synced copy, resume to round 4 (add --sync-to hf://<you>/curator-runs to test the upload too)
-python run.py smoke
-# 4. the comparison: Curator vs Uniform vs LP, seed 0, 1.5 charged GPU-hours each (two run in parallel on 2xT4)
+python run.py setup                                                     # once per session (~5-10 min)
+python run.py smoke --sync-to hf://<you>/curator-runs                   # first session only (~10 min)
 python run.py compare --methods curator,uniform,lp --seeds 0 --sync-to hf://<you>/curator-runs
-# 5. where things are, and the tables
 python run.py status
 cat /kaggle/working/curator_runs/comparison.md
 ```
@@ -38,6 +45,8 @@ cat /kaggle/working/curator_runs/comparison.md
 
 - **Every round is checkpointed** (LoRA adapter, optimizer, scheduler, prompt-stream positions, RNG
   streams, ledger; written atomically, so a kill mid-write leaves the previous checkpoint intact).
+  Only the **newest 3 checkpoints per run** are kept (about 0.1 GB each); older ones and half-written
+  leftovers are deleted automatically (`--keep-checkpoints N` to change it).
 - **With `--sync-to`, each run is mirrored while it trains**: the newest checkpoint plus every log, at
   most every `--sync-every-min` minutes (default 5) and always at the end. Uploads run in the background:
   training never waits for the network, and a failed upload is retried at the next one.
@@ -119,25 +128,57 @@ Methods: `curator`, `curator_nocal` (Curator without calibration: the ablation),
 `pilot_uniform` (uniform over the arms the pilot could solve: what a practitioner would run), `lp`,
 `ucb`, `sec`, `dump`, `static` (size-proportional), and `dirichlet` (the sysid design, via `sysid`).
 
-## What to run, in order (Kaggle's weekly GPU quota is about 30 hours)
+## What to run, in order (one STEP per Kaggle session)
 
-| step | command | GPU | about |
-|---|---|---|---|
-| 1 | `python run.py smoke --sync-to hf://<you>/curator-runs` | any | 10 min |
-| 2 | `python run.py compare --methods curator,uniform,lp --seeds 0 --sync-to ...` | T4 x2 | 4.5 GPU-h (2.3 h wall) |
-| 3 | `python run.py sysid --calib-items 50 --final-items 100 --sync-to ...` | P100 | 1.5 GPU-h |
-| 4 | `python run.py compare --methods curator_nocal,pilot_uniform --seeds 0 --sync-to ...` | T4 x2 | 3 GPU-h |
-| 5 | `python run.py compare --methods curator,uniform,lp --seeds 1,2 --sync-to ...` | T4 x2 | 9 GPU-h |
-| 6 | `python run.py loo --methods uniform --seeds 0 --sync-to ...` | T4 x2 | 9 GPU-h (full + 5 arms) |
+Wall time is what Kaggle's weekly GPU quota (about 30 hours) counts. Each run is capped at 1.5 charged
+GPU-hours of training plus calibration (about 1.7 hours of wall time with model loading and evaluations);
+on GPU T4 x2 two runs go in parallel.
 
-Step 2 answers the main question on one seed (descriptive); step 5 gives the first intervals (n = 3);
-step 3 measures the costs, learning speeds and transfers the simulator still assumes; step 6 is the
-ground truth the ROI leaderboard is checked against (H5). All steps resume if a session ends.
+| order | `STEP` | what it runs | GPU | wall time | answers |
+|---|---|---|---|---|---|
+| 1 | `compare` (+ smoke) | curator, uniform, lp; seed 0 | T4 x2 | ~3.7 h | does Curator beat Uniform and the best baseline on a real model? (one seed: descriptive) |
+| 2 | `sysid` | randomized mixtures; seed 0 | P100 | ~2 h | real per-arm costs, learning speeds, transfer, kappa (refits the simulator) |
+| 3 | `ablation` | curator_nocal, pilot_uniform; seed 0 | T4 x2 | ~2 h | is calibration worth its cost? does Curator beat what a practitioner would run? |
+| 4 | `seeds12` | curator, uniform, lp; seeds 1, 2 | T4 x2 | ~5.5 h | first confidence intervals (n = 3 seeds with step 1) |
+| 5 | `loo` | uniform: full + one run without each arm; seed 0 | T4 x2 | ~5.5 h | ground truth for the ROI leaderboard (H5) |
+
+Total about 19 hours of sessions. Steps 1-3 are the minimum worth reporting.
+
+## Results: one folder, one zip
+
+Everything worth keeping is collected in **`/kaggle/working/results/`** (next to `curator_runs/`),
+rebuilt automatically after every finished run, every 20 minutes during long runs and at the end of
+every command:
+
+```
+/kaggle/working/results/
+  curator_results.zip     <- everything below in one file: download this
+  comparison.md           scores per method, paired differences, ROI leaderboards, leave-one-out
+  status.md               every run: status, round, GPU-hours, last checkpoint, last sync
+  plots/                  mixture over rounds per run, score vs GPU-hours
+  runs/<run>/             summary.json, progress.json, run_config.json, rounds/steps/calibration/reports logs
+  logs/                   console log of every training process
+  README.txt
+```
+
+Download it from the notebook's right panel: **Output -> results -> curator_results.zip** (the download
+icon), or after "Save Version" from the version's **Output** tab. With `--sync-to`, the same folder is
+uploaded to your Hugging Face dataset under `results/`. `python run.py report` rebuilds it at any time;
+checkpoints are never put in it, so it stays a few MB.
 
 ## What to send back
 
-`comparison.md`, `plots/`, every `summary.json` and `progress.json`, the `sysid_report.md` (if run), and
-`logs/*.log` of any failed run. With `--sync-to`, all of it is already in your Hugging Face dataset.
+`results/curator_results.zip` (it contains `comparison.md`, `plots/`, every `summary.json` and
+`progress.json`, the sysid report and the logs). With `--sync-to`, everything is also in your Hugging
+Face dataset; download it on your PC with
+
+```
+hf download <you>/curator-runs --repo-type dataset --local-dir kaggle_results
+python kaggle/run.py report --out kaggle_results        # rebuilds comparison.md and the figures locally
+```
+
+Before **Save Version** without a sync target, run the notebook's last cell: it deletes the vLLM
+virtualenv (several GB) so only the runs are saved as output.
 
 ## If something breaks
 

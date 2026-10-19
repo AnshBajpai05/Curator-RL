@@ -42,6 +42,7 @@ class RunConfig:
     report_items: int = 100              # dev items per domain for the periodic reports
     final_items: int = 300               # dev items per domain for the final score
     checkpoint_every: int = 1            # rounds; every round => a crash loses at most one round
+    keep_checkpoints: int = 3            # newest checkpoints kept per run; older ones are deleted
     sync_to: str = ""                    # mirror artifacts while training: hf://owner/repo[/prefix] or a directory
     sync_every_min: float = 5.0          # minimum minutes between background uploads (a final one always runs)
     deadline_unix: float = 0.0           # wall-clock limit (e.g. Kaggle's 12 h): stop cleanly before it; 0 = none

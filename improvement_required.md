@@ -469,7 +469,7 @@ Covered in B1: reporting and final evaluations must use `rng("sim_report")`, not
 | `docs/COST_MODEL.md` header | "Status: skeleton. Nothing below has been measured yet" | §6 contains measurements; update the header |
 | `docs/GATES.md` phase log | "No commit yet", tags "not yet created" | Fill in commits; create the tags (E12) |
 | `scheduler/curator.py` docstring | "the alpha/beta fit + S5 mismatch feed arrive with Phase 9" | S5 feed is wired (D-73); α/β is still pending |
-| `Curator/` (repo root) | duplicate of `curator-rl/docs/CURATOR_Implementation_Roadmap.md` and both proposal PDFs | Delete the duplicates, keep `curator-rl/docs/` |
+| `Curator/` (repo root) | duplicate of `curator-rl/docs/CURATOR_Implementation_Roadmap.md` and both proposal PDFs | Delemakte the duplicates, keep `curator-rl/docs/` |
 | `envs/math35.py` docstring | "5586 problems" | README and gold check say 5,582; correct one of them |
 
 ### E12. Git and review process
