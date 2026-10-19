@@ -20,8 +20,8 @@ on Kaggle's free GPUs. It answers two questions no simulator can:
    `<your-hf-username>/curator-runs` on first use.
 3. **Create the notebook.** Code -> New Notebook -> File -> Import Notebook -> upload `curator_gpu.ipynb`
    (in the package; on your PC it is `curator-rl/kaggle/curator_gpu.ipynb`).
-4. **Settings (right panel).** Session options -> Accelerator: **GPU T4 x2** (GPU P100 only for the sysid
-   step); Internet: **On** (needs a phone-verified Kaggle account); Input -> Add Input -> your dataset.
+4. **Settings (right panel).** Session options -> Accelerator: **GPU T4 x2** for every step (Kaggle no longer offers
+   the P100; TPU v5e-8 does not work: the stack needs an NVIDIA GPU); Internet: **On** (needs a phone-verified Kaggle account); Input -> Add Input -> your dataset.
 5. **Edit two cells.** Cell 2: `SYNC = "hf://<your-hf-username>/curator-runs"`. Cell 5: `STEP` (first
    session: `"compare"`; leave `RUN_SMOKE = True` in cell 4 the first time).
 6. **Run All**, or for long steps **Save Version -> Save & Run All (Commit)**, which keeps running in the
@@ -79,17 +79,15 @@ cat /kaggle/working/curator_runs/comparison.md
 
 ## Which GPU for what
 
-| | GPU T4 x2 | GPU P100 |
-|---|---|---|
-| Backend | vLLM colocate (~42 s per GRPO step, measured) | HF generate (~85 s per step), PyTorch log-prob path |
-| Parallel runs | 2 (one per GPU) | 1 |
-| Best use | `compare` (cost-sensitive, same hardware for all methods) | `sysid` (learning/transfer are hardware-independent) |
-| Suggested | `python run.py compare --seeds 0` (~2 h wall) | `python run.py sysid --calib-items 50 --final-items 100` |
+Use **GPU T4 x2** for everything: vLLM colocate, about 42 s per GRPO step, two runs in parallel (one per
+GPU). Kaggle no longer offers the P100, and TPU v5e-8 cannot run this stack (PyTorch CUDA, vLLM, TRL).
+Running sysid on the T4s too is an advantage: its cost measurements come from the same hardware as the
+comparison runs. Never put runs from different GPU types (e.g. a local RTX 4090) in one comparison: costs
+are GPU-seconds, so keep each GPU type in its own sync repo.
 
-Why the P100 needs special handling: TRL 1.15 computes GRPO log-probabilities with a Triton kernel, and
-Triton needs compute capability >= 7.0; the P100 is 6.0. `curator_rl/trainer/logprob_fallback.py`
-replaces that one function with an exact PyTorch equivalent (tested against the naive computation,
-values and gradients) when Triton cannot run. Never put T4 and P100 runs in the same comparison.
+If a P100 (compute capability 6.0) is ever available again: `setup` installs the HF backend there, and
+`curator_rl/trainer/logprob_fallback.py` replaces TRL's Triton log-prob kernel (Triton needs 7.0+) with
+an exact PyTorch equivalent, tested against the naive computation (values and gradients).
 
 ## What the runs do
 
@@ -137,7 +135,7 @@ on GPU T4 x2 two runs go in parallel.
 | order | `STEP` | what it runs | GPU | wall time | answers |
 |---|---|---|---|---|---|
 | 1 | `compare` (+ smoke) | curator, uniform, lp; seed 0 | T4 x2 | ~3.7 h | does Curator beat Uniform and the best baseline on a real model? (one seed: descriptive) |
-| 2 | `sysid` | randomized mixtures; seed 0 | P100 | ~2 h | real per-arm costs, learning speeds, transfer, kappa (refits the simulator) |
+| 2 | `sysid` | randomized mixtures; seeds 0, 1 in parallel | T4 x2 | ~2 h | real per-arm costs, learning speeds, transfer, kappa (refits the simulator) |
 | 3 | `ablation` | curator_nocal, pilot_uniform; seed 0 | T4 x2 | ~2 h | is calibration worth its cost? does Curator beat what a practitioner would run? |
 | 4 | `seeds12` | curator, uniform, lp; seeds 1, 2 | T4 x2 | ~5.5 h | first confidence intervals (n = 3 seeds with step 1) |
 | 5 | `loo` | uniform: full + one run without each arm; seed 0 | T4 x2 | ~5.5 h | ground truth for the ROI leaderboard (H5) |
