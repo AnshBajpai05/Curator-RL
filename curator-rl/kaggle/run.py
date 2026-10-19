@@ -141,12 +141,45 @@ def deadline_unix(args) -> float:
 
 # ----------------------------------------------------------------------------------------------- setup
 
+def venv_dir() -> Path:
+    """Where the vLLM virtualenv lives.
+
+    On Kaggle: /tmp, which session persistence never saves. A virtualenv restored from /kaggle/working by
+    "Persistence: variables and files" comes back without execute permissions (its python cannot run),
+    and saving it costs several GB per session. /kaggle/working only if /tmp is short of space.
+    """
+    if not ON_KAGGLE:
+        return HERE / "venv_vllm"
+    tmp = Path("/tmp/venv_vllm")
+    try:
+        if tmp.exists() or shutil.disk_usage("/tmp").free > 15e9:
+            return tmp
+    except OSError:
+        pass
+    return Path("/kaggle/working/venv_vllm")
+
+
+def runs(python: str) -> bool:
+    """True if this interpreter starts (a restored virtualenv may exist but not be executable)."""
+    try:
+        return subprocess.run([python, "-c", "import sys"], capture_output=True, timeout=120).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def cmd_setup(args) -> int:
     devices = gpus()
     print("GPUs:", devices or "none found")
     if devices and min(d["cc"] for d in devices) >= 7.0 and not args.hf:
-        venv = Path("/kaggle/working/venv_vllm") if ON_KAGGLE else HERE / "venv_vllm"
+        venv = venv_dir()
+        stale = Path("/kaggle/working/venv_vllm")
+        if ON_KAGGLE and stale.exists() and stale != venv:
+            shutil.rmtree(stale, ignore_errors=True)       # a broken copy restored by session persistence
+        if (venv / "bin" / "python").exists() and not runs(str(venv / "bin" / "python")):
+            print(f"[setup] {venv} is broken (its python cannot run): rebuilding it", flush=True)
+            shutil.rmtree(venv, ignore_errors=True)
         if not (venv / "bin" / "python").exists():
+            print(f"[setup] creating the vLLM virtualenv in {venv}", flush=True)
             sh([sys.executable, "-m", "pip", "install", "-q", "virtualenv"])
             sh([sys.executable, "-m", "virtualenv", "-q", str(venv)])     # `python -m venv` fails on Kaggle 3.13
         py = str(venv / "bin" / "python")
