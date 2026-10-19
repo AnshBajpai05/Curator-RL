@@ -32,6 +32,17 @@ HF_PREFIX = "hf://"
 SKIP_DIRS = {"trl"}                       # TRL's own output dir (save_strategy="no": scratch only)
 
 
+def _quiet_hub() -> None:
+    """No Hugging Face progress bars: in a notebook they flood the output (and the page) every upload."""
+    os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+    try:
+        from huggingface_hub.utils.tqdm import disable_progress_bars
+
+        disable_progress_bars()
+    except Exception:  # noqa: BLE001 - older hub versions: the environment variable suffices
+        pass
+
+
 def parse_target(target: str | None) -> tuple[str, str, str]:
     """('none' | 'hf' | 'dir', location, prefix) for a sync target string."""
     if not target:
@@ -183,6 +194,7 @@ class ArtifactSync:
         shutil.rmtree(old, ignore_errors=True)
 
     def _upload_hf(self, stage: Path, label: str) -> None:
+        _quiet_hub()
         from huggingface_hub import HfApi
 
         api = HfApi(token=os.environ.get("HF_TOKEN") or None)
@@ -237,6 +249,7 @@ def fetch_runs(source: str, out_root: Path, *, log: Callable[[str], None] = prin
         return []
     if kind == "dir":
         return merge_runs(Path(location), out_root, log=log)
+    _quiet_hub()
     from huggingface_hub import HfApi, snapshot_download
 
     api = HfApi(token=os.environ.get("HF_TOKEN") or None)

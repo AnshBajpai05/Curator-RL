@@ -47,6 +47,10 @@ import sys
 import time
 from pathlib import Path
 
+# Hugging Face progress bars (backup uploads, restores) printed thousands of lines into the notebook,
+# which made the Kaggle page sluggish enough to look crashed. The training workers inherit this.
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+
 HERE = Path(__file__).resolve().parent
 CODE = HERE / "curator-rl" if (HERE / "curator-rl" / "src").exists() else HERE.parent   # bundle or repo layout
 PY_FILE = HERE / ".curator_python"
