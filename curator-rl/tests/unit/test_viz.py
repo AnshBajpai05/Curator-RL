@@ -24,7 +24,7 @@ def test_render_run_plots_writes_pngs(tmp_path):
     run = tmp_path / "curator_s0"
     run.mkdir()
     (run / "rounds.jsonl").write_text("\n".join(json.dumps(r) for r in ROUNDS))
-    (run / "reports.jsonl").write_text(json.dumps({"charged_gpu_hours": 0.4, "macro": 0.21}))
+    (run / "reports.jsonl").write_text(json.dumps({"tag": "final", "charged_gpu_hours": 0.4, "macro": 0.21}))
     files, note = render_run_plots(tmp_path)
     assert {f.name for f in files} == {"curator_s0_mixture.png", "score_vs_gpu_hours.png"}
     assert all(f.stat().st_size > 1000 for f in files)

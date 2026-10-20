@@ -220,6 +220,26 @@ def _finished(run_dir: Path) -> bool:
     return (Path(run_dir) / "summary.json").exists()
 
 
+def _restore_dropped_lines(src: Path, dst: Path) -> list[str]:
+    """Log files a local copy of a finished run lost lines of, brought back from the backup.
+
+    Only where the local file is a strict prefix of the backed-up one (lines missing at the end, never
+    different content): an older version rewound a finished run's logs to its last checkpoint when it
+    was relaunched, dropping the final-evaluation rows written after that checkpoint.
+    """
+    fixed = []
+    for f in sorted(Path(src).glob("*.jsonl")):
+        d = Path(dst) / f.name
+        try:
+            local, backup = (d.read_bytes() if d.exists() else b""), f.read_bytes()
+        except OSError:
+            continue
+        if len(local) < len(backup) and backup.startswith(local):
+            shutil.copy2(f, d)
+            fixed.append(f.name)
+    return fixed
+
+
 def merge_runs(source_root: Path, out_root: Path, *, log: Callable[[str], None] = print) -> list[str]:
     """Copy every run under `source_root` whose state is newer than the local one into `out_root`."""
     taken = []
@@ -232,6 +252,8 @@ def merge_runs(source_root: Path, out_root: Path, *, log: Callable[[str], None] 
         dst = out_root / src.name
         newer = (_finished(src) and not _finished(dst)) or _ckpt_round(src) > _ckpt_round(dst)
         if dst.exists() and not newer:
+            if _finished(src) and _finished(dst) and (fixed := _restore_dropped_lines(src, dst)):
+                log(f"[sync] {src.name}: restored log lines missing locally ({', '.join(fixed)})")
             continue
         if dst.exists():
             shutil.rmtree(dst)

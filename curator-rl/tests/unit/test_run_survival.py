@@ -142,6 +142,21 @@ def test_merge_prefers_a_finished_run(tmp_path):
     assert (out / "lp_s1" / "summary.json").exists()
 
 
+def test_merge_restores_lines_a_finished_runs_local_copy_lost(tmp_path):
+    """An older version rewound a finished run's logs on relaunch, dropping its final-evaluation row."""
+    backup, out = tmp_path / "backup", tmp_path / "out"
+    src = _fake_run(backup, "uniform_s0", finished=True)
+    dst = _fake_run(out, "uniform_s0", finished=True)
+    (src / "reports.jsonl").write_text('{"tag": "periodic"}\n{"tag": "final"}\n')
+    (dst / "reports.jsonl").write_text('{"tag": "periodic"}\n')
+    (dst / "rounds.jsonl").write_text('{"round": 9}\n')               # different content: never replaced
+    log: list[str] = []
+    assert merge_runs(backup, out, log=log.append) == []                  # not newer: the run is not replaced
+    assert (dst / "reports.jsonl").read_text().count('"final"') == 1
+    assert (dst / "rounds.jsonl").read_text() == '{"round": 9}\n'
+    assert any("restored log lines missing locally (reports.jsonl)" in m for m in log)
+
+
 def test_fetch_from_a_directory_round_trips_a_sync(tmp_path):
     run = _fake_run(tmp_path / "session1")
     ArtifactSync(run, str(tmp_path / "backup"), min_interval_s=0.0, log=lambda m: None).flush()

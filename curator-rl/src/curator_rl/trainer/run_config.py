@@ -41,6 +41,8 @@ class RunConfig:
     report_every: int = 20               # uncharged dev evaluation every N rounds (0 = final only)
     report_items: int = 100              # dev items per domain for the periodic reports
     final_items: int = 300               # dev items per domain for the final score
+    eval_samples: int = 4                # reports: samples per item for the sampled accuracy (D-101; 0 = greedy only)
+    eval_temperature: float = 1.0        # ... drawn at the training temperature
     checkpoint_every: int = 1            # rounds; every round => a crash loses at most one round
     keep_checkpoints: int = 3            # newest checkpoints kept per run; older ones are deleted
     sync_to: str = ""                    # mirror artifacts while training: hf://owner/repo[/prefix] or a directory

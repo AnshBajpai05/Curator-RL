@@ -9,6 +9,7 @@ import time
 from curator_rl.trainer.progress_view import (
     FINAL_EVAL_SECONDS,
     QUIET_SECONDS,
+    STARTUP_SECONDS,
     ProgressBoard,
     bar,
     duration,
@@ -120,6 +121,10 @@ def test_a_previous_attempts_progress_file_does_not_show_a_crash(tmp_path):
     board.launched("lp_s0", 1)
     board.tick(0)
     assert "starting: resuming from round 12" in lines[0] and "crashed" not in lines[0]
+    board.launched("base_s0", 0, eval_only=True)
+    board.tick(0)
+    base = next(x for x in lines if "base_s0" in x)
+    assert f"starting: loading the model for evaluation, ~{duration(FINAL_EVAL_SECONDS + STARTUP_SECONDS)}" in base
     board.ended("lp_s0", 1)
     board.ended("lp_s0", 75)
     board.tick(0)
@@ -133,7 +138,8 @@ def test_estimates_and_ascii_console(tmp_path):
            budget_gpu_hours=1.5, last_checkpoint_round=35, sync={"target": "d", "last_round": 35})
     board.launched("uniform_s0", 0)
     board.tick(0)
-    assert "final evaluation, ~5 min to go" in lines[0] and "step done in ~5 min" in lines[1]
+    full = duration(FINAL_EVAL_SECONDS)
+    assert f"final evaluation, ~{full} to go" in lines[0] and f"step done in ~{full}" in lines[1]
     clock.t += max(QUIET_SECONDS, FINAL_EVAL_SECONDS)      # taking longer than expected: never below a minute
     board.tick(0)
     assert "#" * 20 in lines[2] and "final evaluation, ~1 min to go" in lines[2]

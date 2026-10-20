@@ -220,6 +220,7 @@ def run_config(args, method: str, seed: int, **shape):
                     budget_gpu_hours=args.budget_gpu_hours, max_rounds=args.rounds, overrides=overrides,
                     micro_batch=args.micro_batch, max_completion_tokens=args.max_tokens,
                     calib_items=args.calib_items, final_items=args.final_items, report_items=args.report_items,
+                    eval_samples=args.eval_samples, eval_temperature=args.eval_temperature,
                     report_every=args.report_every, sync_to=args.sync_to or "", sync_every_min=args.sync_every_min,
                     deadline_unix=args.deadline_unix, label=getattr(args, "label", None) or "",
                     keep_checkpoints=args.keep_checkpoints)
@@ -246,6 +247,7 @@ def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
            "--micro-batch", str(job["micro_batch"]), "--max-tokens", str(args.max_tokens),
            "--calib-items", str(args.calib_items), "--final-items", str(args.final_items),
            "--report-items", str(args.report_items), "--report-every", str(args.report_every),
+           "--eval-samples", str(args.eval_samples), "--eval-temperature", str(args.eval_temperature),
            "--sync-every-min", str(args.sync_every_min), "--deadline-unix", str(args.deadline_unix),
            "--keep-checkpoints", str(args.keep_checkpoints),
            "--shape", json.dumps(job["shape"]), *job["extra"]]
@@ -318,19 +320,22 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
     """Run jobs one per GPU; restart crashed ones from their checkpoint. Returns outcome lists.
 
     A job is (method, seed) or (method, seed, arm_left_out); the latter trains without that arm (LOO).
+    A dict job sets {"method", "seed", "label", "extra"} itself (e.g. BASE_JOB).
     """
     devices = [d["index"] for d in gpus()] or [None]
     pending = []
     for job in jobs:
-        m, s, arm = (tuple(job) + (None,))[:3]
+        if isinstance(job, dict):
+            m, s, arm, label, own_extra = job["method"], job["seed"], None, job.get("label", ""), job.get("extra", [])
+        else:
+            (m, s, arm), label, own_extra = (tuple(job) + (None,))[:3], "", []
         sh_ = dict(shape or {})
-        label = ""
         if arm:
             label = f"{m}-wo-{arm}"
             sh_["envs"] = [e for e in sh_.get("envs", LEVEL1_ENVS) if e != arm]
         pending.append({"method": m, "seed": s, "label": label, "name": label or m, "attempt": 0,
                         "failed_at_round": None, "micro_batch": args.micro_batch, "shape": sh_,
-                        "extra": list(extra or [])})
+                        "extra": list(extra or []) + list(own_extra)})
     running: list[tuple[subprocess.Popen, int | None, dict]] = []
     outcome = {"finished": [], "preempted": [], "failed": []}
     board = progress_board(args, len(pending), len(devices))
@@ -344,7 +349,10 @@ def run_jobs(args, jobs: list[tuple], shape: dict | None = None, extra: list[str
             if args.backend != "fake" and running and wait > 0:
                 time.sleep(wait)            # never two model downloads / vLLM start-ups at the same moment
             running.append((spawn(args, job, free[0]), free[0], job))
-            board.launched(f"{job['name']}_s{job['seed']}", free[0])
+            name = f"{job['name']}_s{job['seed']}"
+            # evaluation only: the untrained model, or a finished run (skipped, or re-evaluated, D-101)
+            board.launched(name, free[0], eval_only=job["label"] == "base"
+                           or (Path(args.out) / name / "summary.json").exists())
             last_launch = time.time()
         board.tick(len(pending))
         time.sleep(5 if args.backend == "fake" else 15)
@@ -445,10 +453,22 @@ def _shape(args) -> dict:
     return json.loads(args.shape) if args.shape else {}
 
 
+# the untrained model, evaluated exactly as the trained runs are: the reference every method starts from
+BASE_JOB = {"method": "uniform", "seed": 0, "label": "base", "extra": ["--rounds", "0"]}
+
+
+def with_base(args, jobs: list) -> list:
+    """`jobs` led by the base-model evaluation (a few minutes), unless it exists or --no-base."""
+    if args.no_base or (Path(args.out) / "base_s0" / "summary.json").exists():
+        return jobs
+    return [BASE_JOB, *jobs]
+
+
 def cmd_compare(args) -> int:
     restore(args)
     args.methods = args.methods or ["curator", "uniform", "lp"]
-    outcome = run_jobs(args, [(m, s) for s in args.seeds for m in args.methods], _shape(args))
+    # finished runs evaluated with an older protocol are re-evaluated from their final checkpoint (D-101)
+    outcome = run_jobs(args, with_base(args, [(m, s) for s in args.seeds for m in args.methods]), _shape(args))
     refresh_results(args, quiet=False)
     return finish(args, outcome)
 
@@ -505,7 +525,15 @@ def cmd_smoke(args) -> int:
         print("SMOKE FAILED on resume: see the log")
         return 1
     summary = json.loads((Path(args.out) / "curator_s0" / "summary.json").read_text())
-    ok = summary["rounds"] == 4 and summary["calibrations"] >= 3
+    # the untrained model through the evaluation-only engine (protocol 2: greedy and sampled)
+    if run_jobs(args, [BASE_JOB], shape)["failed"]:
+        print("SMOKE FAILED in the base-model evaluation: see", log_path(args, "base", 0))
+        return 1
+    base = json.loads((Path(args.out) / "base_s0" / "summary.json").read_text())
+    sampled_ok = all(((x.get("final") or {}).get("sampled") or {}).get("macro") is not None for x in (summary, base))
+    ok = summary["rounds"] == 4 and summary["calibrations"] >= 3 and sampled_ok
+    if not sampled_ok:
+        print("SMOKE: the sampled evaluation produced no score (see 'errors' in reports.jsonl)")
     print(json.dumps({k: summary.get(k) for k in ("rounds", "steps", "calibrations", "charged_gpu_hours",
                                                   "backend", "logprob_path", "verifier_errors", "eval_errors")},
                      indent=1))
@@ -596,7 +624,10 @@ def main(argv=None) -> int:
     ap.add_argument("--calib-items", type=int, default=100, help="paired calibration items per slice")
     ap.add_argument("--final-items", type=int, default=300, help="dev items per domain for the final score")
     ap.add_argument("--report-items", type=int, default=100, help="dev items per domain, periodic reports")
-    ap.add_argument("--report-every", type=int, default=20, help="uncharged dev report every N rounds (0: final only)")
+    ap.add_argument("--report-every", type=int, default=10, help="uncharged dev report every N rounds (0: final only)")
+    ap.add_argument("--eval-samples", type=int, default=4, help="samples per item for the sampled accuracy (D-101)")
+    ap.add_argument("--eval-temperature", type=float, default=1.0, help="... drawn at this temperature (training's)")
+    ap.add_argument("--no-base", action="store_true", help="compare: skip the untrained-model evaluation")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--results-dir", type=Path, default=None,
                     help="where results + curator_results.zip go (default: 'results' next to --out)")

@@ -192,7 +192,8 @@ def test_supervisor_restarts_a_crashed_run_and_mirrors_everything(tmp_path):
     assert "crashed" in res.stdout and "attempt 2" in res.stdout
     # the notebook sees progress lines (the workers' own output goes to their logs)
     assert "curator_s0 finished: 5 rounds" in res.stdout and "1 crash(es)" in res.stdout
-    assert "compare: 1/1 runs finished, 0 running, 0 waiting" in res.stdout
+    # compare evaluates the untrained model too (D-101), once
+    assert "compare: 2/2 runs finished, 0 running, 0 waiting" in res.stdout and "base_s0 finished: 0 rounds" in res.stdout
     log = (out / "logs" / "curator_s0.log").read_text(errors="replace")
     assert "injected fault at step 3" in log and "resuming from round-0002" in log
     summary = json.loads((out / "curator_s0" / "summary.json").read_text())
@@ -236,8 +237,11 @@ def test_a_finished_run_is_never_overwritten_and_a_lost_final_is_recomputed(tmp_
     path = tmp_path / "curator_s3" / "summary.json"
     assert first["status"] == "finished" and first["final"]["macro"] is not None
     stamp = path.stat().st_mtime_ns
+    reports = tmp_path / "curator_s3" / "reports.jsonl"
+    logged = reports.read_text(encoding="utf-8")
     again = run_single(cfg, REPO)                       # re-launching a finished run changes nothing
     assert again["final"] == first["final"] and path.stat().st_mtime_ns == stamp
+    assert reports.read_text(encoding="utf-8") == logged      # its final-evaluation row stays (it was dropped)
     path.unlink()                                       # the session died during the final evaluation
     redo = run_single(cfg, REPO)
     assert redo["final"]["scores"] == first["final"]["scores"] and redo["rounds"] == 3
@@ -271,3 +275,57 @@ def test_smoke_then_compare_with_the_same_sync_target(tmp_path):
     assert (results / "curator_results.zip").exists() and (results / "runs" / "curator_s0" / "summary.json").exists()
     assert (backup / "results" / "curator_results.zip").exists()
     assert not (out / "smoke" / "results").exists() and not (tmp_path / "out" / "results").exists()
+
+
+# ------------------------------------------------------------------ evaluation protocol 2 (D-101)
+
+def test_the_untrained_model_is_evaluated_like_every_run(tmp_path):
+    from curator_rl.trainer.runner import run_single
+
+    s = run_single(_cfg(tmp_path, method="uniform", label="base", max_rounds=0,
+                        overrides=["signals.status.n_min=8"]), REPO)
+    assert s["rounds"] == 0 and s["charged_gpu_hours"] == 0 and s["final"]["protocol"] == 2
+    assert s["final"]["sampled"]["macro"] is not None and s["final"]["sampled"]["k"] == 4
+    assert set(s["final"]["items"]) == {"gsm8k", "math35", "mbpp", "countdown"}
+    assert (tmp_path / "base_s3" / "summary.json").exists()
+
+
+def test_a_run_finished_under_protocol_1_is_reevaluated_without_retraining(tmp_path):
+    from curator_rl.trainer.runner import run_single
+
+    cfg = _cfg(tmp_path, max_rounds=3, report_every=0, overrides=["signals.status.n_min=8"])
+    first = run_single(cfg, REPO)
+    run = tmp_path / "curator_s3"
+    old = dict(first, final={k: v for k, v in first["final"].items() if k not in ("protocol", "sampled", "items")})
+    (run / "summary.json").write_text(json.dumps(old), encoding="utf-8")
+    steps = (run / "steps.jsonl").read_text(encoding="utf-8")
+    redo = run_single(cfg, REPO)
+    assert redo["final"]["protocol"] == 2 and redo["final"]["sampled"]["macro"] is not None
+    assert "protocol" not in json.loads((run / "summary_v1.json").read_text(encoding="utf-8"))["final"]
+    assert (run / "steps.jsonl").read_text(encoding="utf-8") == steps and redo["rounds"] == first["rounds"]
+    assert [r["tag"] for r in _lines(run / "reports.jsonl")].count("final") == 1
+    assert redo["final"]["scores"] == first["final"]["scores"]        # the same policy, the same verdicts
+
+
+def test_sampled_evaluations_never_change_the_run_they_measure(tmp_path):
+    rows = []
+    for k in (4, 0):
+        out = tmp_path / f"k{k}"
+        _run(_cfg(tmp_path, max_rounds=6, report_every=2, eval_samples=k), out)
+        rows.append([{key: v for key, v in r.items() if key != "_seq"} for r in _lines(out / "rounds.jsonl")])
+        reports = _lines(out / "reports.jsonl")
+        assert reports and all(("sampled" in r) == (k > 0) for r in reports)
+    assert rows[0] == rows[1]
+
+
+def test_compare_report_pairs_items_and_measures_the_gain_over_the_untrained_model(tmp_path):
+    from curator_rl.trainer.runner import compare_report, run_single
+
+    kw = dict(max_rounds=6, report_every=2, overrides=["signals.status.n_min=8"])
+    for method in ("curator", "uniform"):
+        run_single(_cfg(tmp_path, method=method, **kw), REPO)
+    run_single(_cfg(tmp_path, method="uniform", label="base", max_rounds=0, overrides=kw["overrides"]), REPO)
+    report = compare_report(tmp_path)
+    assert "| base (untrained) |" in report and "## Item by item against uniform" in report
+    assert "## Gain over the untrained model" in report and "## GPU-hours to reach uniform's final level" in report
+    assert "Gains are fitted non-negative" in report

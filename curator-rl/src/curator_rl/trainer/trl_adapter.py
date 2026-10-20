@@ -130,15 +130,121 @@ def _vllm_greedy(trainer, tok):
     return generate
 
 
-def attach_eval_generate(controller, run_cfg, ckpt_dir: Path, batch: int = 16) -> None:
-    """Evaluation only (training already complete): base model + saved LoRA adapter, HF greedy decoding."""
+def _sampling_params(k: int, temperature: float, cap: int, seed: int):
+    """Exactly the training sampler (TRL colocate: top_p 1, top_k 0, min_p 0, no repetition penalty), set
+    explicitly: vLLM fills unset fields from the model's generation_config (Qwen: top_k 20, top_p 0.8)."""
+    from vllm import SamplingParams
+
+    return SamplingParams(n=int(k), temperature=float(temperature), top_p=1.0, top_k=0, min_p=0.0,
+                          repetition_penalty=1.0, max_tokens=int(cap), seed=int(seed))
+
+
+def _vllm_sampled(trainer, tok, temperature: float):
+    def generate(prompts, cap, k, seeds):
+        if trainer.state.global_step != getattr(trainer, "_last_loaded_step", -1):
+            trainer.vllm_generation.sync_weights()
+            trainer._last_loaded_step = trainer.state.global_step
+        # one seed per item: its own generator, so evaluating never moves the generator training samples from
+        params = [_sampling_params(k, temperature, cap, s) for s in seeds]
+        outs = trainer.vllm_generation.llm.generate([_render(tok, p.messages) for p in prompts], params,
+                                                    use_tqdm=False)
+        return [[c.text for c in o.outputs] for o in outs]
+    return generate
+
+
+def _hf_sampled(get_model, tok, temperature: float, batch: int = 8):
+    """HF backend: k samples per item, one seed per chunk of items (approximate; vLLM is exact per item)."""
+    def generate(prompts, cap, k, seeds):
+        model = get_model()
+        was_training = model.training
+        model.eval()
+        out: list[list[str]] = []
+        devices = [model.device] if model.device.type == "cuda" else []
+        with torch.random.fork_rng(devices=devices):       # leave the training RNG where it was
+            for i in range(0, len(prompts), batch):
+                chunk = [_render(tok, p.messages) for p in prompts[i:i + batch]]
+                enc = tok(chunk, return_tensors="pt", padding=True, add_special_tokens=False).to(model.device)
+                torch.manual_seed(int(seeds[i]))
+                with torch.no_grad():
+                    gen = model.generate(**enc, do_sample=True, temperature=float(temperature), top_p=1.0, top_k=0,
+                                         num_return_sequences=int(k), max_new_tokens=int(cap),
+                                         repetition_penalty=1.0, pad_token_id=tok.pad_token_id)
+                texts = tok.batch_decode(gen[:, enc["input_ids"].shape[1]:], skip_special_tokens=True)
+                out += [texts[j * k:(j + 1) * k] for j in range(len(chunk))]
+        if was_training:
+            model.train()
+        return out
+    return generate
+
+
+def _engine_dtype() -> str:
+    """What TRL's colocated vLLM runs in ("auto" on a bf16 checkpoint): bf16 from compute capability 8.0,
+    else fp16 (T4). Set explicitly so the base model and merged checkpoints are evaluated the same way."""
+    return "bfloat16" if torch.cuda.is_available() and torch.cuda.get_device_capability(0)[0] >= 8 else "float16"
+
+
+def _merged_checkpoint(run_cfg, ckpt_dir: Path) -> str:
+    """Base model + the saved LoRA adapter merged (as TRL merges before loading weights into vLLM), in a
+    temporary directory that is removed at exit."""
+    import atexit
+    import shutil
+    import tempfile
+
+    cuda = torch.cuda.is_available()
+    model = _load_model(run_cfg.model, torch.float16 if cuda else torch.float32)
+    if cuda:
+        model = model.to("cuda")
+    merged = PeftModel.from_pretrained(model, str(Path(ckpt_dir) / "adapter")).merge_and_unload()
+    out = tempfile.mkdtemp(prefix="curator_merged_")
+    atexit.register(shutil.rmtree, out, True)
+    merged.to("cpu").save_pretrained(out, safe_serialization=True)
+    AutoTokenizer.from_pretrained(run_cfg.model).save_pretrained(out)
+    del merged, model
+    if cuda:
+        torch.cuda.empty_cache()
+    return out
+
+
+def _attach_vllm_engine(controller, run_cfg, model_dir: str, tok) -> None:
+    """A standalone vLLM engine for evaluation only (no trainer in this process), set up like TRL's."""
+    import os
+
+    os.environ.setdefault("VLLM_ENABLE_V1_MULTIPROCESSING", "0")     # in this process, as colocate is
+    from vllm import LLM, SamplingParams
+
+    llm = LLM(model=model_dir, dtype=_engine_dtype(), gpu_memory_utilization=run_cfg.vllm_gpu_memory_utilization,
+              max_num_batched_tokens=4096, seed=0)
+
+    def greedy(prompts, cap):
+        params = SamplingParams(temperature=0.0, max_tokens=int(cap), repetition_penalty=1.0)
+        outs = llm.generate([_render(tok, p.messages) for p in prompts], params, use_tqdm=False)
+        return [o.outputs[0].text for o in outs]
+
+    def sampled(prompts, cap, k, seeds):
+        params = [_sampling_params(k, run_cfg.eval_temperature, cap, s) for s in seeds]
+        outs = llm.generate([_render(tok, p.messages) for p in prompts], params, use_tqdm=False)
+        return [[c.text for c in o.outputs] for o in outs]
+
+    controller.generate, controller.generate_sampled = greedy, sampled
+
+
+def attach_eval_generate(controller, run_cfg, ckpt_dir: Path | None, *, backend: str = "hf",
+                         batch: int = 16) -> None:
+    """Evaluation only: a saved policy (base model + its LoRA adapter), or the untrained base model when
+    `ckpt_dir` is None. vLLM backend: the merged weights in a standalone vLLM engine (the engine every
+    trained run's evaluation uses); otherwise HF decoding."""
     cuda = torch.cuda.is_available()
     tok = AutoTokenizer.from_pretrained(run_cfg.model)
+    if backend == "vllm":
+        model_dir = run_cfg.model if ckpt_dir is None else _merged_checkpoint(run_cfg, Path(ckpt_dir))
+        _attach_vllm_engine(controller, run_cfg, model_dir, tok)
+        return
     tok.padding_side = "left"
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
     model = _load_model(run_cfg.model, torch.float16 if cuda else torch.float32)
-    model = PeftModel.from_pretrained(model, str(Path(ckpt_dir) / "adapter"))
+    if ckpt_dir is not None:
+        model = PeftModel.from_pretrained(model, str(Path(ckpt_dir) / "adapter"))
     model = model.to("cuda" if cuda else "cpu").eval()
 
     def generate(prompts, cap):
@@ -153,6 +259,7 @@ def attach_eval_generate(controller, run_cfg, ckpt_dir: Path, batch: int = 16) -
         return texts
 
     controller.generate = generate
+    controller.generate_sampled = _hf_sampled(lambda: model, tok, run_cfg.eval_temperature)
 
 
 def run_trl(controller, run_cfg, out_dir: Path, *, backend: str, resume_dir: Path | None,
@@ -211,6 +318,9 @@ def run_trl(controller, run_cfg, out_dir: Path, *, backend: str, resume_dir: Pat
     trainer.curator_controller = controller
     callback.trainer = trainer
     controller.generate = _vllm_greedy(trainer, tok) if backend == "vllm" else _hf_greedy(trainer, tok)
+    controller.generate_sampled = (_vllm_sampled(trainer, tok, run_cfg.eval_temperature) if backend == "vllm" else
+                                   _hf_sampled(lambda: trainer.accelerator.unwrap_model(trainer.model), tok,
+                                               run_cfg.eval_temperature))
     controller.save_backend = lambda d: callback.save_backend(d, {"model": trainer.model,
                                                                    "optimizer": trainer.optimizer})
     trainer.train()

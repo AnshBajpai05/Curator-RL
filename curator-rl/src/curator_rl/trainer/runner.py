@@ -10,6 +10,8 @@ percentile bootstrap.
 from __future__ import annotations
 
 import json
+import math
+import os
 import shutil
 import signal
 import threading
@@ -21,7 +23,7 @@ from curator_rl.core.config import load_config, rescale_for_batch_shape
 from curator_rl.envs.registry import EnvRegistry
 from curator_rl.trainer.artifacts import ArtifactSync
 from curator_rl.trainer.checkpoint import latest_checkpoint, load_controller_state
-from curator_rl.trainer.round_controller import SYNC_RESERVE_SECONDS, RoundController
+from curator_rl.trainer.round_controller import EVAL_PROTOCOL, SYNC_RESERVE_SECONDS, RoundController
 from curator_rl.trainer.run_config import BENCH_DOMAINS, RunConfig
 
 
@@ -95,6 +97,14 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
     ctl.sync = sync
     backend = resolve_backend(cfg.backend)
     ckpt = latest_checkpoint(out) if resume else None
+    summary_path = out / "summary.json"
+    if ckpt is not None and summary_path.exists() and _protocol(summary_path) < EVAL_PROTOCOL:
+        # finished under an older evaluation protocol: keep that summary and evaluate the saved final
+        # policy again with the current one (no training; D-101)
+        os.replace(summary_path, out / "summary_v1.json")
+        print(f"[curator] {cfg.name} seed {cfg.seed}: evaluated with protocol {_protocol(out / 'summary_v1.json')}; "
+              f"re-evaluating the final checkpoint with protocol {EVAL_PROTOCOL} (old summary kept as "
+              "summary_v1.json)", flush=True)
     (out / "run_config.json").write_text(cfg.to_json(), encoding="utf-8")
     print(f"[curator] {cfg.method} seed {cfg.seed}: backend={backend}, "
           f"{'resuming from ' + ckpt.name if ckpt else 'fresh start'}"
@@ -103,9 +113,12 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
     if ckpt is not None:
         ctl.load_state(load_controller_state(ckpt))
         ctl.last_checkpoint_round = ctl.round
+    elif cfg.max_rounds == 0:
+        # the untrained model (run "base"): no training, only the final evaluation. The reference every
+        # method starts from, evaluated exactly as they are
+        ctl.stop, ctl.stop_reason = True, "max_rounds"
     else:
         ctl.begin_round()
-    summary_path = out / "summary.json"
     if ctl.stop and summary_path.exists():
         # training is complete and the final evaluation already ran: nothing to redo (re-launching a
         # finished run must never overwrite its result)
@@ -132,8 +145,8 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
             if ctl.save_backend is not None and ctl.last_checkpoint_round != ctl.round:
                 ctl.save(ctl.save_backend)        # final state, for later analysis
         elif ctl.generate is None:
-            # training finished in an earlier session but the final evaluation did not complete:
-            # load the trained policy for evaluation only
+            # training finished in an earlier session but the final evaluation did not complete (or
+            # used an older protocol), or this is the untrained model: evaluation only
             _attach_eval_backend(ctl, cfg, backend, ckpt)
         if ctl.preempted:
             ctl.write_progress("preempted")
@@ -168,18 +181,28 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
     return summary
 
 
+def _protocol(summary_path: Path) -> int:
+    try:
+        return int((json.loads(summary_path.read_text(encoding="utf-8")).get("final") or {}).get("protocol", 1))
+    except (OSError, ValueError):
+        return EVAL_PROTOCOL           # unreadable: never move it aside on a guess
+
+
 def _attach_eval_backend(ctl, cfg: RunConfig, backend: str, ckpt) -> None:
-    if ckpt is None:
+    if ckpt is None and cfg.max_rounds > 0:
         raise RuntimeError("nothing to evaluate: the run is complete but has no checkpoint")
     if backend == "fake":
         from curator_rl.trainer.fake_backend import FakeTrainer
 
-        FakeTrainer(ctl, cfg.seed).load(ckpt)     # sets ctl.generate
+        trainer = FakeTrainer(ctl, cfg.seed)      # sets ctl.generate (the untrained policy)
+        if ckpt is not None:
+            trainer.load(ckpt)
     else:
         from curator_rl.trainer.trl_adapter import attach_eval_generate
 
-        attach_eval_generate(ctl, cfg, ckpt)
-    print(f"[curator] {cfg.name} seed {cfg.seed}: training already complete; evaluating the saved policy", flush=True)
+        attach_eval_generate(ctl, cfg, ckpt, backend=backend)
+    what = "the untrained model" if ckpt is None else "the saved policy (training already complete)"
+    print(f"[curator] {cfg.name} seed {cfg.seed}: evaluating {what}", flush=True)
 
 
 def _install_stop_handlers(ctl) -> dict:
@@ -213,28 +236,124 @@ def _restore_stop_handlers(previous: dict) -> None:
 
 
 def compare_report(root: Path, *, reference: str = "uniform") -> str:
-    """Markdown comparison of every method against `reference`, paired by seed."""
+    """Markdown comparison of every method against `reference`: item-paired (protocol 2) and by seed."""
     from curator_rl.core.stats import paired_t_interval, sign_flip_pvalue
+    from curator_rl.evaluation.paired_items import hours_to_reach, learning_curve, paired_item_diff
 
     runs: dict[str, dict[int, dict]] = {}
     for path in sorted(Path(root).glob("*/summary.json")):
         s = json.loads(path.read_text(encoding="utf-8"))
         runs.setdefault(s.get("label") or s["method"], {})[int(s["seed"])] = s
+    base = next(iter(runs.pop("base", {}).values()), None)          # the untrained model (one run)
+
+    def sampled(s: dict) -> float | None:
+        return ((s.get("final") or {}).get("sampled") or {}).get("macro")
+
+    def mean(xs: list) -> float | None:
+        xs = [x for x in xs if x is not None]
+        return sum(xs) / len(xs) if xs else None
+
+    def fmt(x: float | None, spec: str = ".4f") -> str:
+        return "-" if x is None else format(x, spec)
+
+    k = next((((s.get("final") or {}).get("sampled") or {}).get("k") for by in runs.values() for s in by.values()
+              if sampled(s) is not None), None)
     lines = ["# CURATOR GPU comparison", "",
-             "Final score = macro-average of greedy dev accuracy over gsm8k, math35, mbpp, countdown "
-             "(uncharged evaluation, identical for every method; the sealed test is not used).", "",
-             "| method | seeds | final macro (mean) | charged GPU-h | rounds | ever S5 | sandbox rejections |",
-             "|---|---|---|---|---|---|---|"]
+             f"Sampled accuracy = mean over {k or 'k'} samples per item at the training temperature (evaluation "
+             "protocol 2, D-101: the primary measure, since RL raises sampled accuracy before greedy). Greedy = "
+             "the single most likely answer. Both: macro-average over gsm8k, math35, mbpp, countdown on the "
+             "same dev items for every method (uncharged; the sealed test is not used).", "",
+             "| method | seeds | sampled macro (mean) | greedy macro (mean) | charged GPU-h | rounds | ever S5 | "
+             "sandbox rejections |", "|---|---|---|---|---|---|---|---|"]
+    if base is not None:
+        lines.append(f"| base (untrained) | - | {fmt(sampled(base))} | {fmt(base['final'].get('macro'))} | 0 | 0 | - | - |")
     for m, by_seed in sorted(runs.items()):
-        vals = [s["final"].get("macro") for s in by_seed.values() if s["final"].get("macro") is not None]
-        mean = sum(vals) / len(vals) if vals else float("nan")
         hours = sum(s["charged_gpu_hours"] for s in by_seed.values()) / len(by_seed)
         rnds = sum(s["rounds"] for s in by_seed.values()) / len(by_seed)
         s5 = sorted({e for s in by_seed.values() for e in s["ever_s5"]})
         rej = sum(sum(s["sandbox_rejections"].values()) for s in by_seed.values())
-        lines.append(f"| {m} | {len(by_seed)} | {mean:.4f} | {hours:.3f} | {rnds:.1f} | {', '.join(s5) or '-'} | {rej} |")
+        lines.append(f"| {m} | {len(by_seed)} | {fmt(mean([sampled(s) for s in by_seed.values()]))} | "
+                     f"{fmt(mean([s['final'].get('macro') for s in by_seed.values()]))} | {hours:.3f} | {rnds:.1f} | "
+                     f"{', '.join(s5) or '-'} | {rej} |")
+    domains = list(BENCH_DOMAINS)
+    lines += ["", "## Per domain (sampled accuracy; greedy in brackets; mean over seeds)", "",
+              "| method | " + " | ".join(domains) + " |", "|---|" + "---|" * len(domains)]
+    for m, group in ([("base (untrained)", [base])] if base is not None else []) + \
+            [(m, list(by.values())) for m, by in sorted(runs.items())]:
+        cells = []
+        for d in domains:
+            sv = mean([((s["final"].get("sampled") or {}).get("scores") or {}).get(d) for s in group])
+            gv = mean([(s["final"].get("scores") or {}).get(d) for s in group])
+            cells.append(f"{fmt(sv, '.3f')} ({fmt(gv, '.3f')})")
+        lines.append(f"| {m} | " + " | ".join(cells) + " |")
+
+    # item by item: against the reference, and against the untrained model
     if reference in runs:
-        lines += ["", f"## Paired differences against {reference} (same seed)", "",
+        lines += ["", f"## Item by item against {reference} (same seed, same items)", "",
+                  "Paired over items: the SE is the evaluation's, for one seed. Whether a difference holds across "
+                  "training seeds is the across-seed interval below it.", "",
+                  "| method | seed | sampled macro diff (SE) | greedy macro diff (SE) | sampled diff per domain |",
+                  "|---|---|---|---|---|"]
+        per_seed: dict[str, list[float]] = {}
+        for m, by_seed in sorted(runs.items()):
+            if m == reference:
+                continue
+            for seed in sorted(set(by_seed) & set(runs[reference])):
+                a, b = by_seed[seed]["final"], runs[reference][seed]["final"]
+                ps, pg = paired_item_diff(a, b, "sampled"), paired_item_diff(a, b, "greedy")
+                if ps is None and pg is None:
+                    continue
+                if ps is not None:
+                    per_seed.setdefault(m, []).append(ps[0])
+                dom = ", ".join(f"{d} {v:+.3f}" for d, v in ps[2].items()) if ps else "-"
+                lines.append(f"| {m} | {seed} | {f'{ps[0]:+.4f} ({ps[1]:.4f})' if ps else '-'} | "
+                             f"{f'{pg[0]:+.4f} ({pg[1]:.4f})' if pg else '-'} | {dom} |")
+        for m, diffs in sorted(per_seed.items()):
+            if len(diffs) >= 2:
+                mu, lo, hi = paired_t_interval(diffs)
+                lines.append(f"\n{m} vs {reference}, sampled macro over {len(diffs)} seeds: {mu:+.4f}, 95% t-interval "
+                             f"[{lo:+.4f}, {hi:+.4f}], sign-flip p {sign_flip_pvalue(diffs):.3f}")
+    if base is not None:
+        lines += ["", "## Gain over the untrained model (item by item, sampled)", "",
+                  "| method | seed | sampled macro gain (SE) | per domain |", "|---|---|---|---|"]
+        for m, by_seed in sorted(runs.items()):
+            for seed, s in sorted(by_seed.items()):
+                ps = paired_item_diff(s["final"], base["final"], "sampled")
+                if ps is not None:
+                    dom = ", ".join(f"{d} {v:+.3f}" for d, v in ps[2].items())
+                    lines.append(f"| {m} | {seed} | {ps[0]:+.4f} ({ps[1]:.4f}) | {dom} |")
+
+    # learning curves on the same items: compute to reach the reference's final level
+    n_subset = next((int(s["run_config"].get("report_items", 100)) for by in runs.values() for s in by.values()), 100)
+    rows_out = []
+    for seed in sorted(runs.get(reference, {})):
+        ref_curve = learning_curve(_rows(Path(root) / f"{reference}_s{seed}" / "reports.jsonl"), n_subset=n_subset,
+                                   base_final=base["final"] if base else None)
+        if len(ref_curve) < 2:
+            continue
+        target, ref_hours = ref_curve[-1][1], ref_curve[-1][0]
+        for m, by_seed in sorted(runs.items()):
+            if m == reference or seed not in by_seed or "-wo-" in m:
+                continue
+            curve = learning_curve(_rows(Path(root) / f"{m}_s{seed}" / "reports.jsonl"), n_subset=n_subset,
+                                   base_final=base["final"] if base else None)
+            if len(curve) < 2:
+                continue
+            h = hours_to_reach(curve, target)
+            saved = f"{100 * (1 - h / ref_hours):+.0f}%" if h is not None and ref_hours else "-"
+            rows_out.append(f"| {m} | {seed} | {target:.4f} at {ref_hours:.2f} | "
+                            f"{'not reached (best ' + format(max(v for _, v in curve), '.4f') + ')' if h is None else f'{h:.2f}'} "
+                            f"| {saved} |")
+    if rows_out:
+        lines += ["", f"## GPU-hours to reach {reference}'s final level (sampled, the same {n_subset} items per domain)",
+                  "", "Learning curves start at the untrained model (0 GPU-h). Fewer GPU-hours = the same accuracy "
+                  "for less compute.", "",
+                  f"| method | seed | {reference} final (at GPU-h) | GPU-h to reach it | compute saved |",
+                  "|---|---|---|---|---|"] + rows_out
+
+    # protocol 1 (greedy, by seed): kept for runs evaluated before D-101
+    if reference in runs:
+        lines += ["", f"## Greedy, paired by seed against {reference} (protocol 1)", "",
                   "| method | n | mean diff | 95% t-interval | sign-flip p |", "|---|---|---|---|---|"]
         for m, by_seed in sorted(runs.items()):
             if m == reference:
@@ -243,8 +362,8 @@ def compare_report(root: Path, *, reference: str = "uniform") -> str:
             diffs = [by_seed[s]["final"]["macro"] - runs[reference][s]["final"]["macro"] for s in seeds
                      if by_seed[s]["final"].get("macro") is not None and runs[reference][s]["final"].get("macro") is not None]
             if len(diffs) >= 2:
-                mean, lo, hi = paired_t_interval(diffs)
-                lines.append(f"| {m} | {len(diffs)} | {mean:+.4f} | [{lo:+.4f}, {hi:+.4f}] | {sign_flip_pvalue(diffs):.3f} |")
+                mu, lo, hi = paired_t_interval(diffs)
+                lines.append(f"| {m} | {len(diffs)} | {mu:+.4f} | [{lo:+.4f}, {hi:+.4f}] | {sign_flip_pvalue(diffs):.3f} |")
             elif diffs:
                 lines.append(f"| {m} | 1 | {diffs[0]:+.4f} | one seed: no interval | - |")
         lines += ["", "With n < 20 seeds the interval is a Student-t interval (a percentile bootstrap undercovers "
@@ -291,11 +410,20 @@ def roi_sections(root: Path, runs: dict[str, dict[int, dict]]) -> list[str]:
             table = roi_table(calib, envs, gpu_hours_per_prompt(run), weights, domain_of=DOMAIN_OF)
             if name.startswith("curator") and seed not in roi_by_seed:
                 roi_by_seed[seed] = {r.env_id: r.roi for r in table}
+            s5 = sorted(set(summ.get("ever_s5") or []))
+            informative = any(r.roi_lo > 0 for r in table if r.env_id not in s5 and math.isfinite(r.roi_lo))
             lines += ["", f"## ROI leaderboard: {name}, seed {seed} ({len(calib)} calibration evaluations)", "",
                       "Benchmark gain per GPU-hour spent on each arm, credited on the slice the arm is scored on "
                       "(roi/leaderboard.py, `members`). From one run this is descriptive: in the simulator one run "
-                      "ranks arms like leave-one-out with median tau 0.3-0.5 (reports/analysis/roi_loo_sim.md).", "",
-                      render(table)]
+                      "ranks arms like leave-one-out with median tau 0.3-0.5 (reports/analysis/roi_loo_sim.md). "
+                      "Gains are fitted non-negative: 0.0000 means no positive evidence, not a measured zero.", ""]
+            if s5:
+                lines += [f"Flagged S5 (rewards that do not depend on the prompt): {', '.join(s5)}. Their ROI is "
+                          "not meaningful, whatever its rank.", ""]
+            if not informative:
+                lines += [f"**Not a ranking:** with {len(calib)} calibration evaluations no (unflagged) arm's interval "
+                          "excludes zero, so the order below is noise.", ""]
+            lines.append(render(table))
     loo_bases = sorted({n.split("-wo-")[0] for n in runs if "-wo-" in n})
     for base in loo_bases:
         for seed, full in sorted(runs.get(base, {}).items()):

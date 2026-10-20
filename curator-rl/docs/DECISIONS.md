@@ -646,6 +646,18 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
 - Consequence: a one-seed GPU ROI table and H5 verdict are descriptive only (the report says so); H5 needs several seeds or the pooled sysid design.
 - B3: LP window W in {10, 15, 20, 30} with the preset: no window beats W = 10; W = 30 is worse on S-I-R1-GPU2 (-0.0039 [-0.0074, -0.0003]). W stays 10.
 
+## D-101 — Evaluation protocol 2: sampled accuracy, per-item pairing, base-model reference (GPU runs)
+
+- Date: 2026-10-20. Owner approved the same day, BEFORE any protocol-2 number existed (this entry is the pre-registration of the GPU measure). Evidence: Kaggle seed 0 (curator, uniform, lp; protocol 1).
+- Why. Seed 0 tied on greedy dev macro (0.308 / 0.302 / 0.301) while training clearly moved the policy: entropy 0.49 -> 0.33, and sampled training accuracy rose under Curator (GSM8K 0.46 -> 0.53, MBPP 0.26 -> 0.33 first vs second half) but not under Uniform. Early RL sharpens the sampling distribution; the greedy answer moves little. Greedy macro also had about +-0.018 evaluation SE per run (MBPP dev has ~60 items), and there was no untrained reference.
+- Protocol 2 (reports only; training is unchanged, `test_sampled_evaluations_never_change_the_run_they_measure`):
+  - every report scores greedy AND sampled accuracy: k = 4 samples per item at the training temperature (1.0) with the training sampler (top_p 1, top_k 0, min_p 0), one seed per item from the item alone (the same for every method, seed and model);
+  - per-item results are logged; methods are compared item by item on the same items (paired SE), per seed, then across seeds (t-interval, sign-flip);
+  - the untrained model (`base_s0`, `run.py compare` runs it first) is evaluated with the same engine (vLLM, the training dtype), giving the gain of every method;
+  - periodic reports every 10 rounds on a fixed random 100 of the final 300 items per domain (previously the 100 lowest-index items, not a random sample), so learning curves and the final score share their items; the compute measure is GPU-hours to reach the reference's final level.
+- **Primary GPU measure (H1/H2 on hardware): sampled macro, item-paired against Uniform, across seeds.** Greedy macro is reported alongside as secondary. Protocol-1 results are kept (`summary_v1.json`); finished runs are re-evaluated from their final checkpoint, without retraining.
+- Fixed with it: a relaunched finished run rewound its logs to the last checkpoint and dropped its final-evaluation row (restored from the backup on the next fetch); the ROI table says when it is not a ranking (no unflagged arm's interval excludes zero) and marks S5 arms.
+
 ---
 
 # Roadmap v3 decisions (PROPOSED — pending owner confirmation; see `docs/ROADMAP_v3.md` §11)

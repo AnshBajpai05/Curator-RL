@@ -42,7 +42,7 @@ from curator_rl.cost.attribution import attribute_step
 from curator_rl.cost.ledger import Ledger
 from curator_rl.envs.base import Environment
 from curator_rl.trainer.artifacts import ArtifactSync
-from curator_rl.trainer.calibration_eval import EvalSuite, GenerateFn
+from curator_rl.trainer.calibration_eval import EvalSuite, GenerateFn, SampledFn
 from curator_rl.trainer.checkpoint import save_checkpoint
 from curator_rl.trainer.prompt_stream import PromptStream
 from curator_rl.trainer.reward_router import ArmStats, RewardRouter
@@ -53,6 +53,7 @@ LOG_FILES = ("steps", "rounds", "calibration", "reports")
 EXIT_PREEMPTED = 75            # EX_TEMPFAIL: stopped cleanly before a limit; resume to continue
 FAULT_ENV = "CURATOR_FAULT_AT_STEP"   # tests: raise once at this global step (a simulated crash)
 SYNC_RESERVE_SECONDS = 300.0   # time kept free before the deadline for the last checkpoint upload
+EVAL_PROTOCOL = 2              # reports: greedy + sampled accuracy with per-item results (D-101)
 
 
 class RoundController:
@@ -86,6 +87,7 @@ class RoundController:
                                       workers=run_cfg.verify_workers)
         self.ledger = Ledger(run_cfg.budget_gpu_hours)
         self.generate: GenerateFn | None = None          # set by the backend (greedy decoding)
+        self.generate_sampled: SampledFn | None = None   # set by the backend (k samples per item, one seed each)
         self.logprob_path = "n/a"                         # set by the TRL backend (triton | pytorch-fallback)
         self.round = 0
         self.global_step = 0
@@ -341,13 +343,20 @@ class RoundController:
         self._window_cost = 0.0
 
     def report(self, n_items: int, *, tag: str) -> dict:
-        """Uncharged dev evaluation, identical for every method (score-vs-GPU-hours curve)."""
+        """Uncharged dev evaluation, identical for every method (score-vs-GPU-hours curve).
+
+        Protocol 2 (D-101): greedy accuracy as before, plus sampled accuracy (k samples per item at
+        the training temperature, one seed per item) and per-item results. Periodic reports use a
+        fixed random subset of the final items, so curve and final score share their items.
+        """
         if self.generate is None:
             return {}
         t0 = self.clock()
+        k = int(self.cfg.eval_samples) if self.generate_sampled is not None else 0
         try:
-            res = self.report_suite.evaluate({d: n_items for d in self.bench}, self.generate,
-                                             retries=2 if tag == "final" else 1)
+            res = self.report_suite.evaluate_items({d: n_items for d in self.bench}, self.generate,
+                                                   sampled=self.generate_sampled, k=k, spread=tag != "final",
+                                                   retries=2 if tag == "final" else 1)
         except Exception as exc:  # noqa: BLE001
             res = {"score_by_domain": {}, "se_by_domain": {}, "errors": {"*": repr(exc)[:300]}}
         secs = self.clock() - t0
@@ -359,7 +368,15 @@ class RoundController:
         row = {"tag": tag, "round": self.round, "charged_gpu_hours": self.ledger.charged_gpu_hours,
                "scores": scores, "se": res.get("se_by_domain", {}), "n_items": n_items,
                "macro": (sum(scores.values()) / len(scores)) if scores and not missing else None,
-               "missing": missing, "errors": res.get("errors") or {}, "seconds": secs}
+               "missing": missing, "errors": res.get("errors") or {}, "seconds": secs,
+               "protocol": EVAL_PROTOCOL, "subset": "first" if tag == "final" else "spread"}
+        s_scores = res.get("sampled_by_domain") or {}
+        if k:
+            row["sampled"] = {"k": k, "temperature": self.cfg.eval_temperature, "scores": s_scores,
+                              "se": res.get("sampled_se_by_domain") or {},
+                              "macro": (sum(s_scores.values()) / len(s_scores))
+                              if s_scores and all(d in s_scores for d in self.bench) else None}
+        row["items"] = res.get("items") or {}
         self._write("reports", row)
         return row
 
@@ -402,7 +419,12 @@ class RoundController:
         # stop is recomputed from THIS run's limits, so a finished run can be extended
         self.stop = self.ledger.exhausted() or self.round >= self.cfg.max_rounds
         self._next_ready = bool(state.get("next_ready", True))
-        # drop log lines written after the checkpoint (they will be re-run)
+        # drop log lines written after the checkpoint (they will be re-run). Not for a run that is
+        # complete (summary written) and not being extended: it is not re-run, and those lines hold its
+        # final evaluation
+        if self.stop and (self.out_dir / "summary.json").exists():
+            self._reset_round()
+            return
         for name, n in state["log_lines"].items():
             path = self.out_dir / f"{name}.jsonl"
             self.logs[name].__exit__()

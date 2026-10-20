@@ -82,6 +82,17 @@ class FakePolicy:
             out.append(gold if ok else self._wrong(pr.env_id))
         return out
 
+    def sampled(self, prompts: Sequence[Prompt], cap: int, k: int, seeds: Sequence[int]) -> list[list[str]]:
+        """k samples per item, each correct with the current pass rate; drawn from the item's own seed,
+        never from the training generator (an evaluation must not change the run it measures)."""
+        out = []
+        for pr, seed in zip(prompts, seeds):
+            rng = np.random.default_rng([int(seed), 7])
+            gold = self._gold(pr)
+            out.append([gold if (gold is not None and rng.random() < self.p(pr.env_id)) else self._wrong(pr.env_id)
+                        for _ in range(int(k))])
+        return out
+
     def learn(self, prompts_by_env: Mapping[str, int]) -> None:
         total = sum(prompts_by_env.values()) or 1
         g = {e: 4 * self.p(e) * (1 - self.p(e)) for e in self.skill}
@@ -108,6 +119,7 @@ class FakeTrainer:
         self.ctl = controller
         self.policy = FakePolicy(controller.envs, seed)
         self.ctl.generate = self.policy.greedy
+        self.ctl.generate_sampled = self.policy.sampled
         self.len_rng = np.random.default_rng([seed, 99])
 
     def save(self, ckpt_dir: Path) -> None:

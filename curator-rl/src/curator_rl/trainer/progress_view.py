@@ -26,7 +26,7 @@ from pathlib import Path
 
 BAR_WIDTH = 20
 STARTUP_SECONDS = 5 * 60          # model load and vLLM start-up before the first round
-FINAL_EVAL_SECONDS = 5 * 60       # the uncharged final evaluation after training
+FINAL_EVAL_SECONDS = 10 * 60      # the uncharged final evaluation (greedy + 4 samples per item, D-101)
 UNCHARGED_OVERHEAD = 1.1          # wall seconds per charged GPU-second (calibration, reports, checkpoints)
 QUIET_SECONDS = 5 * 60            # a run's line again after this long without one
 SUMMARY_SECONDS = 15 * 60         # the step summary again after this long
@@ -103,6 +103,7 @@ class _Run:
     phase_since: float = 0.0
     shown: tuple | None = None        # (round, phase) last printed
     shown_at: float = 0.0
+    eval_only: bool = False           # no training: the base model, or a finished run being re-evaluated
 
 
 class ProgressBoard:
@@ -126,10 +127,11 @@ class ProgressBoard:
 
     # ------------------------------------------------------------------ called by run_jobs
 
-    def launched(self, name: str, gpu: int | None) -> None:
+    def launched(self, name: str, gpu: int | None, *, eval_only: bool = False) -> None:
         p, _ = self._progress(name)
         now = self.clock()
-        self.runs[name] = _Run(name, gpu, now, int((p or {}).get("round") or 0), phase_since=now)
+        self.runs[name] = _Run(name, gpu, now, int((p or {}).get("round") or 0), phase_since=now,
+                               eval_only=eval_only)
         self.name_width = max(self.name_width, len(name))
         self.summary_due = True
 
@@ -180,7 +182,8 @@ class ProgressBoard:
                  f"round {int(p.get('round') or 0)}"]
         left = self.seconds_left(run, p, now)
         if run.phase == "starting":
-            what = "loading the model and vLLM" if run.start_round == 0 else f"resuming from round {run.start_round}"
+            what = ("loading the model for evaluation" if run.eval_only else "loading the model and vLLM"
+                    if run.start_round == 0 else f"resuming from round {run.start_round}")
             parts.append(f"starting: {what}, ~{duration(left)} to go")
         elif run.phase == "training":
             parts.append(f"training, ~{duration(left)} to go")
@@ -220,7 +223,7 @@ class ProgressBoard:
             return 0.0
         if run.phase == "final evaluation":
             return max(60.0, FINAL_EVAL_SECONDS - (now - run.phase_since))
-        left = training_left_seconds(p, self.budget) + FINAL_EVAL_SECONDS
+        left = (0.0 if run.eval_only else training_left_seconds(p, self.budget)) + FINAL_EVAL_SECONDS
         if run.phase == "starting":
             left += max(0.0, STARTUP_SECONDS - (now - run.started))
         return left

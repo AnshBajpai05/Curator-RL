@@ -111,15 +111,23 @@ an exact PyTorch equivalent, tested against the naive computation (values and gr
   On the pilot data the random-reward arm has dispersion D = 1.0-1.09 and every real verifier 3.0-4.4.
 - Curator calibrates every 10 rounds on fixed paired items (greedy); the noisy arm is scored on the GSM8K
   slice with transfer-aware credit. Calibration flags an arm after 3 consecutive mismatches.
-- The final score is greedy accuracy on the **dev** split (300 items per domain), macro-averaged over GSM8K,
-  MATH35, MBPP and Countdown. The sealed test sets are not in the zip and are never touched.
+- The score (evaluation protocol 2, D-101) is measured on the **dev** split (300 items per domain),
+  macro-averaged over GSM8K, MATH35, MBPP and Countdown: **sampled accuracy** (mean of 4 samples per item at
+  the training temperature; the primary measure, since RL raises it before the greedy answer moves) and
+  greedy accuracy. Every item's results are kept, so methods are compared item by item on the same items.
+  The untrained model (`base_s0`) is evaluated first, the same way, as the reference. A learning-curve
+  report every 10 rounds uses a fixed random 100 of those items. Runs that finished under the old
+  protocol are re-evaluated from their final checkpoint (no retraining; the old summary stays as
+  `summary_v1.json`). The sealed test sets are not in the zip and are never touched.
 
 Each run writes `/kaggle/working/curator_runs/<method>_s<seed>/`: `rounds.jsonl` (mixture, delivered
 shares, pass rates, statuses, costs), `steps.jsonl`, `calibration.jsonl`, `reports.jsonl`,
-`summary.json`, `progress.json`, `checkpoints/`. `comparison.md` pairs the methods by seed (t-interval; with one
-seed it is descriptive only), adds the ROI leaderboard of every calibrating run and, after `loo`, the
-leave-one-out table with the H5 verdict; `plots/` holds each run's mixture over rounds and the
-score-vs-GPU-hours curves. Every `rounds.jsonl` row also records each arm's reward dispersion (`dispersion`).
+`summary.json`, `progress.json`, `checkpoints/`. `comparison.md` has the sampled and greedy scores per
+method and per domain, each method against Uniform item by item (per seed, then across seeds), every
+method's gain over the untrained model, the GPU-hours each method needs to reach Uniform's final level,
+the ROI leaderboard of every calibrating run (it says when it is not a ranking) and, after `loo`, the
+leave-one-out table with the H5 verdict; `plots/` holds each run's mixture over rounds and the learning
+curves (sampled accuracy on the same items, from the untrained model). Every `rounds.jsonl` row also records each arm's reward dispersion (`dispersion`).
 
 ## Presets and methods
 

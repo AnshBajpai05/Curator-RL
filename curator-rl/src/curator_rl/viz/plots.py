@@ -34,8 +34,10 @@ def _plt():
     return plt
 
 
-def score_vs_gpu_hours(curves: Mapping[str, Sequence[tuple[float, float | None]]], *, title: str = ""):
-    """One line per method: (charged GPU-hours, macro dev score) points, e.g. from reports.jsonl."""
+def score_vs_gpu_hours(curves: Mapping[str, Sequence[tuple[float, float | None]]], *, title: str = "",
+                       baseline: float | None = None, ylabel: str = "macro dev accuracy"):
+    """One line per method: (charged GPU-hours, macro dev score) points on the SAME items (protocol 2
+    learning curves); `baseline` (the untrained model) as a dashed line."""
     plt = _plt()
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
     for i, (name, pts) in enumerate(sorted(curves.items())):
@@ -43,8 +45,10 @@ def score_vs_gpu_hours(curves: Mapping[str, Sequence[tuple[float, float | None]]
         if clean:
             ax.plot([p[0] for p in clean], [p[1] for p in clean], marker="o", lw=1.8, label=name,
                     color=_FALLBACK[i % len(_FALLBACK)] if name not in ARM_COLORS else ARM_COLORS[name])
+    if baseline is not None:
+        ax.axhline(baseline, ls="--", lw=1.2, color="#777777", label="untrained model")
     ax.set_xlabel("charged GPU-hours")
-    ax.set_ylabel("macro dev accuracy")
+    ax.set_ylabel(ylabel)
     ax.set_title(title or "Score vs compute")
     ax.grid(alpha=0.3)
     ax.legend(frameon=False)
@@ -111,7 +115,13 @@ def render_run_plots(root: Path) -> tuple[list[Path], str]:
     out = root / "plots"
     out.mkdir(exist_ok=True)
     files: list[Path] = []
-    curves: dict[str, list[tuple[float, float | None]]] = {}
+    from curator_rl.evaluation.paired_items import learning_curve
+
+    base_dir = next(iter(sorted(root.glob("base_s*"))), None)          # the untrained model (one run)
+    base_reports = _rows(base_dir / "reports.jsonl") if base_dir is not None else []
+    base_final = next((r for r in reversed(base_reports) if r.get("tag") == "final" and r.get("items")), None)
+    curves: dict[str, list[tuple[float, float | None]]] = {}      # protocol 2: sampled, on the same items
+    finals: dict[str, list[tuple[float, float | None]]] = {}      # protocol 1: one greedy final point each
     for run in sorted(p for p in root.iterdir() if p.is_dir() and (p / "rounds.jsonl").exists()):
         rounds = _rows(run / "rounds.jsonl")
         if rounds:
@@ -119,12 +129,33 @@ def render_run_plots(root: Path) -> tuple[list[Path], str]:
             files.append(out / f"{run.name}_mixture.png")
             fig.savefig(files[-1], dpi=130)
             _plt().close(fig)
-        pts = [(r["charged_gpu_hours"], r.get("macro")) for r in _rows(run / "reports.jsonl")]
-        if pts:
-            curves[run.name] = pts
-    if curves:
-        fig = score_vs_gpu_hours(curves)
+        if run == base_dir:
+            continue
+        reports = _rows(run / "reports.jsonl")
+        cfg = _json(run / "run_config.json")
+        curve = learning_curve(reports, n_subset=int(cfg.get("report_items", 100)), base_final=base_final)
+        if len(curve) >= 2:
+            curves[run.name] = list(curve)
+        final = next((r for r in reversed(reports) if r.get("tag") == "final"), None)
+        if final is not None:
+            finals[run.name] = [(final["charged_gpu_hours"], final.get("macro"))]
+    if curves or finals:
+        if curves:
+            first = next(iter(curves.values()))
+            fig = score_vs_gpu_hours(curves, title="Sampled accuracy on the same items (learning curves)",
+                                     baseline=first[0][1] if base_final is not None else None,
+                                     ylabel="macro sampled accuracy")
+        else:
+            # older runs: final scores only (a periodic report was on other items, not comparable)
+            fig = score_vs_gpu_hours(finals, title="Final greedy score (evaluation protocol 1)")
         files.append(out / "score_vs_gpu_hours.png")
         fig.savefig(files[-1], dpi=130)
         _plt().close(fig)
     return files, f"{len(files)} figures in {out}"
+
+
+def _json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}

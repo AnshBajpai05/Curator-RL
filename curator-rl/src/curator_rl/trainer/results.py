@@ -4,7 +4,7 @@
 
     results/
       README.txt              what each file is
-      comparison.md           methods paired by seed, ROI leaderboards, leave-one-out (if any)
+      comparison.md           methods item by item and by seed, gain over base, ROI, leave-one-out
       status.md               where every run is (status, round, GPU-hours, checkpoint, sync)
       plots/*.png             mixture over rounds per run, score vs GPU-hours
       runs/<run>/             summary, progress, config, round/step/calibration/report logs, sysid report
@@ -31,9 +31,11 @@ RUN_FILES = ("summary.json", "progress.json", "run_config.json", "rounds.jsonl",
 
 README = """CURATOR results ({stamp} UTC)
 
-comparison.md   final scores per method, paired differences by seed, ROI leaderboards, leave-one-out
+comparison.md   sampled + greedy scores, item-by-item differences, gain over the untrained model,
+                GPU-hours to reach Uniform's level, ROI leaderboards, leave-one-out
 status.md       every run: status, round, GPU-hours used, last checkpoint, last sync
 plots/          <run>_mixture.png (share of each arm per round, S5 marked), score_vs_gpu_hours.png
+                (learning curves on the same items)
 runs/<run>/     summary.json (final scores, shares, S5 arms, errors), progress.json (heartbeat),
                 run_config.json, rounds.jsonl / steps.jsonl / calibration.jsonl / reports.jsonl (logs),
                 sysid_report.md (system identification runs only)
