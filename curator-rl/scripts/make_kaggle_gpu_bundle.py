@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     from curator_rl.core.config import config_hash, load_config
 
     info = {"built_utc": datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"), "git_sha": _git("rev-parse", "--short", "HEAD"),
-            "git_dirty": bool(_git("status", "--porcelain")),
+            "git_dirty": bool(_git("status", "--porcelain", "--", ".")),     # the packaged tree only
             "config_hash": config_hash(load_config(REPO_ROOT / "configs" / "base.yaml")), "n_files": len(files)}
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
