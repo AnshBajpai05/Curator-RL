@@ -205,6 +205,10 @@ class SignalEngine:
             )
         return out
 
+    def preflag_unreliable(self, env_ids) -> None:
+        """Arms whose reward paid for junk before training (pre-flight verifier check, D-102): S5 throughout."""
+        self._audit.preflag(env_ids)
+
     def _within_round_variance(self, obs: EnvRoundObs, p_pooled: float) -> float | None:
         """Between-group variance of pass rates inside one round (LP-B `design` SE, E-01).
 

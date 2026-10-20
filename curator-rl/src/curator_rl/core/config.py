@@ -145,6 +145,7 @@ class RewardAuditCfg(_StrictModel):
     d_max: float = Field(gt=1)   # dispersion ratio separating prompt-independent (D=1) from real (D~3-4) rewards
     z: float = Field(gt=0)       # one-sided confidence multiplier on log D (enter below, clear above)
     min_df: int = Field(ge=2)    # pooled degrees of freedom before any decision
+    preflight_gate: bool = False  # S5 from the start for an arm whose reward paid for junk before training (D-102)
 
 
 class PriorCfg(_StrictModel):

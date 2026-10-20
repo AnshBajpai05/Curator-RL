@@ -215,8 +215,17 @@ def run_config(args, method: str, seed: int, **shape):
 
     if "envs" in shape:
         shape["envs"] = tuple(shape["envs"])
-    overrides = list(PRESETS[args.preset].get(method, [])) + list(args.set or [])
+    from curator_rl.trainer.group_filter import split_method
+
+    # "_q" (D-102): the base method's preset plus question filtering; Curator-Q also starts arms whose
+    # reward paid for junk in the pre-flight verifier check in S5
+    base, filtered = split_method(method)
+    overrides = list(PRESETS[args.preset].get(base, []))
+    if filtered and base.startswith("curator"):
+        overrides.append("signals.reward_audit.preflight_gate=true")
+    overrides += list(args.set or [])
     cfg = RunConfig(method=method, seed=seed, model=args.model, backend=args.backend, out_dir=str(args.out),
+                    group_filter=args.group_filter if filtered else 0.0,
                     budget_gpu_hours=args.budget_gpu_hours, max_rounds=args.rounds, overrides=overrides,
                     micro_batch=args.micro_batch, max_completion_tokens=args.max_tokens,
                     calib_items=args.calib_items, final_items=args.final_items, report_items=args.report_items,
@@ -248,6 +257,7 @@ def spawn(args, job: dict, gpu: int | None) -> subprocess.Popen:
            "--calib-items", str(args.calib_items), "--final-items", str(args.final_items),
            "--report-items", str(args.report_items), "--report-every", str(args.report_every),
            "--eval-samples", str(args.eval_samples), "--eval-temperature", str(args.eval_temperature),
+           "--group-filter", str(args.group_filter),
            "--sync-every-min", str(args.sync_every_min), "--deadline-unix", str(args.deadline_unix),
            "--keep-checkpoints", str(args.keep_checkpoints),
            "--shape", json.dumps(job["shape"]), *job["extra"]]
@@ -450,7 +460,10 @@ def finish(args, outcome: dict) -> int:
 
 
 def _shape(args) -> dict:
-    return json.loads(args.shape) if args.shape else {}
+    shape = json.loads(args.shape) if args.shape else {}
+    if getattr(args, "envs", None):
+        shape["envs"] = list(args.envs)          # e.g. the stress portfolio (hackable checker instead of noisy)
+    return shape
 
 
 # the untrained model, evaluated exactly as the trained runs are: the reference every method starts from
@@ -628,6 +641,12 @@ def main(argv=None) -> int:
     ap.add_argument("--eval-samples", type=int, default=4, help="samples per item for the sampled accuracy (D-101)")
     ap.add_argument("--eval-temperature", type=float, default=1.0, help="... drawn at this temperature (training's)")
     ap.add_argument("--no-base", action="store_true", help="compare: skip the untrained-model evaluation")
+    ap.add_argument("--group-filter", type=float, default=1.75,
+                    help="'_q' methods: questions drawn per question trained (D-102)")
+    ap.add_argument("--envs", type=lambda s: s.split(","), default=None,
+                    help="training arms, e.g. gsm8k,math35,mbpp,countdown,hackable (stress portfolio)")
+    ap.add_argument("--namespace", default=None,
+                    help="keep these runs apart (another model or portfolio): <out>_<ns>, results_<ns>, <sync>/<ns>")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--results-dir", type=Path, default=None,
                     help="where results + curator_results.zip go (default: 'results' next to --out)")
@@ -647,6 +666,16 @@ def main(argv=None) -> int:
     ap.add_argument("--no-grad-ckpt", action="store_true", help="faster steps if memory allows (C1)")
     ap.add_argument("--hf", action="store_true", help="setup: force the HF backend even on a T4")
     args = ap.parse_args(argv)
+    if args.namespace:
+        # runs of another model or portfolio share run names (curator_s0, ...) with the main ones: their
+        # own output folder, results folder and backup prefix keep them from ever overwriting each other.
+        # Workers receive the resolved --out and --sync-to, never --namespace.
+        ns = args.namespace.strip("/")
+        args.out = args.out.parent / f"{args.out.name}_{ns}"
+        if args.results_dir is None:
+            args.results_dir = args.out.parent / f"results_{ns}"
+        if args.sync_to:
+            args.sync_to = args.sync_to.rstrip("/") + f"/{ns}"
     args.out.mkdir(parents=True, exist_ok=True)
     if args.deadline_unix is None:            # workers receive the supervisor's deadline explicitly
         args.deadline_unix = deadline_unix(args)

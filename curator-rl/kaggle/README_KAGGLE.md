@@ -141,18 +141,39 @@ Methods: `curator`, `curator_nocal` (Curator without calibration: the ablation),
 `pilot_uniform` (uniform over the arms the pilot could solve: what a practitioner would run), `lp`,
 `ucb`, `sec`, `dump`, `static` (size-proportional), and `dirichlet` (the sysid design, via `sysid`).
 
-## What to run, in order (three sessions)
+## What to run, in order
 
 | session | `STEPS` in cell 1 | wall time | runs |
 |---|---|---|---|
-| 1 | `["compare", "ablation"]` | ~5.5 h | curator, uniform, lp, curator_nocal, pilot_uniform (seed 0) |
-| 2 | `["sysid", "seeds12"]` | ~7.5 h | sysid seeds 0, 1; curator, uniform, lp seeds 1, 2 |
-| 3 | `["loo"]` | ~5.5 h | uniform with each arm left out (seed 0) |
+| 1-2 (done) | `["compare", "ablation", "sysid", "seeds12"]` | ~17 h | curator, uniform, lp seeds 0-2; curator_nocal, pilot_uniform, sysid; the untrained model |
+| pilots (D-102) | `["pilot_q", "baselines", "olmo", "stress"]` | ~9 h | see below, one seed each |
+| then | the pilot that pays off (D-102 rules), `["loo"]` | ~6 h each | |
 
-About 19 hours of Kaggle's ~30-hour weekly GPU quota. Each run is capped at 1.5 charged GPU-hours
-(~1.7 h of wall time); two run in parallel on T4 x2. If a session ends early, start a new one with the
-**same** `STEPS`: runs resume from their last checkpoint and finished runs are skipped.
-`STEPS = ["status"]` only prints where everything is.
+The pilot steps:
+
+| step | runs | question |
+|---|---|---|
+| `pilot_q` | curator_q, uniform_q (seed 0; compared with uniform_s0) | does training only on questions with a learning signal raise the score per GPU-hour? |
+| `baselines` | sec, dump (seed 0) | the published curricula, against Uniform |
+| `olmo` | the untrained model, curator, uniform on OLMo-2-1B | outside Qwen, does the random-reward arm hurt, and does Curator avoid it? |
+| `llama` | the same on Llama-3.2-1B | optional: needs Meta's licence approval on Hugging Face for the token's account |
+| `stress` | curator_q, uniform with a hackable checker instead of the noisy arm | does a realistic checker bug hurt, and does the pre-flight check protect? |
+| `seeds345` | curator, uniform seeds 3-5 | more seeds, if a comparison needs them |
+
+Steps with `--namespace` (`olmo`, `llama`, `stress`) keep their runs in `curator_runs_<name>/`, their
+results in `results_<name>/` and their backup in `<backup>/<name>/`, so their run names (`curator_s0`, ...)
+never collide with the main runs; cell 7 prints every namespace's results.
+
+**Question filtering (`_q` methods):** each step draws 1.75 times the questions it trains on, generates
+and scores them all, and trains on the groups whose answers got different rewards (a group whose 8
+answers all got the same reward teaches nothing; 35-50% of groups were like that). All generation is
+charged to the budget. **Pre-flight verifier check:** before training, every run scores junk answers with
+each arm's reward and writes `fuzz.json`; an arm whose reward pays for junk is flagged (the noisy and
+hackable arms are; the four real checkers pay nothing). `curator_q` starts flagged arms in S5.
+
+Each run is capped at 1.5 charged GPU-hours (~1.9 h of wall time with the evaluation); two run in
+parallel on T4 x2. If a session ends early, start a new one with the **same** `STEPS`: runs resume from
+their last checkpoint and finished runs are skipped. `STEPS = ["status"]` only prints where everything is.
 
 ## What to send back
 

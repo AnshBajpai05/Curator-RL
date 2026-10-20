@@ -16,7 +16,9 @@ own crash-safe checkpoints), `remove_unused_columns=False` (the reward needs env
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
+import math
 import time
 from pathlib import Path
 from typing import Any
@@ -29,14 +31,94 @@ from trl import GRPOConfig, GRPOTrainer
 
 
 class CuratorGRPOTrainer(GRPOTrainer):
-    """GRPOTrainer whose generation batches are filled by the CURATOR controller."""
+    """GRPOTrainer whose generation batches are filled by the CURATOR controller.
+
+    With question filtering (D-102, "_q" methods) a step draws more questions than it trains on,
+    generates and scores them all in one stock TRL call, and keeps the groups with a reward signal.
+    """
 
     curator_controller = None
 
     def _generate_and_score_completions(self, inputs):
-        if self.model.training and self.curator_controller is not None:
-            inputs = self.curator_controller.fill_generation_batch(list(inputs), self.num_generations)
-        return super()._generate_and_score_completions(inputs)
+        ctl = self.curator_controller
+        if not (self.model.training and ctl is not None):
+            return super()._generate_and_score_completions(inputs)
+        from curator_rl.trainer.group_filter import has_signal, select_groups
+
+        g = self.num_generations
+        n_keep = len(inputs) // g
+        n_draw = ctl.candidates_per_step(n_keep)
+        output = super()._generate_and_score_completions(ctl.fill_generation_batch(list(inputs), g, n_draw))
+        if n_draw == n_keep:
+            return output
+        # advantages are per group: a group without a reward signal has all of them at zero
+        adv = output["advantages"].detach().float().view(n_draw, g).cpu().tolist()
+        signal = [has_signal(a) for a in adv]
+        keep = select_groups(signal, n_keep)
+        self._metrics["train"]["curator/signal_groups_drawn"].append(sum(signal) / n_draw)
+        self._metrics["train"]["curator/signal_groups_kept"].append(sum(signal[i] for i in keep) / n_keep)
+        return keep_groups(output, keep, g, n_draw * g, gather=self.accelerator.gather)
+
+
+# per-completion tensors whose second dimension is the completion length (right-padded)
+_COMPLETION_KEYS = ("completion_ids", "completion_mask", "old_per_token_logps", "ref_per_token_logps",
+                    "sampling_per_token_logps", "importance_sampling_ratio", "tool_mask")
+
+
+def keep_groups(output: dict, keep: list[int], g: int, n_rows: int, gather=None) -> dict:
+    """A generation batch restricted to whole groups `keep` (row order kept).
+
+    Completion columns are trimmed to the last token any kept row trains on (trailing masked columns
+    change nothing: attention is causal) and the loss normaliser, the number of completion tokens in
+    the batch, is recomputed for the kept rows. Everything else per row is selected as it is.
+    """
+    rows = torch.tensor([i * g + j for i in keep for j in range(g)], dtype=torch.long)
+    out: dict = {}
+    for key, value in output.items():
+        if torch.is_tensor(value) and value.dim() >= 1 and value.shape[0] == n_rows:
+            out[key] = value.index_select(0, rows.to(value.device))
+        elif isinstance(value, list) and len(value) == n_rows:
+            out[key] = [value[i] for i in rows.tolist()]
+        else:
+            out[key] = value
+    mask = out["completion_mask"]
+    full = mask.shape[1]
+    used = mask.nonzero()
+    width = int(used[:, 1].max().item()) + 1 if used.numel() else 1
+    if width < full:
+        for key in _COMPLETION_KEYS:
+            value = out.get(key)
+            if torch.is_tensor(value) and value.dim() == 2 and value.shape[1] == full:
+                out[key] = value[:, :width]
+    loss_mask = out["completion_mask"] if out.get("tool_mask") is None else out["completion_mask"] * out["tool_mask"]
+    total = loss_mask.sum()
+    out["num_items_in_batch"] = gather(total).sum() if gather is not None else total
+    return out
+
+
+@contextlib.contextmanager
+def _vllm_room_for(factor: float):
+    """TRL caps vLLM's concurrent sequences at one generation batch; question filtering generates
+    `factor` times as many, which would otherwise run in two waves. Widen the cap while the trainer
+    (and its vLLM engine) is built; nothing else changes."""
+    import trl.trainer.grpo_trainer as grpo
+
+    if factor <= 1.0:
+        yield
+        return
+    original = grpo.VLLMGeneration
+
+    class _Wider(original):  # type: ignore[misc, valid-type]
+        def __init__(self, *args, max_num_seqs=None, **kwargs):
+            if max_num_seqs is not None:
+                max_num_seqs = math.ceil(max_num_seqs * factor)
+            super().__init__(*args, max_num_seqs=max_num_seqs, **kwargs)
+
+    grpo.VLLMGeneration = _Wider
+    try:
+        yield
+    finally:
+        grpo.VLLMGeneration = original
 
 
 def _sync() -> None:
@@ -313,8 +395,9 @@ def run_trl(controller, run_cfg, out_dir: Path, *, backend: str, resume_dir: Pat
     controller.router.count_prompt_tokens = lambda msgs: len(tok.apply_chat_template(
         [dict(m) for m in msgs], tokenize=True, add_generation_prompt=True))
     callback = CuratorCallback(controller, out_dir, resume_dir)
-    trainer = CuratorGRPOTrainer(model=model, reward_funcs=controller.router, args=config, train_dataset=dataset,
-                                 processing_class=tok, peft_config=peft_config, callbacks=[callback])
+    with _vllm_room_for(float(run_cfg.group_filter)):
+        trainer = CuratorGRPOTrainer(model=model, reward_funcs=controller.router, args=config, train_dataset=dataset,
+                                     processing_class=tok, peft_config=peft_config, callbacks=[callback])
     trainer.curator_controller = controller
     callback.trainer = trainer
     controller.generate = _vllm_greedy(trainer, tok) if backend == "vllm" else _hf_greedy(trainer, tok)

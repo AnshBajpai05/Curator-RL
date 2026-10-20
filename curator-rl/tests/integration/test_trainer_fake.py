@@ -329,3 +329,61 @@ def test_compare_report_pairs_items_and_measures_the_gain_over_the_untrained_mod
     assert "| base (untrained) |" in report and "## Item by item against uniform" in report
     assert "## Gain over the untrained model" in report and "## GPU-hours to reach uniform's final level" in report
     assert "Gains are fitted non-negative" in report
+
+
+# ------------------------------------------------------------------ D-102: filtering, pre-flight check, namespaces
+
+def test_preflight_verifier_check_flags_exactly_the_broken_rewards():
+    from curator_rl.signals.verifier_fuzz import fuzz_arms
+
+    root = load_config(REPO / "configs" / "base.yaml", [])
+    reg = EnvRegistry(REPO, root.data)
+    arms = ("gsm8k", "math35", "mbpp", "countdown", "noisy", "hackable")
+    report = fuzz_arms({e: reg.get(e) for e in arms}, arms)
+    assert report["flagged"] == ["hackable", "noisy"]
+    for real in ("gsm8k", "math35", "mbpp", "countdown"):                # every junk probe earns nothing
+        assert report["arms"][real]["junk_reward_rate"] == 0.0
+    assert report["arms"]["hackable"]["probes"]["number_spray"] == 1.0  # the right number anywhere is paid
+    assert report["arms"]["mbpp"]["probes"]["exit_early"] == 0.0         # the sandbox token cannot be skipped
+
+
+def test_question_filtering_draws_more_questions_and_trains_on_informative_groups(tmp_path):
+    from curator_rl.trainer.runner import run_single
+
+    s = run_single(_cfg(tmp_path, method="uniform_q", group_filter=1.75, max_rounds=4,
+                        overrides=["signals.status.n_min=8"]), REPO)
+    steps = _lines(tmp_path / "uniform_q_s3" / "steps.jsonl")
+    assert s["status"] == "finished" and steps
+    assert all(sum(st["prompts"].values()) == 14 for st in steps)      # ceil(8 x 1.75) drawn per step
+    assert s["preflight"]["flagged"] == ["noisy"]                       # reported for every method
+
+
+def test_curator_q_starts_an_arm_whose_reward_pays_for_junk_in_s5(tmp_path):
+    from curator_rl.trainer.runner import run_single
+
+    over = ["signals.status.n_min=8", "signals.reward_audit.enabled=true", "signals.reward_audit.preflight_gate=true"]
+    run_single(_cfg(tmp_path, method="curator_q", group_filter=1.75, max_rounds=3, overrides=over), REPO)
+    rounds = _lines(tmp_path / "curator_q_s3" / "rounds.jsonl")
+    assert str(rounds[0]["statuses"]["noisy"]).startswith("S5")          # from the first round boundary
+    assert not any(str(v).startswith("S5") for e, v in rounds[0]["statuses"].items() if e != "noisy")
+
+
+def test_run_py_namespace_keeps_runs_results_and_backup_apart(tmp_path):
+    import subprocess
+    import sys
+
+    out, backup = tmp_path / "curator_runs", tmp_path / "backup"
+    res = subprocess.run([sys.executable, str(REPO / "kaggle" / "run.py"), "compare", "--backend", "fake",
+                          "--methods", "uniform_q", "--seeds", "0", "--rounds", "2", "--out", str(out),
+                          "--sync-to", str(backup), "--sync-every-min", "0", "--namespace", "stress", "--no-base",
+                          "--envs", "gsm8k,math35,mbpp,countdown,hackable"],
+                         capture_output=True, text=True, timeout=900)
+    assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-3000:]
+    run = tmp_path / "curator_runs_stress" / "uniform_q_s0"
+    assert (run / "summary.json").exists() and not out.exists()
+    assert json.loads((run / "run_config.json").read_text())["envs"] == ["gsm8k", "math35", "mbpp", "countdown",
+                                                                         "hackable"]
+    assert (tmp_path / "results_stress" / "comparison.md").exists()
+    assert (backup / "stress" / "uniform_q_s0" / "summary.json").exists()
+    report = (tmp_path / "results_stress" / "comparison.md").read_text(encoding="utf-8")
+    assert "pass@k macro" in report and "| hackable |" in report

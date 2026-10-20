@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 from curator_rl.core.config import RewardAuditCfg
 from curator_rl.core.types import EnvRoundObs
@@ -47,6 +47,7 @@ class AuditState(TypedDict):
     e0: dict[str, float]
     df: dict[str, int]
     flag: dict[str, bool]
+    preflight: NotRequired[list[str]]      # arms flagged before training (D-102); absent in older checkpoints
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,14 @@ class PromptDependenceAudit:
         self._e0 = {e: 0.0 for e in env_ids}
         self._df = {e: 0 for e in env_ids}
         self._flag = {e: False for e in env_ids}
+        self._preflight: set[str] = set()
+
+    def preflag(self, env_ids) -> None:
+        """Arms whose reward paid for junk in the pre-flight verifier check: flagged for the whole run.
+
+        Kept apart from the evidence-based flag, which later rounds may clear; this one never clears.
+        """
+        self._preflight |= {e for e in env_ids if e in self._flag}
 
     def observe(self, obs: EnvRoundObs) -> AuditResult:
         e = obs.env_id
@@ -85,8 +94,9 @@ class PromptDependenceAudit:
 
     def _decide(self, e: str) -> AuditResult:
         df, e0 = self._df[e], self._e0[e]
+        pre = e in self._preflight
         if df == 0 or e0 <= 0.0:
-            return AuditResult(float("nan"), df, self._flag[e])
+            return AuditResult(float("nan"), df, self._flag[e] or pre)
         d_hat = max(self._ss[e] / e0, 1e-9)
         half = self.cfg.z * math.sqrt(2.0 / df)
         log_d, log_max = math.log(d_hat), math.log(self.cfg.d_max)
@@ -95,7 +105,7 @@ class PromptDependenceAudit:
                 self._flag[e] = True
             elif self._flag[e] and log_d - half > log_max:
                 self._flag[e] = False
-        return AuditResult(d_hat, df, self._flag[e])
+        return AuditResult(d_hat, df, self._flag[e] or pre)
 
     def result(self, e: str) -> AuditResult:
         return self._decide(e)
@@ -103,10 +113,12 @@ class PromptDependenceAudit:
     # ------------------------------------------------------------------ checkpoints
 
     def get_state(self) -> AuditState:
-        return {"ss": dict(self._ss), "e0": dict(self._e0), "df": dict(self._df), "flag": dict(self._flag)}
+        return {"ss": dict(self._ss), "e0": dict(self._e0), "df": dict(self._df), "flag": dict(self._flag),
+                "preflight": sorted(self._preflight)}
 
     def load_checkpoint(self, state: AuditState) -> None:
         self._ss = {e: float(v) for e, v in state["ss"].items()}
         self._e0 = {e: float(v) for e, v in state["e0"].items()}
         self._df = {e: int(v) for e, v in state["df"].items()}
         self._flag = {e: bool(v) for e, v in state["flag"].items()}
+        self._preflight = set(state.get("preflight", []))

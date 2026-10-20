@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from curator_rl.core.types import Prompt
+from curator_rl.trainer.group_filter import has_signal, select_groups
 
 DIFFICULTY = {"gsm8k": 0.31, "math35": 0.80, "mbpp": 0.71, "countdown": 4.0, "noisy": 0.31}
 ETA = {"gsm8k": 0.015, "math35": 0.012, "mbpp": 0.012, "countdown": 0.01, "noisy": 0.0}
@@ -137,9 +138,11 @@ class FakeTrainer:
         g, n_rows = cfg.group_size, cfg.prompts_per_step * cfg.group_size
         steps = 0
         while not self.ctl.stop:
-            rows = self.ctl.fill_generation_batch([{}] * n_rows, g)
+            n_keep = cfg.prompts_per_step
+            n_draw = self.ctl.candidates_per_step(n_keep)          # > n_keep with question filtering (D-102)
+            rows = self.ctl.fill_generation_batch([{}] * n_rows, g, n_draw)
             completions, ids, tokens = [], [], {}
-            for i in range(0, n_rows, g):
+            for i in range(0, len(rows), g):
                 row = rows[i]
                 prompt = Prompt(prompt_id=row["prompt_id"], env_id=row["env_id"], split="train", messages=(),
                                 reference=row["reference"], meta=json.loads(row["meta_json"]))
@@ -152,10 +155,14 @@ class FakeTrainer:
                     ids.append([0] * n_tok)
                     tokens[row["env_id"]] = tokens.get(row["env_id"], 0) + n_tok
             cols = {k: [r[k] for r in rows] for k in ("env_id", "prompt_id", "reference", "meta_json")}
-            self.ctl.router(prompts=[r["prompt"] for r in rows], completions=completions, completion_ids=ids, **cols)
+            rewards = self.ctl.router(prompts=[r["prompt"] for r in rows], completions=completions,
+                                      completion_ids=ids, **cols)
+            kept = range(n_draw)
+            if n_draw > n_keep:          # train on the groups with a reward signal; all of them were generated
+                kept = select_groups([has_signal(rewards[i * g:(i + 1) * g]) for i in range(n_draw)], n_keep)
             counts: dict[str, int] = {}
-            for i in range(0, n_rows, g):
-                counts[rows[i]["env_id"]] = counts.get(rows[i]["env_id"], 0) + 1
+            for k in kept:
+                counts[rows[k * g]["env_id"]] = counts.get(rows[k * g]["env_id"], 0) + 1
             self.policy.learn(counts)
             # a real step's wall time includes scoring: add the measured verification wall time
             seconds = STEP_OVERHEAD_SECONDS + sum(SECONDS_PER_1K_TOKENS.get(e, 2.0) * t / 1000.0

@@ -658,6 +658,24 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
 - **Primary GPU measure (H1/H2 on hardware): sampled macro, item-paired against Uniform, across seeds.** Greedy macro is reported alongside as secondary. Protocol-1 results are kept (`summary_v1.json`); finished runs are re-evaluated from their final checkpoint, without retraining.
 - Fixed with it: a relaunched finished run rewound its logs to the last checkpoint and dropped its final-evaluation row (restored from the backup on the next fetch); the ROI table says when it is not a ranking (no unflagged arm's interval excludes zero) and marks S5 arms.
 
+## D-102 — Research-informed changes and the pilot plan (pre-registered before any pilot run)
+
+- Date: 2026-10-21. Owner request ("add all the research-based improvements"); written before any of the runs below exist. Evidence: the protocol-2 result (D-101: Curator vs Uniform, sampled, 3 seeds, -0.0013 [-0.0122, +0.0096]; every mixing method ties; 35-50% of GRPO groups per step carry no reward signal in every method) and the literature in `report.md` §6.
+- Built (training of the existing methods unchanged; their runs stay valid):
+  - **Question-level filtering, "_q" methods** (`trainer/group_filter.py`): a step draws ceil(1.75 P) questions, generates and scores them all (every token charged to the budget), and trains on P groups, informative ones first (online difficulty filtering, Bae et al. 2026; DAPO dynamic sampling). vLLM's concurrent-sequence cap is widened by the same factor for these runs only. `uniform_q` isolates filtering; `curator_q` = Curator + filtering + the pre-flight gate.
+  - **Pre-flight verifier check** (`signals/verifier_fuzz.py`): each arm's reward path scores fixed junk answers (empty, echoed prompt, empty/wrong box, number spray, code that exits early or prints its globals) on 6 training prompts before training; > 5% junk reward, or one probe paid on half the prompts, flags the arm (fuzzing RLVR verifiers, 2026). Result on our arms: gsm8k, math35, mbpp, countdown 0.00 (MBPP's sandbox resists early exit and global leaks); noisy 0.30 and hackable 1.00 on number spray: flagged. With `signals.reward_audit.preflight_gate` (curator_q only) a flagged arm is S5 from the first round boundary, a sticky flag apart from the evidence-based audit flag.
+  - **Hackable arm** (`envs/hackable.py`, stress portfolio only): GSM8K prompts whose checker pays for the reference number anywhere in the response; its reward still depends on the prompt, so the in-run audit cannot see it, the pre-flight check does.
+  - **Second model family:** `run.py --namespace` gives another model or portfolio its own output, results and backup prefix (run names never collide). Default second family: OLMo-2-0425-1B-DPO (open data, ungated, before OLMo's own RLVR stage); Llama-3.2-1B-Instruct optional (licence approval needed).
+  - **pass@k** (k = 4, from the stored samples) in the comparison: coverage vs sharpening (Yue et al. 2025).
+  - Notebook steps for all of the above and for the SEC/DUMP baselines (built earlier, never run on GPU).
+- Not built, and why: GRESO (skips questions using an earlier epoch's outcome; our runs see under half an epoch); TAC's transferability term (per-domain gradient projections inside TRL: heavy, later); a higher LoRA learning rate (1e-5 is in the recommended range; changing it would break comparability with the 13 finished runs); entropy bonus (not in TRL's GRPO).
+- **Pilot session** (`STEPS = ["pilot_q", "baselines", "olmo", "stress"]`, one seed each, about 9 GPU-hours), primary metric as D-101 (sampled macro, item-paired, 1.5 GPU-hours), secondary GPU-hours to reach Uniform's final level:
+  - H-A (pilot_q): curator_q and uniform_q vs uniform_s0 (Qwen). Pays off if either is >= +1.5 points AND >= 2 paired SE above Uniform, or reaches Uniform's final level with >= 20% less compute.
+  - H-B (olmo): on OLMo-2-1B, Uniform (which trains on the random-reward arm) vs Curator. Pays off if Curator is >= 2 paired SE above Uniform. Also reported: each method's gain over the untrained OLMo.
+  - H-C (stress): with the hackable checker, Curator-Q vs Uniform. Pays off if Curator-Q is >= 2 paired SE above Uniform; whether the bug hurts Uniform is read against uniform_s0 of the main portfolio.
+  - Baselines: SEC and DUMP seed 0 against Uniform, descriptive.
+- Decision (24 Oct, new quota): a hypothesis that pays off gets seeds 1 and 2 (then 3-5 if its interval still crosses zero); none does: leave-one-out and the negative-result write-up. One seed is never reported as a result on its own.
+
 ---
 
 # Roadmap v3 decisions (PROPOSED — pending owner confirmation; see `docs/ROADMAP_v3.md` §11)

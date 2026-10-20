@@ -50,6 +50,19 @@ def paired_item_diff(a: Mapping, b: Mapping, kind: str = "sampled",
     return sum(per.values()) / len(per), math.sqrt(sum(x * x for x in ses)) / len(per), per
 
 
+def pass_at_k(report: Mapping, domains: Sequence[str] = BENCH_DOMAINS) -> float | None:
+    """Macro share of items solved at least once in the k samples.
+
+    Coverage rather than reliability: RL raises 1-sample accuracy by sharpening onto answers the model
+    could already produce, and can shrink coverage at large k (Yue et al., 2025). From the stored
+    per-item sample means; None without them.
+    """
+    vals = item_values(report, "sampled")
+    if any(d not in vals or not vals[d] for d in domains):
+        return None
+    return sum(sum(1.0 for v in vals[d].values() if v > 0) / len(vals[d]) for d in domains) / len(domains)
+
+
 def subset_ids(final: Mapping, n: int, split: str = "dev") -> dict[str, set[str]]:
     """The item ids of the periodic subset, rebuilt from a final report (whose items are the full list)."""
     out = {}

@@ -129,11 +129,17 @@ class RoundController:
         self.stream.set_weights(self.weights)
         self._next_ready = True
 
-    def fill_generation_batch(self, rows: list[dict], group_size: int) -> list[dict]:
-        """Replace placeholder rows with this step's prompts, G consecutive rows per prompt."""
+    def candidates_per_step(self, n_keep: int) -> int:
+        """Questions to draw for a step that trains on n_keep (more with question filtering, D-102)."""
+        from curator_rl.trainer.group_filter import candidates
+
+        return candidates(n_keep, float(self.cfg.group_filter))
+
+    def fill_generation_batch(self, rows: list[dict], group_size: int, n_prompts: int | None = None) -> list[dict]:
+        """This step's prompts as rows, G consecutive rows per prompt (n_prompts, default one per G rows)."""
         if len(rows) % group_size:
             raise ValueError(f"generation batch of {len(rows)} rows is not a multiple of G={group_size}")
-        prompts = self.stream.next_step(len(rows) // group_size)
+        prompts = self.stream.next_step(n_prompts or len(rows) // group_size)
         out = []
         for p in prompts:
             row = {"prompt": [dict(m) for m in p.messages], "env_id": p.env_id, "prompt_id": p.prompt_id,

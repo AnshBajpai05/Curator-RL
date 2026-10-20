@@ -270,6 +270,10 @@ class DiscountedUCB(BaseScheduler):
             return None
         return self._calibrator.select_targets(self._win_u, self._win_x)
 
+    def preflag_unreliable(self, env_ids) -> None:
+        """Arms whose reward paid for junk before training (pre-flight verifier check, D-102): S5 throughout."""
+        self._engine.preflag_unreliable(env_ids)
+
     def update_calibration(self, observation: CalibrationObservation) -> None:
         """One calibration window: credit, proxy-vs-benchmark test, S5 flags (D-73)."""
         self._engine.update_calibration(observation)

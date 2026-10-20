@@ -52,6 +52,9 @@ def make_run_scheduler(method: str, cfg, env_ids: Sequence[str], *, seed: int,
     from curator_rl.scheduler.curator import Curator
 
     env_ids = list(env_ids)
+    from curator_rl.trainer.group_filter import split_method
+
+    method, _ = split_method(method)          # "_q" = the same scheduler plus question filtering (D-102)
     if method == "uniform":
         return UniformScheduler(env_ids)
     if method == "dirichlet":

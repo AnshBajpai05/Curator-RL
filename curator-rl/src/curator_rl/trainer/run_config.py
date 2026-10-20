@@ -15,7 +15,9 @@ from dataclasses import dataclass, field
 LEVEL1_ENVS = ("gsm8k", "math35", "mbpp", "countdown", "noisy")
 # arm -> calibration slice it is scored on (the real noisy arm has no slice of its own, audit E-03)
 DOMAIN_OF = {"gsm8k": "gsm8k", "math35": "math35", "mbpp": "mbpp", "countdown": "countdown",
-             "noisy": "gsm8k"}
+             "noisy": "gsm8k", "hackable": "gsm8k"}
+# stress-test portfolio (D-102): the random-reward arm replaced by one whose checker has a false-positive bug
+STRESS_ENVS = ("gsm8k", "math35", "mbpp", "countdown", "hackable")
 # benchmark = macro-average over domains with a test set (Roadmap v3 4.8); noisy has none
 BENCH_DOMAINS = ("gsm8k", "math35", "mbpp", "countdown")
 
@@ -43,6 +45,7 @@ class RunConfig:
     final_items: int = 300               # dev items per domain for the final score
     eval_samples: int = 4                # reports: samples per item for the sampled accuracy (D-101; 0 = greedy only)
     eval_temperature: float = 1.0        # ... drawn at the training temperature
+    group_filter: float = 0.0            # questions drawn per question trained ("_q" methods, D-102); 0 = off
     checkpoint_every: int = 1            # rounds; every round => a crash loses at most one round
     keep_checkpoints: int = 3            # newest checkpoints kept per run; older ones are deleted
     sync_to: str = ""                    # mirror artifacts while training: hf://owner/repo[/prefix] or a directory

@@ -97,6 +97,23 @@ def test_checkpoint_round_trip():
     assert a.observe(obs) == b.observe(obs)
 
 
+def test_a_preflight_flag_holds_for_the_whole_run_and_survives_a_checkpoint():
+    rng = np.random.default_rng(6)
+    audit = PromptDependenceAudit(CFG, ["x", "y"], G)
+    audit.preflag(["x", "not-an-arm"])
+    assert audit.result("x").flag and not audit.result("y").flag
+    for _ in range(80):                       # strong evidence of a real verifier never clears it
+        audit.observe(_round(rng, 2.14, 0.35, 8))
+    assert audit.result("x").flag
+    clone = PromptDependenceAudit(CFG, ["x", "y"], G)
+    clone.load_checkpoint(audit.get_state())
+    assert clone.result("x").flag
+    older = audit.get_state()
+    del older["preflight"]                    # checkpoints from before D-102
+    clone.load_checkpoint(older)
+    assert not clone.result("x").flag
+
+
 def _classifier():
     status = StatusCfg(n_min=64, r_min=3, p_sat=0.7, p_hard=0.05, sr_hard=0.1, z_up=1.5, z_neg=2.0,
                        hysteresis_p=0.05, hysteresis_sr=0.05, dwell_min=3, consecutive_rounds=4,

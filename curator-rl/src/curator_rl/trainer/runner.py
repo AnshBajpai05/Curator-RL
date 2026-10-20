@@ -109,6 +109,8 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
     print(f"[curator] {cfg.method} seed {cfg.seed}: backend={backend}, "
           f"{'resuming from ' + ckpt.name if ckpt else 'fresh start'}"
           f"{', syncing to ' + cfg.sync_to if cfg.sync_to else ''}", flush=True)
+    if ckpt is None and cfg.max_rounds > 0:
+        _preflight_verifiers(ctl, cfg, root_cfg, out)     # a resumed run has its flags in the checkpoint
 
     if ckpt is not None:
         ctl.load_state(load_controller_state(ckpt))
@@ -161,6 +163,10 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
         final = ctl.report(cfg.final_items, tag="final")
         summary = ctl.summary(final)
         summary["backend"] = backend
+        if (out / "fuzz.json").exists():
+            fz = json.loads((out / "fuzz.json").read_text(encoding="utf-8"))
+            summary["preflight"] = {"flagged": fz.get("flagged", []),
+                                    "junk_reward_rate": {e: r.get("junk_reward_rate") for e, r in fz["arms"].items()}}
         summary["status"] = "finished"
         atomic_write_json(out / "summary.json", summary)
         ctl.write_progress("finished")
@@ -179,6 +185,29 @@ def run_single(cfg: RunConfig, repo_root: Path, *, resume: bool = True,
     print(f"[curator] {cfg.method} seed {cfg.seed}: final macro {final.get('macro')} "
           f"after {summary['rounds']} rounds, {summary['charged_gpu_hours']:.3f} charged GPU-h", flush=True)
     return summary
+
+
+def _preflight_verifiers(ctl, cfg: RunConfig, root_cfg, out: Path) -> None:
+    """Pre-flight verifier check (D-102): probe each arm's reward with junk before training.
+
+    Writes fuzz.json. With `signals.reward_audit.preflight_gate`, a flagged arm starts in S5 (schedulers
+    with a reward audit). Seconds, no GPU, never stops the run.
+    """
+    from curator_rl.signals.verifier_fuzz import fuzz_arms
+
+    try:
+        report = fuzz_arms(ctl.envs, list(cfg.envs))
+        atomic_write_json(out / "fuzz.json", report)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[curator] pre-flight verifier check skipped: {exc!r}", flush=True)
+        return
+    if report["flagged"]:
+        print(f"[curator] pre-flight verifier check: the reward pays for junk on {', '.join(report['flagged'])}",
+              flush=True)
+    preflag = getattr(ctl.scheduler, "preflag_unreliable", None)
+    if report["flagged"] and preflag is not None and root_cfg.signals.reward_audit.preflight_gate:
+        preflag(report["flagged"])
+        print(f"[curator] {', '.join(report['flagged'])}: S5 from the start (pre-flight gate)", flush=True)
 
 
 def _protocol(summary_path: Path) -> int:
@@ -238,7 +267,12 @@ def _restore_stop_handlers(previous: dict) -> None:
 def compare_report(root: Path, *, reference: str = "uniform") -> str:
     """Markdown comparison of every method against `reference`: item-paired (protocol 2) and by seed."""
     from curator_rl.core.stats import paired_t_interval, sign_flip_pvalue
-    from curator_rl.evaluation.paired_items import hours_to_reach, learning_curve, paired_item_diff
+    from curator_rl.evaluation.paired_items import (
+        hours_to_reach,
+        learning_curve,
+        paired_item_diff,
+        pass_at_k,
+    )
 
     runs: dict[str, dict[int, dict]] = {}
     for path in sorted(Path(root).glob("*/summary.json")):
@@ -263,16 +297,18 @@ def compare_report(root: Path, *, reference: str = "uniform") -> str:
              "protocol 2, D-101: the primary measure, since RL raises sampled accuracy before greedy). Greedy = "
              "the single most likely answer. Both: macro-average over gsm8k, math35, mbpp, countdown on the "
              "same dev items for every method (uncharged; the sealed test is not used).", "",
-             "| method | seeds | sampled macro (mean) | greedy macro (mean) | charged GPU-h | rounds | ever S5 | "
-             "sandbox rejections |", "|---|---|---|---|---|---|---|---|"]
+             "| method | seeds | sampled macro (mean) | pass@k macro | greedy macro (mean) | charged GPU-h | rounds | "
+             "ever S5 | sandbox rejections |", "|---|---|---|---|---|---|---|---|---|"]
     if base is not None:
-        lines.append(f"| base (untrained) | - | {fmt(sampled(base))} | {fmt(base['final'].get('macro'))} | 0 | 0 | - | - |")
+        lines.append(f"| base (untrained) | - | {fmt(sampled(base))} | {fmt(pass_at_k(base['final']))} | "
+                     f"{fmt(base['final'].get('macro'))} | 0 | 0 | - | - |")
     for m, by_seed in sorted(runs.items()):
         hours = sum(s["charged_gpu_hours"] for s in by_seed.values()) / len(by_seed)
         rnds = sum(s["rounds"] for s in by_seed.values()) / len(by_seed)
         s5 = sorted({e for s in by_seed.values() for e in s["ever_s5"]})
         rej = sum(sum(s["sandbox_rejections"].values()) for s in by_seed.values())
         lines.append(f"| {m} | {len(by_seed)} | {fmt(mean([sampled(s) for s in by_seed.values()]))} | "
+                     f"{fmt(mean([pass_at_k(s['final']) for s in by_seed.values()]))} | "
                      f"{fmt(mean([s['final'].get('macro') for s in by_seed.values()]))} | {hours:.3f} | {rnds:.1f} | "
                      f"{', '.join(s5) or '-'} | {rej} |")
     domains = list(BENCH_DOMAINS)
@@ -286,6 +322,21 @@ def compare_report(root: Path, *, reference: str = "uniform") -> str:
             gv = mean([(s["final"].get("scores") or {}).get(d) for s in group])
             cells.append(f"{fmt(sv, '.3f')} ({fmt(gv, '.3f')})")
         lines.append(f"| {m} | " + " | ".join(cells) + " |")
+
+    # pre-flight verifier check (D-102): the same arms give the same answer in every run, so merge them
+    junk: dict[str, float] = {}
+    flagged: set[str] = set()
+    for by in runs.values():
+        for s in by.values():
+            pre = s.get("preflight") or {}
+            junk.update({e: r for e, r in (pre.get("junk_reward_rate") or {}).items() if r is not None})
+            flagged |= set(pre.get("flagged") or [])
+    if junk:
+        lines += ["", "## Pre-flight verifier check (D-102)", "",
+                  "Reward each arm paid for junk before any training (empty or echoed answers, wrong or sprayed "
+                  "numbers, code that exits early or prints its globals). Above 5% the checker can be gamed.", "",
+                  "| arm | junk reward rate | flagged |", "|---|---|---|"]
+        lines += [f"| {e} | {junk[e]:.2f} | {'yes' if e in flagged else '-'} |" for e in sorted(junk)]
 
     # item by item: against the reference, and against the untrained model
     if reference in runs:

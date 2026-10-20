@@ -32,6 +32,12 @@ def _make_noisy(repo_root: Path, data_cfg) -> Environment:
     return NoisyRewardEnv(repo_root, data_cfg.envs.noisy)
 
 
+def _make_hackable(repo_root: Path, data_cfg) -> Environment:
+    from curator_rl.envs.hackable import HackableEnv
+
+    return HackableEnv(repo_root, data_cfg.envs.gsm8k)        # stress test (D-102): GSM8K's limits and prior
+
+
 def _make_countdown(repo_root: Path, data_cfg) -> Environment:
     from curator_rl.envs.countdown import CountdownEnv
 
@@ -55,6 +61,7 @@ _register("mbpp", _make_mbpp)
 _register("gsm8k", _make_gsm8k)
 _register("noisy", _make_noisy)
 _register("countdown", _make_countdown)
+_register("hackable", _make_hackable)
 
 
 class EnvRegistry:

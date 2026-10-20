@@ -23,6 +23,7 @@ experiment is **identical** to the Kaggle one. Every rule below protects that.
 **R1. Do not change the experiment.** Use `run.py` with its defaults. Never pass or change any of:
 `--model`, `--preset`, `--budget-gpu-hours`, `--rounds`, `--max-tokens`, `--calib-items`,
 `--final-items`, `--report-items`, `--report-every`, `--eval-samples`, `--eval-temperature`, `--no-base`,
+`--group-filter`, `--envs`, `--namespace`,
 `--set`, or `prompts_per_step`, `group_size`,
 `steps_per_round` (in `--shape`). Do not edit anything under `curator-rl/src/`, `curator-rl/configs/`
 or `curator-rl/data/`, and do not edit `run.py`'s presets.
