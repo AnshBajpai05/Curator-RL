@@ -2,7 +2,8 @@
 
 Give this file to Claude Code together with `curator-gpu-kaggle.zip` (Ansh sends the zip; it contains
 the task data, which is not in this repository) and ask it to follow it. `BUNDLE_INFO.json` in the zip
-must say `"git_sha": "203e074"`: the exact code the Kaggle runs use.
+must say `"git_sha": "a3d5d41"` (or later) and `"git_dirty": false`: the code the Kaggle runs use,
+with evaluation protocol 2 (sampled accuracy, item-by-item comparison, untrained-model reference).
 
 ## What this is
 
@@ -21,7 +22,8 @@ experiment is **identical** to the Kaggle one. Every rule below protects that.
 
 **R1. Do not change the experiment.** Use `run.py` with its defaults. Never pass or change any of:
 `--model`, `--preset`, `--budget-gpu-hours`, `--rounds`, `--max-tokens`, `--calib-items`,
-`--final-items`, `--report-items`, `--report-every`, `--set`, or `prompts_per_step`, `group_size`,
+`--final-items`, `--report-items`, `--report-every`, `--eval-samples`, `--eval-temperature`, `--no-base`,
+`--set`, or `prompts_per_step`, `group_size`,
 `steps_per_round` (in `--shape`). Do not edit anything under `curator-rl/src/`, `curator-rl/configs/`
 or `curator-rl/data/`, and do not edit `run.py`'s presets.
 
@@ -82,11 +84,13 @@ first `compare` does. Start a GPU log in a second terminal (it runs until stoppe
 nvidia-smi --query-gpu=timestamp,name,memory.used,memory.total,utilization.gpu,power.draw,clocks.sm,temperature.gpu --format=csv -l 30 > gpu_log.csv
 ```
 
-Then the runs. They go one after the other on one GPU; each takes about 1.8 h:
+Then the runs. They go one after the other on one GPU; each takes about 2 h. The first `compare` also
+evaluates the untrained model first (`base_s0`, about 10 minutes): the reference every method is
+measured against.
 
 ```
-python run.py compare --methods curator,uniform --seeds 0      # ~3.5 h (required)
-python run.py compare --methods curator,uniform --seeds 1      # ~3.5 h (if there is time)
+python run.py compare --methods curator,uniform --seeds 0      # ~4 h (required)
+python run.py compare --methods curator,uniform --seeds 1      # ~4 h (if there is time)
 ```
 
 Add the R2 knobs to these lines if needed, the same on both. The terminal shows a progress line per
