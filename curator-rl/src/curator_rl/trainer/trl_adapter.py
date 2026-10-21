@@ -96,6 +96,24 @@ def keep_groups(output: dict, keep: list[int], g: int, n_rows: int, gather=None)
     return out
 
 
+def release_from_vllm_compile(model) -> int:
+    """Let the training model run plain forwards after vLLM decorated its classes in place.
+
+    vLLM's Transformers backend (used for e.g. OLMo-2 by vLLM 0.31; Qwen has a native vLLM implementation)
+    wraps the *shared* Hugging Face model class with its torch.compile hook. The training copy, built before
+    vLLM, lacks the hook's instance state and crashed on its first forward ("'Olmo2Model' object has no
+    attribute 'do_not_compile'"). Marking those modules `do_not_compile` makes the hook run the module's
+    own forward, as it does whenever compilation is off. Returns the number of modules marked.
+    """
+    marked = 0
+    for module in model.modules():
+        call = next((vars(c)["__call__"] for c in type(module).__mro__ if "__call__" in vars(c)), None)
+        if str(getattr(call, "__module__", "")).startswith("vllm.") and "do_not_compile" not in vars(module):
+            module.do_not_compile = True
+            marked += 1
+    return marked
+
+
 @contextlib.contextmanager
 def _vllm_room_for(factor: float):
     """TRL caps vLLM's concurrent sequences at one generation batch; question filtering generates
@@ -400,6 +418,8 @@ def run_trl(controller, run_cfg, out_dir: Path, *, backend: str, resume_dir: Pat
                                      processing_class=tok, peft_config=peft_config, callbacks=[callback])
     trainer.curator_controller = controller
     callback.trainer = trainer
+    if backend == "vllm" and (n := release_from_vllm_compile(trainer.model)):
+        print(f"[curator] {n} module(s) of the training model released from vLLM's compile hook", flush=True)
     controller.generate = _vllm_greedy(trainer, tok) if backend == "vllm" else _hf_greedy(trainer, tok)
     controller.generate_sampled = (_vllm_sampled(trainer, tok, run_cfg.eval_temperature) if backend == "vllm" else
                                    _hf_sampled(lambda: trainer.accelerator.unwrap_model(trainer.model), tok,

@@ -45,3 +45,27 @@ def test_keep_groups_selects_whole_groups_and_renormalises_the_loss():
     assert kept["completion_ids"].tolist() == [[0, 1], [4, 5], [16, 17], [20, 21]]
     assert kept["old_per_token_logps"].shape == (4, 2) and kept["importance_sampling_ratio"].shape == (4, 1)
     assert int(kept["num_items_in_batch"]) == 6                            # the loss is normalised by kept tokens
+
+
+def test_training_model_is_released_from_a_vllm_compile_hook():
+    torch = pytest.importorskip("torch")
+    trl_adapter = pytest.importorskip("curator_rl.trainer.trl_adapter")
+
+    class Backbone(torch.nn.Module):
+        def forward(self, x):
+            return x + 1
+
+    model = torch.nn.Sequential(Backbone())          # built before vLLM, as the training copy is
+
+    def hooked_call(self, *args, **kwargs):          # what vLLM's in-place class decoration installs
+        if self.do_not_compile:
+            return self.forward(*args, **kwargs)
+        raise AssertionError("would compile")
+
+    hooked_call.__module__ = "vllm.compilation.decorators"
+    Backbone.__call__ = hooked_call
+    with pytest.raises(AttributeError, match="do_not_compile"):
+        model(torch.zeros(1))                          # the OLMo-2 crash
+    assert trl_adapter.release_from_vllm_compile(model) == 1
+    assert model(torch.zeros(1)).item() == 1.0
+    assert trl_adapter.release_from_vllm_compile(model) == 0          # idempotent
