@@ -62,6 +62,9 @@ def make_run_scheduler(method: str, cfg, env_ids: Sequence[str], *, seed: int,
     if method == "static":                      # size-proportional (D-61/D-63)
         total = sum(float(nominal_sizes[e]) for e in env_ids)
         return StaticMixtureScheduler(env_ids, {e: float(nominal_sizes[e]) / total for e in env_ids})
+    if method == "clean_uniform":               # D-103: equal mix of the arms that are neither junk nor unsolvable:
+        keep = [e for e in env_ids if e not in ("countdown", "noisy", "hackable")]   # a perfect junk detector
+        return StaticMixtureScheduler(env_ids, {e: (1.0 / len(keep) if e in keep else 0.0) for e in env_ids})
     if method == "pilot_uniform":               # improvement B10: drop arms the pilot could not solve
         keep = [e for e in env_ids if e != "countdown"]
         return StaticMixtureScheduler(env_ids, {e: (1.0 / len(keep) if e in keep else 0.0) for e in env_ids})

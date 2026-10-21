@@ -146,8 +146,9 @@ Methods: `curator`, `curator_nocal` (Curator without calibration: the ablation),
 | session | `STEPS` in cell 1 | wall time | runs |
 |---|---|---|---|
 | 1-2 (done) | `["compare", "ablation", "sysid", "seeds12"]` | ~17 h | curator, uniform, lp seeds 0-2; curator_nocal, pilot_uniform, sysid; the untrained model |
-| pilots (D-102) | `["pilot_q", "baselines", "olmo", "stress"]` | ~9 h | see below, one seed each |
-| then | the pilot that pays off (D-102 rules), `["loo"]` | ~6 h each | |
+| pilots (D-102, done) | `["pilot_q", "baselines", "olmo", "stress"]` | ~9 h | see below, one seed each |
+| D-103 A | `["confirm", "lite"]` | ~10 h | sec, dump, uniform_q, curator_q seeds 1, 2; curator_nocal seeds 1, 2 |
+| D-103 B | `["olmo", "clean"]` | ~4.5 h | curator_nocal and uniform on OLMo-2-1B; clean_uniform seeds 0, 1 |
 
 The pilot steps:
 
@@ -155,10 +156,13 @@ The pilot steps:
 |---|---|---|
 | `pilot_q` | curator_q, uniform_q (seed 0; compared with uniform_s0) | does training only on questions with a learning signal raise the score per GPU-hour? |
 | `baselines` | sec, dump (seed 0) | the published curricula, against Uniform |
-| `olmo` | the untrained model, curator, uniform on OLMo-2-1B | outside Qwen, does the random-reward arm hurt, and does Curator avoid it? |
+| `olmo` | the untrained model, curator_nocal (Curator-lite), uniform on OLMo-2-1B | outside Qwen, does the random-reward arm hurt, and does Curator avoid it? |
 | `llama` | the same on Llama-3.2-1B | optional: needs Meta's licence approval on Hugging Face for the token's account |
 | `stress` | curator_q, uniform with a hackable checker instead of the noisy arm | does a realistic checker bug hurt, and does the pre-flight check protect? |
 | `seeds345` | curator, uniform seeds 3-5 | more seeds, if a comparison needs them |
+| `confirm` | sec, dump, uniform_q, curator_q seeds 1, 2 | D-103: are learning-signal selectors fooled by broken rewards, and is Curator not? |
+| `lite` | curator_nocal (Curator-lite) seeds 1, 2 | D-103: does Curator lose anything without calibration? |
+| `clean` | clean_uniform seeds 0, 1 | D-103: the ceiling, an equal mix without the two junk arms |
 
 Steps with `--namespace` (`olmo`, `llama`, `stress`) keep their runs in `curator_runs_<name>/`, their
 results in `results_<name>/` and their backup in `<backup>/<name>/`, so their run names (`curator_s0`, ...)

@@ -69,3 +69,14 @@ def test_training_model_is_released_from_a_vllm_compile_hook():
     assert trl_adapter.release_from_vllm_compile(model) == 1
     assert model(torch.zeros(1)).item() == 1.0
     assert trl_adapter.release_from_vllm_compile(model) == 0          # idempotent
+
+
+def test_clean_uniform_is_an_equal_mix_of_the_useful_arms():
+    from curator_rl.trainer.schedulers import make_run_scheduler
+
+    arms = ["gsm8k", "math35", "mbpp", "countdown", "noisy"]
+    sched = make_run_scheduler("clean_uniform", None, arms, seed=0, prompts_per_round=32, domain_of={},
+                               nominal_sizes={})
+    w = sched.select_mixture(None)
+    assert w["countdown"] == w["noisy"] == 0.0
+    assert w["gsm8k"] == w["math35"] == w["mbpp"] == pytest.approx(1 / 3)

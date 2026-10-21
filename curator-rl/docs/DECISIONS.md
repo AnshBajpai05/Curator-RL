@@ -676,6 +676,22 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
   - Baselines: SEC and DUMP seed 0 against Uniform, descriptive.
 - Decision (24 Oct, new quota): a hypothesis that pays off gets seeds 1 and 2 (then 3-5 if its interval still crosses zero); none does: leave-one-out and the negative-result write-up. One seed is never reported as a result on its own.
 
+## D-103 — New thesis (robustness), Curator-lite, confirmation runs (pre-registered before any of them)
+
+- Date: 2026-10-21. Owner request. Evidence: the D-102 pilots, seed 0, sampled accuracy item-paired against Uniform: SEC -2.3 (SE 0.6), DUMP -1.5 (0.7), uniform_q -2.1 (0.6); curator_q -0.3 (0.6), and curator_q vs uniform_q +1.8 (0.6). SEC put 34% and DUMP 31% of their questions into the random-reward arm (Uniform 20%, Curator 6%). Greedy scores disagree in direction for SEC and DUMP (+1.3, +2.0, SE about 1); greedy is reported alongside everywhere. H-A (filtering raises accuracy) failed its D-102 bar; the claim "Curator beats Uniform" is dropped (D-101: -0.1 [-1.2, +1.0] over 3 seeds).
+- **Thesis:** at small scale the data mix does not move accuracy (explained in `self_critic.md`); selectors that steer on learning signals (SEC, DUMP, variance-based question filtering) are pulled into a broken reward source and lose accuracy; Curator checks whether a reward depends on the prompt and is not pulled in.
+- **Curator-lite = `curator_nocal`** (existing method: Curator without calibration, which cost 2-3 rounds and returned nothing measurable). No new code; seed 0 exists. Calibration, the ROI leaderboard, the transfer matrix and the per-token cost model are reported as measured and not paying off at this scale; the cost model is not changed (that would be a new, untested method).
+- **Runs** (session hours; two runs in parallel on T4 x2): `confirm` = sec, dump, uniform_q, curator_q seeds 1, 2 (~8 h); `lite` = curator_nocal seeds 1, 2 (~2 h); `olmo` = curator_nocal and uniform on OLMo-2-1B, seed 0 (~2.5 h; changed from D-102's curator before any OLMo training result existed, since both D-102 OLMo training runs crashed at round 0); `clean` = clean_uniform (equal mix without countdown and noisy: the ceiling of a perfect junk detector) seeds 0, 1 (~2 h). Nothing else is added.
+- **Primary measure** (as D-101): sampled macro accuracy, item-paired against the comparison method, per seed; across seeds the mean of the per-seed differences with its SE (sd / sqrt(3)) and the 95% t-interval (df 2). Greedy, pass@k and the share of compute on the random-reward arm are reported for every run.
+- **Hypotheses and success rules** (3 seeds: seed 0 from D-102 plus seeds 1, 2):
+  - R1 (primary): curator_q > uniform_q. Holds if all 3 seeds have the same sign and the mean is at least 2 across-seed SE.
+  - R2: SEC < Uniform and DUMP < Uniform, each by the same rule. (Seeds 1, 2 of Uniform exist.)
+  - R3 (mechanism): SEC and DUMP spend more than Uniform's 20% of questions on the random-reward arm, Curator variants under 13%. Descriptive.
+  - R4: Curator-lite vs Curator, 3 seeds each: the simplification holds if the difference is within +-1 point.
+  - OLMo (1 seed) and clean_uniform (2 seeds): descriptive; OLMo is reported either way.
+- With 3 seeds, "mean >= 2 SE" is evidence at roughly one-sided p 0.1, not proof; the t-interval is reported next to it and the write-up says so.
+- **Story decision on the analysis day** (after `confirm` and `lite`), not later: R1 and R2 hold, the robustness thesis leads; otherwise the fallback (rigorous negative result with its mechanism, plus the deterministic pre-flight check and the in-run audit as the contribution). No change of story after that day.
+
 ---
 
 # Roadmap v3 decisions (PROPOSED — pending owner confirmation; see `docs/ROADMAP_v3.md` §11)
