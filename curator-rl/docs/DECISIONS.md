@@ -690,6 +690,7 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
   - R4: Curator-lite vs Curator, 3 seeds each: the simplification holds if the difference is within +-1 point.
   - OLMo (1 seed) and clean_uniform (2 seeds): descriptive; OLMo is reported either way.
 - With 3 seeds, "mean >= 2 SE" is evidence at roughly one-sided p 0.1, not proof; the t-interval is reported next to it and the write-up says so.
+- Record (21 Oct): the OLMo run started from a notebook with D-102's step, so it is full Curator vs Uniform on OLMo-2-1B, seed 0 (D-102 H-B as pre-registered), not Curator-lite. With the vLLM compile-hook fix, OLMo trains; about 6.5 min per round, so about 14 rounds per 1.5 GPU-hour run. It is reported as H-B; no Curator-lite OLMo run is added.
 - **Story decision on the analysis day** (after `confirm` and `lite`), not later: R1 and R2 hold, the robustness thesis leads; otherwise the fallback (rigorous negative result with its mechanism, plus the deterministic pre-flight check and the in-run audit as the contribution). No change of story after that day.
 
 ---
