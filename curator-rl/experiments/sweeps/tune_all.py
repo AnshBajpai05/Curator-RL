@@ -27,23 +27,22 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
-import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 import numpy as np  # noqa: E402
-from experiments.analysis.common import REPO_ROOT  # noqa: E402
-from experiments.run_sim import make_scheduler  # noqa: E402
 
 from curator_rl.core.config import load_config  # noqa: E402
 from curator_rl.scheduler.baselines.uniform import UniformScheduler  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
 from curator_rl.simulator.scenarios import load_scenario  # noqa: E402
+from experiments.analysis.common import REPO_ROOT  # noqa: E402
+from experiments.run_sim import (
+    FROZEN_D68_D94,  # noqa: E402  (audit E-04: pre-registered config)
+    make_scheduler,  # noqa: E402
+)
 
 REPORT_DIR = REPO_ROOT / "reports" / "sweeps"
 TUNING_SCENARIOS = ("S-A", "S-B", "S-C", "S-I")      # S-J is held out on purpose
@@ -98,7 +97,7 @@ def uniform_scores(seeds: list[int]) -> dict[str, list[float]]:
 def evaluate_point(task: tuple) -> dict:
     """Run one (method, point) over all tuning scenarios and seeds (worker entry)."""
     method, index, point, seeds, uniform = task
-    base = load_config(REPO_ROOT / "configs" / "base.yaml")
+    base = load_config(FROZEN_D68_D94)
     cfg = variant_cfg(base, method, point)
     per_scenario: dict[str, list[float]] = {}
     ent, maxw = [], []

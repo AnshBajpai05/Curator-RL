@@ -44,9 +44,28 @@ class JsonlWriter:
 
     def __enter__(self) -> JsonlWriter:
         if self._fh is None:
+            self._repair_tail()
             self._seq = self._next_seq()
             self._fh = self.path.open("a", encoding="utf-8")
         return self
+
+    def _repair_tail(self) -> None:
+        """Cut a crash-truncated last line before appending (audit E-13).
+
+        A process killed mid-write leaves a partial line without a newline. Appending to it glued
+        the next record onto the fragment, and the reader then stopped there, so every record
+        written after the crash was lost. The fragment is moved to `<name>.corrupt-tail`.
+        """
+        if not self.path.exists() or self.path.stat().st_size == 0:
+            return
+        data = self.path.read_bytes()
+        if data.endswith(b"\n"):
+            return
+        cut = data.rfind(b"\n") + 1
+        with self.path.with_name(self.path.name + ".corrupt-tail").open("ab") as fh:
+            fh.write(data[cut:] + b"\n")
+        with self.path.open("r+b") as fh:
+            fh.truncate(cut)
 
     def __exit__(self, *exc: object) -> None:
         if self._fh is not None:
@@ -71,7 +90,7 @@ def read_jsonl(
             except json.JSONDecodeError:
                 if not skip_corrupt_tail:
                     raise
-                skipped += 1
-                break
+                skipped += 1          # skip this line only; later complete records still count
+                continue
     if skipped and on_skip is not None:
         on_skip(skipped)

@@ -14,12 +14,13 @@ Per-round update order (deterministic, permutation-invariant over env ids):
    the real Cost Meter arrives in Phase 6 with the same interface);
 6. richness (mode per config);
 7. proxy rewards (sigma scale, cost normalisation, quantile map);
-8. status classifier per environment.
+8. reward audit (prompt dependence; always measured, flags forwarded only when enabled);
+9. status classifier per environment.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from typing import Any, NotRequired, TypedDict
 
 from curator_rl.core.config import CalibCfg, ProxyCfg, SignalsCfg
 from curator_rl.core.types import (
@@ -29,11 +30,23 @@ from curator_rl.core.types import (
     RoundObservation,
     SignalVector,
 )
+from curator_rl.signals.audit import AuditState, PromptDependenceAudit
 from curator_rl.signals.passrate import PassRateTracker, Posterior
 from curator_rl.signals.progress import LPEstimator
-from curator_rl.signals.proxy import ProxyReward
+from curator_rl.signals.proxy import ProxyReward, ProxyState
 from curator_rl.signals.richness import RichnessEstimator
-from curator_rl.signals.status import StatusClassifier
+from curator_rl.signals.status import StatusClassifier, StatusState
+
+
+class EngineState(TypedDict):
+    round_t: int
+    unit_cost: dict[str, float]
+    tracker: Any
+    lp: Any
+    richness: Any
+    proxy: ProxyState
+    classifiers: dict[str, StatusState]
+    audit: NotRequired[AuditState]      # absent in checkpoints made before the reward audit
 
 
 def _zero_obs(env_id: str) -> EnvRoundObs:
@@ -66,7 +79,8 @@ class SignalEngine:
             signals_cfg.lam, signals_cfg.lambda_fast, signals_cfg.lambda_slow,
             signals_cfg.prior.alpha0, signals_cfg.prior.beta0,
         )
-        self._lp = LPEstimator(signals_cfg.lp_method, signals_cfg.window_rounds)
+        self._lp = LPEstimator(signals_cfg.lp_method, signals_cfg.window_rounds, signals_cfg.lp_se)
+        self._group_size = int(group_size)
         self._richness = RichnessEstimator(signals_cfg.richness, signals_cfg.lam, group_size)
         self._proxy = ProxyReward(proxy_cfg, signals_cfg.lam, cost_exponent)
         self._classifiers: dict[str, StatusClassifier] = {
@@ -78,6 +92,7 @@ class SignalEngine:
             for e in self.env_ids
         }
         self._signals_cfg = signals_cfg
+        self._audit = PromptDependenceAudit(signals_cfg.reward_audit, self.env_ids, group_size)
         self._unit_cost: dict[str, float] = {e: 0.0 for e in self.env_ids}
         self._round_t = 0
 
@@ -98,7 +113,8 @@ class SignalEngine:
             posterior = self._tracker.update(obs)
             posteriors[env_id] = posterior
             raw_rate = obs.k_success / obs.n_rollouts if obs.n_rollouts > 0 else None
-            self._lp.observe(env_id, posterior, obs.n_prompts, raw_rate)
+            self._lp.observe(env_id, posterior, obs.n_prompts, raw_rate,
+                             self._within_round_variance(obs, posterior.pass_rate))
             means[env_id] = obs.sum_score / obs.n_prompts if obs.n_prompts > 0 else 0.0
             if obs.n_prompts > 0 and obs.cost_usd > 0:
                 ema = self._unit_cost[env_id]
@@ -139,9 +155,14 @@ class SignalEngine:
 
         rewards = self._proxy.compute(lp_used, richness, unit_cost_norm)
 
+        audit = {e: self._audit.observe(observation.per_env.get(e, _zero_obs(e))) for e in sorted_envs}
+        audit_on = self._signals_cfg.reward_audit.enabled
+
         out: dict[str, SignalVector] = {}
         for env_id in sorted_envs:
             posterior = posteriors[env_id]
+            if audit_on:
+                self._classifiers[env_id].set_audit(audit[env_id].flag)
             status, note = self._classifiers[env_id].step(
                 n_groups_eff=posterior.n_groups_eff,
                 rounds_seen=posterior.n_rounds_seen,
@@ -153,6 +174,9 @@ class SignalEngine:
             )
             lp, se, z = lp_info[env_id]
             result = rewards[env_id]
+            flagged = audit_on and audit[env_id].flag
+            if flagged and status == EnvStatus.S5:
+                note = f"S5 reward ignores the prompt (D={audit[env_id].dispersion:.2f}, df={audit[env_id].df})"
             out[env_id] = SignalVector(
                 env_id=env_id,
                 round_t=observation.round,
@@ -175,13 +199,56 @@ class SignalEngine:
                 proxy_reward=result.proxy_reward,
                 status=status,
                 status_note=note,
+                reward_dispersion=audit[env_id].dispersion,
+                audit_flag=flagged,
+                lp_scaled=result.lp_scaled,
             )
         return out
+
+    def preflag_unreliable(self, env_ids) -> None:
+        """Arms whose reward paid for junk before training (pre-flight verifier check, D-102): S5 throughout."""
+        self._audit.preflag(env_ids)
+
+    def _within_round_variance(self, obs: EnvRoundObs, p_pooled: float) -> float | None:
+        """Between-group variance of pass rates inside one round (LP-B `design` SE, E-01).
+
+        Unbiased sample variance of the n per-prompt group rates from the round's
+        moments, floored at p(1-p)/G: the variance a group rate has even when every
+        prompt is equally hard (pure binomial sampling). One prompt: p(1-p), the
+        largest variance a rate in [0, 1] with mean p can have.
+        """
+        n = obs.n_prompts
+        if n <= 0:
+            return None
+        p = min(max(p_pooled, 1e-6), 1.0 - 1e-6)
+        floor = p * (1.0 - p) / max(self._group_size, 1)
+        if n == 1:
+            return p * (1.0 - p)
+        mean = obs.sum_score / n
+        var = max(obs.sum_score_sq / n - mean * mean, 0.0) * n / (n - 1)
+        return max(var, floor)
 
     # ------------------------------------------------------------- calibration
 
     def update_calibration(self, obs: CalibrationObservation) -> None:
         """Book a calibration window (mismatch flags arrive via set_calibration_mismatch)."""
+
+    def set_proxy_weights(self, alpha: float, beta: float) -> None:
+        """Install fitted proxy weights (improvement B4)."""
+        self._proxy.set_weights(alpha, beta)
+
+    @property
+    def proxy_weights(self) -> tuple[float, float]:
+        return self._proxy.alpha, self._proxy.beta
+
+    @property
+    def n_min(self) -> int:
+        """S1 exit evidence threshold (read-only; improvement E7: no private access from the scheduler)."""
+        return self._signals_cfg.status.n_min
+
+    def unit_cost(self, env_id: str) -> float:
+        """Current unit-cost estimate of an arm (read-only; improvement E7)."""
+        return self._unit_cost[env_id]
 
     def set_calibration_mismatch(self, env_id: str, flag: bool) -> None:
         """Forward a proxy-vs-benchmark mismatch flag (wired in Phase 9)."""
@@ -192,7 +259,7 @@ class SignalEngine:
 
     # ------------------------------------------------------------- checkpoints
 
-    def get_state(self) -> dict[str, object]:
+    def get_state(self) -> EngineState:
         return {
             "round_t": self._round_t,
             "unit_cost": dict(self._unit_cost),
@@ -201,14 +268,17 @@ class SignalEngine:
             "richness": self._richness.get_state(),
             "proxy": self._proxy.get_state(),
             "classifiers": {e: c.get_state() for e, c in self._classifiers.items()},
+            "audit": self._audit.get_state(),
         }
 
-    def load_checkpoint(self, state: Mapping[str, object]) -> None:
-        self._round_t = int(state["round_t"])  # type: ignore[arg-type]
-        self._unit_cost = {e: float(v) for e, v in state["unit_cost"].items()}  # type: ignore[union-attr,attr-defined]
-        for env_id, raw in state["classifiers"].items():  # type: ignore[union-attr]
-            self._classifiers[env_id].load_checkpoint(raw)  # type: ignore[arg-type]
-        self._tracker.load_checkpoint(state["tracker"])  # type: ignore[arg-type]
-        self._lp.load_checkpoint(state["lp"])  # type: ignore[arg-type]
-        self._richness.load_checkpoint(state["richness"])  # type: ignore[arg-type]
-        self._proxy.load_checkpoint(state["proxy"])  # type: ignore[arg-type]
+    def load_checkpoint(self, state: EngineState) -> None:
+        self._round_t = int(state["round_t"])
+        self._unit_cost = {e: float(v) for e, v in state["unit_cost"].items()}
+        for env_id, raw in state["classifiers"].items():
+            self._classifiers[env_id].load_checkpoint(raw)
+        self._tracker.load_checkpoint(state["tracker"])
+        self._lp.load_checkpoint(state["lp"])
+        self._richness.load_checkpoint(state["richness"])
+        self._proxy.load_checkpoint(state["proxy"])
+        if "audit" in state:                    # absent in checkpoints made before the audit existed
+            self._audit.load_checkpoint(state["audit"])

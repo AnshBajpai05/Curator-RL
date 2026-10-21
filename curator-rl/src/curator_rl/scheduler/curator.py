@@ -1,8 +1,9 @@
 """Curator facade (Roadmap Part P v1 Phase 5 class list, A.2 decision 7).
 
-Full Curator = D-UCB + cost normalisation + status constraints, with the
-calibration hooks in place but the alpha/beta fit deferred to Phase 9 (the
-Phase 5 version is "Curator v0": proxy + cost + discounted UCB).
+Full Curator = D-UCB + cost normalisation + status constraints + calibration (S5 mismatch flags,
+D-73) + the reward audit (S5 for a reward that ignores the prompt) and, behind config switches, the
+alpha/beta fit to calibrated gains (B4), drift-triggered discounting (B2) and a weight cap /
+smoothing (B7). The Phase 5 version was "Curator v0": proxy + cost + discounted UCB.
 
 Extra surface beyond `BaseScheduler`:
 - `compute_scores()` — the current mu_hat + bonus per env (debug/ablations).
@@ -33,10 +34,9 @@ class Curator(DiscountedUCB):
         super().update_observation(observation)
 
     def update_calibration(self, observation: CalibrationObservation) -> None:
-        # stores the observation on the engine; the alpha/beta fit + S5
-        # mismatch feed arrive with Phase 9 (D-34)
+        # credit, proxy-vs-benchmark test, S5 flags and (if enabled) the alpha/beta fit
         super().update_calibration(observation)
 
     def get_roi(self) -> Mapping[str, float] | None:
-        """ROI leaderboard stub — the ROI engine arrives in Phase 10."""
+        """In-run ROI per arm is computed from the calibration log by `curator_rl.roi.leaderboard`."""
         return None

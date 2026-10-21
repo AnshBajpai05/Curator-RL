@@ -1,6 +1,11 @@
-# COST MODEL (skeleton — filled in by v3 Phase B)
+# COST MODEL
 
-Source: Roadmap v2.0 Part H. **Status: skeleton.** Nothing below has been measured yet; every `TBD` is replaced by a Phase B pilot measurement and logged in `DECISIONS.md`.
+Source: Roadmap v2.0 Part H. **Status:** sections 1-5 are the definitions; sections 6-7 hold the Kaggle
+measurements (Phase B pilot, Phase E cost probe). Implemented: `cost/attribution.py` (measured,
+CUDA-synchronised step time attributed to arms: verification exactly, the rest by tokens),
+`cost/ledger.py` (matched-budget ledger), and the per-arm cost model fitted by NNLS from one
+randomized-mixture run (`trainer/sysid.py`, Gate 5 on hardware: still to be run). Any `TBD` left below
+is replaced by a measurement and logged in `DECISIONS.md`.
 
 ## 1. Definition
 

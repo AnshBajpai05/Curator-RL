@@ -1,0 +1,95 @@
+# S-I-R1-GPU2-MIS: GPU-shape refit v2 = S-I-R1-GPU plus the simulator realism switches.
+# GENERATED FILE - edit experiments/analysis/refit_scenarios.py (--shape gpu2), not this file.
+# Measured: as S-I-R1-GPU, plus pilot pass@8 per arm and real training-split sizes.
+# Realism: learning from the mixed-group share at the measured kappa (B8), repeated passes over a
+# finite dataset teach less (E-14), forgetting while untrained (B7), reports on their own random
+# stream and paired test items (B1), vectorised draws (E10).
+# ASSUMED (not measured): eta, transfer, repeat_decay 0.5, forget_rate 0.002; the 'format' arm (prompt-dependent reward, no benchmark value) is a stress test.
+scenario_id: S-I-R1-GPU2-MIS
+description: S-I-R1 at the GPU shape with realism v2
+budget_usd: 1.50583
+max_rounds: 200
+steps_per_round: 2
+prompts_per_step: 16
+group_size: 8
+world:
+  skill_noise_std: 0.003
+  cost_lognormal_sigma: 0.1
+  rollout_concentration: 2.14
+  benchmark_items: 200
+  learning_from: delivered
+  rounding: carry
+  learnability: mixed_groups
+  repeat_decay: 0.5
+  report_stream: separate
+  final_eval: paired_items
+  rollout_draws: vectorized
+calib:
+  enabled: true
+  interval_rounds: 10
+  paired: true
+  churn: 0.02
+  items_per_slice: 100
+  cost_per_item_usd: 2.70139e-05
+oracle:
+  simplex_step: 0.1
+  random_search_draws: 1500
+envs:
+- env_id: gsm8k
+  nominal_size: 6873
+  difficulty: 0.3095
+  eta: 0.006
+  cost_usd_per_prompt: 0.000732639
+  transfer_out:
+    math35: 0.3
+  bench_weight: 0.25
+  pilot_pass_at_g: 0.688
+  train_items: 6873
+  forget_rate: 0.002
+- env_id: math35
+  nominal_size: 4982
+  difficulty: 0.7999
+  eta: 0.005
+  cost_usd_per_prompt: 0.00149295
+  transfer_out:
+    gsm8k: 0.3
+  bench_weight: 0.25
+  pilot_pass_at_g: 0.344
+  train_items: 4982
+  forget_rate: 0.002
+- env_id: mbpp
+  nominal_size: 314
+  difficulty: 0.7121
+  eta: 0.005
+  cost_usd_per_prompt: 0.000431374
+  bench_weight: 0.25
+  pilot_pass_at_g: 0.5
+  train_items: 314
+  forget_rate: 0.002
+- env_id: countdown
+  nominal_size: 5000
+  difficulty: 4.0
+  eta: 0.004
+  cost_usd_per_prompt: 0.000641572
+  bench_weight: 0.25
+  pilot_pass_at_g: 0.0
+  forget_rate: 0.002
+- env_id: noisy
+  nominal_size: 6873
+  eta: 0.01
+  cost_usd_per_prompt: 0.000674542
+  noisy_q: 0.35
+  bench_weight: 0.0
+  bench_domain: gsm8k
+  pilot_pass_at_g: 0.984
+  train_items: 6873
+- env_id: format
+  nominal_size: 6873
+  difficulty: 0.3095
+  eta: 0.006
+  cost_usd_per_prompt: 0.000732639
+  bench_weight: 0.0
+  bench_domain: gsm8k
+  pilot_pass_at_g: 0.7
+  train_items: 6873
+  forget_rate: 0.002

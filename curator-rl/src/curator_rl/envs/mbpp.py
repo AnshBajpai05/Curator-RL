@@ -74,4 +74,4 @@ class MbppEnv(FiniteJsonlEnv):
         return Verdict(success=res.passed, score=1.0 if res.passed else 0.0, parse_ok=True,
                        verifier_seconds=time.perf_counter() - start,
                        info={"timed_out": res.timed_out, "returncode": res.returncode,
-                             "stderr_tail": res.stderr_tail})
+                             "stderr_tail": res.stderr_tail, "rejected": res.rejected})

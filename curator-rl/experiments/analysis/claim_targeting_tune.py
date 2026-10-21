@@ -17,21 +17,21 @@ Writes reports/analysis/claim_targeting_tune.{json,md}.
 from __future__ import annotations
 
 import json
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
-from experiments.analysis.calibration_power import S5Recorder  # noqa: E402
-from experiments.refit_gate import SCENARIOS, scenario_with_calibration  # noqa: E402
-from experiments.run_sim import make_scheduler  # noqa: E402
 
 from curator_rl.core.config import load_config  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
+from experiments.analysis.calibration_power import S5Recorder  # noqa: E402
+from experiments.refit_gate import SCENARIOS, scenario_with_calibration  # noqa: E402
+from experiments.run_sim import (  # noqa: E402
+    FROZEN_D68_D94,  # noqa: E402  (audit E-04: pre-registered config)
+    make_scheduler,  # noqa: E402
+)
 
 VARIANTS = (("exposure", 1), ("claim", 1), ("claim", 2), ("claim_stale", 1), ("claim_stale", 2))
 SEEDS = list(range(50))
@@ -45,7 +45,7 @@ def name(v) -> str:
 
 def run_cell(task):
     sid, v = task
-    base = load_config(REPO_ROOT / "configs" / "base.yaml")
+    base = load_config(FROZEN_D68_D94)
     cfg = base.model_copy(update={"calib": base.calib.model_copy(update={"targeting": v[0], "max_targets": v[1]})})
     sc = scenario_with_calibration(sid, cfg.calib.interval_rounds)
     ids = [e.env_id for e in sc.envs]

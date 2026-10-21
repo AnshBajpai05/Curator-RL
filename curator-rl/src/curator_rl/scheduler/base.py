@@ -46,8 +46,9 @@ class BaseScheduler(ABC):
     def update_calibration(self, observation: CalibrationObservation) -> None:  # noqa: B027
         """Consume a calibration observation (default: no-op until Phase 9)."""
 
-    def get_state(self) -> Mapping[str, object]:  # noqa: B027
-        """Serializable scheduler state for checkpointing (Roadmap Part N)."""
+    def get_state(self) -> Mapping[str, object]:
+        """Serializable scheduler state for checkpointing (Roadmap Part N); stateless methods: {}."""
+        return {}
 
     def save_checkpoint(self) -> Mapping[str, object]:
         return self.get_state()

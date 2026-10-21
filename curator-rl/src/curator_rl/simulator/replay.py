@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from curator_rl.core.jsonl import read_jsonl
+from curator_rl.core.quotas import largest_remainder_quotas
 from curator_rl.core.types import EnvRoundObs, RoundObservation
 from curator_rl.scheduler.base import BaseScheduler
 
@@ -40,12 +41,14 @@ class ReplayEnvState:
         chunk = self.chunks[min(self.cursor, len(self.chunks) - 1)]
         self.cursor += 1
         scale = n_prompts / max(chunk.get("n_prompts", 1), 1)
-        return {
-            "k_success": int(round(chunk.get("k_success", 0) * scale)),
-            "n_rollouts": int(round(chunk.get("n_rollouts", 0) * scale)),
-            "n_prompts": n_prompts,
-            "cost_usd": chunk.get("cost_usd", 0.0) * scale,
-        }
+        # every additive per-prompt statistic scales with the prompts taken (audit E-17: mixed
+        # groups were dropped, so richness was 0, and score sums were not sums)
+        out: dict = {"n_prompts": n_prompts}
+        for key in ("k_success", "n_rollouts", "n_groups_mixed"):
+            out[key] = int(round(chunk.get(key, 0) * scale))
+        for key in ("cost_usd", "sum_score", "sum_score_sq", "sum_abs_adv"):
+            out[key] = float(chunk.get(key, 0.0)) * scale
+        return out
 
 
 @dataclass
@@ -78,19 +81,25 @@ class TraceReplayer:
             weights = scheduler.select_mixture(prev_obs)
             per_env: dict[str, EnvRoundObs] = {}
             round_cost = 0.0
+            quotas = largest_remainder_quotas(weights, prompts_per_round, tie_break_seed=round_t)
             for env_id in self.env_ids:
-                m_i = int(round(weights.get(env_id, 0.0) * prompts_per_round))
+                m_i = quotas.get(env_id, 0)
                 chunk = self.states[env_id].take(m_i) if m_i > 0 else {
-                    "k_success": 0, "n_rollouts": 0, "n_prompts": 0, "cost_usd": 0.0,
+                    "k_success": 0, "n_rollouts": 0, "n_prompts": 0, "n_groups_mixed": 0,
+                    "cost_usd": 0.0, "sum_score": 0.0, "sum_score_sq": 0.0, "sum_abs_adv": 0.0,
                 }
                 n_roll = chunk["n_rollouts"]
                 k = chunk["k_success"]
+                n_p = chunk["n_prompts"]
+                rate = k / max(n_roll, 1)
                 per_env[env_id] = EnvRoundObs(
-                    env_id=env_id, n_prompts=chunk["n_prompts"], n_rollouts=n_roll,
-                    k_success=k, n_groups_mixed=0,
-                    sum_score=k / max(n_roll, 1), sum_score_sq=(k / max(n_roll, 1)) ** 2,
+                    env_id=env_id, n_prompts=n_p, n_rollouts=n_roll, k_success=k,
+                    n_groups_mixed=chunk["n_groups_mixed"],
+                    # traces without per-prompt moments fall back to the pooled rate per prompt
+                    sum_score=chunk["sum_score"] or rate * n_p,
+                    sum_score_sq=chunk["sum_score_sq"] or rate * rate * n_p,
                     prompt_tokens=0, completion_tokens=0, verifier_seconds=0.0,
-                    gpu_seconds=0.0, cost_usd=chunk["cost_usd"],
+                    gpu_seconds=0.0, cost_usd=chunk["cost_usd"], sum_abs_adv=chunk["sum_abs_adv"],
                 )
                 round_cost += chunk["cost_usd"]
             spend += round_cost

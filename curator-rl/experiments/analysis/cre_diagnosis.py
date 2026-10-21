@@ -16,18 +16,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np  # noqa: E402
+
+from curator_rl.simulator.harness import run_episode  # noqa: E402
 from experiments.analysis.common import REPO_ROOT  # noqa: E402
 from experiments.cre_gate import method_cfg, scenario_variant  # noqa: E402
 from experiments.run_sim import make_scheduler  # noqa: E402
-
-from curator_rl.simulator.harness import run_episode  # noqa: E402
 
 REPORT_DIR = REPO_ROOT / "reports" / "analysis"
 FIRST_ACTIVE_ROUND = 31      # K=10, k_min=2: the engine activates after the third calibration

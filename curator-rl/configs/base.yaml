@@ -22,11 +22,19 @@ scheduler:
   score_norm: zscore     # none | zscore | rank
   cost_exponent: 1.0     # theta_c; 0 disables cost normalisation (ablation)
   status_control: hard   # off | soft | hard (tuned D-64: fixes junk share, Gate 2c)
-  pull_unit: round       # scale of the UCB log argument
-  s3_multiplier: 0.5     # soft: UCB score * m_sat for saturated arms (E.5)
-  s4_multiplier: 0.5     # soft: UCB score * m for too-hard arms
-  s5_shrink: 0.5         # soft: shrink proxy mass of unreliable arms (s_unrel)
+  pull_unit: delivered   # counter increment: realised prompt share n_i/sum n (audit E-09; legacy: round)
+  s3_multiplier: 0.5     # S3 saturated: WEIGHT x m (E.5); `hard` also caps at 2 x eps/N
+  s4_multiplier: 0.5     # S4 too hard: WEIGHT x m; `hard` also caps at eps/N
+  s5_shrink: 0.5         # S5 unreliable: WEIGHT x m
+  s5_cap: none           # none | floor: also cap S5 at eps/N under `hard` (improvement B5; needs pre-registration)
   s1_quota: 0.30         # q_explore: floor w_i >= q until S1 exits (2x while n_groups_eff < n_min/2)
+  max_weight: 1.0        # cap on any single weight; 1 = off (improvement B7)
+  smoothing: 1.0         # w_t = (1-s) w_{t-1} + s w_new; 1 = off (improvement B7)
+  drift:                 # drift-triggered discounting (improvement B2); use with gamma 1
+    enabled: false
+    delta: 0.5           # Page-Hinkley tolerance (standardised residual units)
+    threshold: 8.0       # Page-Hinkley alarm level
+    decay: 0.3           # counters x rho on an alarm
 
 # Baseline hyperparameters (D-68). Every adaptive method has its own, tuned with
 # the same budget on tuning seeds (v3 section 4.4); selected values come from
@@ -44,12 +52,14 @@ baselines:
   dump:
     exploration_coef: 2.0
     tau: 0.4
+    window_rounds: 0     # 0 = all-time mean (D-68); W > 0 = recent window like DUMP (audit E-16; retune first)
 
 signals:
   lambda: 0.9           # discounted pooled pass-rate discount
   lambda_fast: 0.7       # fast window (LP-A)
   lambda_slow: 0.95      # slow window (LP-A)
   lp_method: lp_b        # lp_a = fast-minus-slow | lp_b = slope | lp_c = windows (chosen: lp_b, D-40)
+  lp_se: design          # LP-B SE: design (calibrated z, audit E-01) | residual_legacy (D-37; SE ~sqrt(n) too large)
   lp_use: signed         # signed | positive | abs
   window_rounds: 10      # W: window length for LP-B / LP-C
   richness:
@@ -73,6 +83,11 @@ signals:
     dwell_min: 3         # min rounds in a status before leaving it (tuned D-42)
     consecutive_rounds: 4 # h: rounds a condition must hold before entering (tuned D-42)
     s1_entry_ratio: 0.5  # re-enter S1 only below this fraction of n_min (anti-flap)
+  reward_audit:           # does the reward depend on the prompt? (signals/audit.py)
+    enabled: false        # research switch; S5 on a prompt-independent reward
+    d_max: 1.5            # pilot: real verifiers D = 3.0-4.4, random reward D = 1.0-1.09 (MC: kappa 10 flagged <= 3%)
+    z: 2.33               # one-sided 99% bound on log D
+    min_df: 40            # pooled degrees of freedom before deciding
 
 proxy:
   alpha: 0.5
@@ -80,16 +95,21 @@ proxy:
   clip_l: 3.0            # LP clip bound in robust sigmas
   quantile_prior_lo: 0.0  # r-tilde quantile priors used during warm-up (E.4)
   quantile_prior_hi: 1.0
+  fit:                     # alpha/beta fitted to calibrated gains (improvement B4)
+    enabled: false
+    ridge: 0.3             # prior worth 0.3 average arms (recovery R2 0.86 vs 0.76 at 1.0)
+    min_rows: 3            # arms with calibrated evidence before fitting
 
 calib:
   enabled: true          # Curator consumes calibration windows (ablation: false; D-73)
   interval_rounds: 10    # K (calibration power study, D-75)
-  target: domain         # domain (own-slice gains) | global (window gains)
   k_min: 2               # min gain windows before S5 decisions (power study, D-75)
-  trust_region: 0.25     # max relative change of (alpha, beta) per fit
+  trust_region: 0.25     # max relative change of alpha and beta per fit (proxy.fit)
   z_mis: 2.0             # S5 mismatch threshold (standardised residual)
   mismatch_windows: 2    # q: consecutive windows to enter S5
   mismatch_clear_windows: 2
+  flag_scope: evaluated  # evaluated = only re-evaluated arms get a flag update (audit E-02) | all (legacy)
+  credit: transfer       # transfer = arms sharing a slice regressed jointly (C2d, audit E-03) | own_slice (legacy)
   targeting: claim_stale # all | exposure | claim | claim_stale: which slices to evaluate (D-75; adopted D-95)
   max_targets: 2         # slices per calibration after a one-time all-slice baseline (D-95)
   items_per_slice: 100   # paired items per evaluated slice
@@ -127,6 +147,7 @@ data:
       target_min: 10
       target_max: 999
       use_all_numbers: true
+      exact_division: true   # enforce the prompt's "divides exactly" rule in generator and verifier (audit E-19)
       max_prompt_tokens: 512
       max_completion_tokens: 512
       verifier_timeout_s: 5.0
@@ -165,5 +186,3 @@ steps_per_round: 5      # R
 prompts_per_step: 16    # P
 group_size: 8           # G
 
-warmup:
-  total_rounds: 6

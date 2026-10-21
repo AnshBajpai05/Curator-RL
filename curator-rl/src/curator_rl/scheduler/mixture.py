@@ -81,6 +81,38 @@ def softmax_floor(
     return out
 
 
+def cap_weights(weights: Mapping[str, float], cap: float, *, frozen: set[str] | None = None) -> dict[str, float]:
+    """Cap every weight at `cap` (improvement B7), handing the excess to the arms below it.
+
+    Arms in `frozen` (e.g. capped by their status) never receive any of the excess. The effective cap
+    is at least 1/N (a mixture over N arms cannot have all weights below 1/N). Sum stays 1; weights
+    only fall at capped arms and only rise elsewhere, so floors are preserved.
+    """
+    out = {e: float(w) for e, w in weights.items()}
+    n = len(out)
+    if n == 0 or cap >= 1.0:
+        return out
+    cap = max(cap, 1.0 / n)
+    frozen = frozen or set()
+    for _ in range(n + 1):
+        excess = sum(max(w - cap, 0.0) for w in out.values())
+        if excess <= _EPS_NORM:
+            break
+        out = {e: min(w, cap) for e, w in out.items()}
+        takers = {e: w for e, w in out.items() if w < cap - _EPS_NORM and e not in frozen}
+        if not takers:
+            takers = {e: w for e, w in out.items() if w < cap - _EPS_NORM}
+        if not takers:
+            break
+        room = {e: cap - w for e, w in takers.items()}
+        total_room = sum(room.values())
+        give = min(excess, total_room)
+        for e in takers:
+            out[e] += give * room[e] / total_room
+    total = sum(out.values())
+    return {e: w / total for e, w in out.items()}
+
+
 def status_multiplier(sv: SignalVector, cfg: SchedulerCfg) -> float:
     """Soft-constraint multiplier for one environment from its status (E.5)."""
     if sv.status == EnvStatus.S3:
@@ -135,6 +167,8 @@ def apply_status_constraints(
             out[e] = min(out[e], 2.0 * floor)   # E.5: S3 hard = cap at 2 x floor
         if cfg.status_control == "hard" and sv.status == EnvStatus.S4:
             out[e] = min(out[e], floor)         # E.5: S4 hard = cap at the floor
+        if cfg.status_control == "hard" and sv.status == EnvStatus.S5 and cfg.s5_cap == "floor":
+            out[e] = min(out[e], floor)         # B5: a calibration-confirmed spurious arm keeps only the floor
         if sv.status == EnvStatus.S1:
             intents[e] = "explore"
         elif sv.status in (EnvStatus.S3, EnvStatus.S4, EnvStatus.S5):

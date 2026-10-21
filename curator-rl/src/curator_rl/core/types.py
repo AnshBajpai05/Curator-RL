@@ -193,6 +193,13 @@ class SignalVector:
     proxy_reward: float
     status: EnvStatus
     status_note: str
+    # reward audit (signals/audit.py): dispersion ratio D of group pass rates (1 = reward ignores the
+    # prompt) and whether the audit flags the arm; LP' as used in the proxy (for the alpha/beta fit);
+    # whether the drift detector fired this round (improvement B2)
+    reward_dispersion: float = float("nan")
+    audit_flag: bool = False
+    lp_scaled: float = 0.0
+    drift_alarm: bool = False
 
 
 @dataclass(frozen=True)

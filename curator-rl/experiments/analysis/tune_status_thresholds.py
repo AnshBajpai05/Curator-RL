@@ -22,18 +22,12 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
-import sys
 import time
 from datetime import UTC, datetime
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from experiments.analysis import common  # noqa: E402
-from experiments.analysis.common import REPO_ROOT  # noqa: E402
 
 from curator_rl.core.config import StatusCfg  # noqa: E402
+from experiments.analysis import common  # noqa: E402
+from experiments.analysis.common import REPO_ROOT  # noqa: E402
 
 REPORT_DIR = REPO_ROOT / "reports" / "analysis"
 GRID = {

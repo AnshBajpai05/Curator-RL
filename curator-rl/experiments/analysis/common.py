@@ -12,13 +12,11 @@ Every script is deterministic: no RNG besides the seeded sim/streams.
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from curator_rl.core.config import load_config  # noqa: E402
 from curator_rl.core.seeding import SeedManager  # noqa: E402

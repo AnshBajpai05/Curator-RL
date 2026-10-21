@@ -1,0 +1,196 @@
+# FROZEN CONFIG (audit E-04) - DO NOT EDIT.
+# Exact configs/base.yaml of commit 30052e8 (the configuration of every pre-registered gate and
+# study from D-68 to D-94: gate2, gate2b, cre, cre_kappa, refit, gamma, claim_targeting_tune and the
+# CONTROL arm of claim_gate), plus the LEGACY value of every key the 2026-10-10 audit added, so those
+# scripts reproduce their committed reports. Two keys the audit removed as dead (calib.target,
+# warmup.total_rounds) are dropped; neither was ever read by the code.
+# New work uses configs/base.yaml; a new pre-registration freezes its own copy here.
+
+# CURATOR base configuration — every scientific hyperparameter (Roadmap E.7).
+# Starting values, never hard-coded in Python (Rule 5). Tuned on simulator
+# tuning seeds and the dev split only.
+
+experiment:
+  name: base
+  tier: 0            # 0 | "1R" | 1 | 2
+  method: curator    # uniform | static | lp | ucb | curator | ...
+  seed: 0
+
+budget:
+  total_usd: 10.0
+  usd_per_gpu_hour: 1.0   # 1.0 => report in normalised "GPU-units" (Roadmap H.3)
+  n_gpus: 1
+
+scheduler:
+  gamma: 0.95            # bandit forgetting factor (MDP discount is 1; tuned D-49, re-tuned D-68)
+  exploration_coef: 0.5  # UCB bonus coefficient (kappa; tuned D-49, re-tuned D-68)
+  tau: 0.3               # softmax temperature on normalised scores (tuned D-49)
+  epsilon: 0.10          # exploration floor => w_i >= epsilon/n_envs
+  warmup_rounds: 6       # uniform warm-up before the scheduler takes over
+  score_norm: zscore     # none | zscore | rank
+  cost_exponent: 1.0     # theta_c; 0 disables cost normalisation (ablation)
+  status_control: hard   # off | soft | hard (tuned D-64: fixes junk share, Gate 2c)
+  pull_unit: round       # LEGACY: requested weight (audit E-09)
+  s3_multiplier: 0.5     # soft: UCB score * m_sat for saturated arms (E.5)
+  s4_multiplier: 0.5     # soft: UCB score * m for too-hard arms
+  s5_shrink: 0.5         # S5: weight x m
+  s5_cap: none           # LEGACY (improvement B5 off)
+  s1_quota: 0.30         # q_explore: floor w_i >= q until S1 exits (2x while n_groups_eff < n_min/2)
+  max_weight: 1.0
+  smoothing: 1.0
+  drift:
+    enabled: false
+    delta: 0.5
+    threshold: 8.0
+    decay: 0.3
+
+# Baseline hyperparameters (D-68). Every adaptive method has its own, tuned with
+# the same budget on tuning seeds (v3 section 4.4); selected values come from
+# reports/sweeps/tune_all.md (pre-registered one-SE + least-concentrated rule). The exploration floor epsilon
+# and the warm-up length are protocol constants shared by all adaptive methods.
+baselines:
+  ucb:
+    exploration_coef: 0.5
+    tau: 0.3
+  lp:
+    tau: 0.75
+  sec:
+    alpha: 0.1           # TD(0) step for Q <- alpha*r + (1-alpha)*Q
+    tau: 0.4
+  dump:
+    exploration_coef: 2.0
+    tau: 0.4
+    window_rounds: 0     # LEGACY all-time mean (audit E-16)
+
+signals:
+  lambda: 0.9           # discounted pooled pass-rate discount
+  lambda_fast: 0.7       # fast window (LP-A)
+  lambda_slow: 0.95      # slow window (LP-A)
+  lp_method: lp_b        # lp_a = fast-minus-slow | lp_b = slope | lp_c = windows (chosen: lp_b, D-40)
+  lp_se: residual_legacy # LEGACY D-37 standard error (audit E-01)
+  lp_use: signed         # signed | positive | abs
+  window_rounds: 10      # W: window length for LP-B / LP-C
+  richness:
+    mode: mixed          # mixed | band | variance
+    band_lo: 0.1
+    band_hi: 0.9
+    variance_min: 0.05
+  prior:
+    alpha0: 1.0
+    beta0: 1.0
+  status:
+    n_min: 64            # min effective prompt groups before S1 exits
+    r_min: 3             # min rounds observed before S1 exits
+    p_sat: 0.7           # saturation pass-rate bound (lower interval bound; tuned D-42)
+    p_hard: 0.05         # too-hard pass-rate bound (upper interval bound; tuned D-42)
+    sr_hard: 0.10        # too-hard richness bound
+    z_up: 1.5            # LP z-score considered "progressing" (tuned D-42)
+    z_neg: 2.0           # negative LP z-score considered forgetting
+    hysteresis_p: 0.05
+    hysteresis_sr: 0.05
+    dwell_min: 3         # min rounds in a status before leaving it (tuned D-42)
+    consecutive_rounds: 4 # h: rounds a condition must hold before entering (tuned D-42)
+    s1_entry_ratio: 0.5  # re-enter S1 only below this fraction of n_min (anti-flap)
+  reward_audit:
+    enabled: false
+    d_max: 1.5
+    z: 2.33
+    min_df: 40
+
+proxy:
+  alpha: 0.5
+  beta: 0.5
+  clip_l: 3.0            # LP clip bound in robust sigmas
+  quantile_prior_lo: 0.0  # r-tilde quantile priors used during warm-up (E.4)
+  quantile_prior_hi: 1.0
+  fit:
+    enabled: false
+    ridge: 0.3
+    min_rows: 3
+
+calib:
+  enabled: true          # Curator consumes calibration windows (ablation: false; D-73)
+  interval_rounds: 10    # K (calibration power study, D-75)
+  k_min: 2               # min gain windows before S5 decisions (power study, D-75)
+  trust_region: 0.25     # max relative change of (alpha, beta) per fit
+  z_mis: 2.0             # S5 mismatch threshold (standardised residual)
+  mismatch_windows: 2    # q: consecutive windows to enter S5
+  mismatch_clear_windows: 2
+  flag_scope: all        # LEGACY: every arm re-flagged each ready window (audit E-02)
+  credit: own_slice      # LEGACY own-slice credit (audit E-03)
+  targeting: exposure    # all | exposure: evaluate only the slices of the most-funded arms (D-75)
+  max_targets: 1         # slices per calibration after a one-time all-slice baseline (D-75)
+  items_per_slice: 100   # paired items per evaluated slice
+
+# Calibrated Reward Engine (D-76). Disabled by default until the pre-registered Gate 2''
+# run (cre_gate.py, seeds 200-249) decides adoption. Constants frozen from tuning seeds
+# 0-49 by cre_constants.py (D-78); never changed after seeing evaluation outcomes.
+cre:
+  enabled: false
+  mode: full             # full | no_uncertainty (ablation)
+  proxy_scale: 0.0001963  # s (D-78)
+  prior_rel_sd: 1.232     # rho (D-78)
+  roi_scale: 1.5105       # R_max (D-78)
+  discount: 1.0          # 1 = no forgetting (primary setting); < 1 is an ablation
+
+cost:
+  count_cpu_verifier_as_gpu_time: true
+  warmup_steps: 2
+
+data:
+  root: data
+  split_salt: curator-gate0-2026-10-d20   # frozen at Gate 0 (DECISIONS.md D-20)
+  calib_size: 300
+  dev_size: 300
+  envs:
+    gsm8k:
+      max_prompt_tokens: 512
+      max_completion_tokens: 512
+      verifier_timeout_s: 5.0
+      prior_usd_per_prompt: 0.001         # cold-start prior only (Roadmap H.5)
+    countdown:
+      n_numbers: 4
+      numbers_min: 1
+      numbers_max: 99
+      target_min: 10
+      target_max: 999
+      use_all_numbers: true
+      exact_division: false  # LEGACY generator/verifier (audit E-19)
+      max_prompt_tokens: 512
+      max_completion_tokens: 512
+      verifier_timeout_s: 5.0
+      prior_usd_per_prompt: 0.001
+    math35:
+      level_min: 3           # MATH levels 3-5 (Roadmap D.2)
+      level_max: 5
+      max_prompt_tokens: 512
+      max_completion_tokens: 1024
+      verifier_timeout_s: 5.0
+      prior_usd_per_prompt: 0.002         # cold-start prior only (Roadmap H.5)
+    mbpp:
+      memory_limit_mb: 512
+      dev_size: 60           # carved from official train; calib = official validation
+      max_prompt_tokens: 512
+      max_completion_tokens: 512
+      verifier_timeout_s: 5.0
+      prior_usd_per_prompt: 0.003
+    noisy:
+      mode: random          # random | flip
+      q: 0.35               # Bernoulli(q) reward, independent of the outcome
+      flip_p: 0.5           # used in flip mode only
+      max_prompt_tokens: 512
+      max_completion_tokens: 512
+      verifier_timeout_s: 5.0
+      prior_usd_per_prompt: 0.001
+
+paths:
+  runs_root: runs
+
+logging:
+  fsync: false
+  schema_version: 1
+
+steps_per_round: 5      # R
+prompts_per_step: 16    # P
+group_size: 8           # G
+

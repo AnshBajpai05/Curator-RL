@@ -22,21 +22,21 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
-from experiments import gate2_check  # noqa: E402
-from experiments.refit_gate import SCENARIOS, scenario_with_calibration  # noqa: E402
-from experiments.run_sim import make_scheduler  # noqa: E402
 
 from curator_rl.core.config import load_config  # noqa: E402
 from curator_rl.simulator.harness import run_episode  # noqa: E402
+from experiments import gate2_check  # noqa: E402
+from experiments.refit_gate import SCENARIOS, scenario_with_calibration  # noqa: E402
+from experiments.run_sim import (  # noqa: E402
+    FROZEN_D68_D94,  # noqa: E402  (audit E-04: pre-registered config)
+    make_scheduler,  # noqa: E402
+)
 
 SKIP = 8
 NOISY = "noisy"
@@ -57,7 +57,7 @@ def variants() -> list[dict]:
 
 
 def variant_cfg(v: dict):
-    base = load_config(REPO_ROOT / "configs" / "base.yaml")
+    base = load_config(FROZEN_D68_D94)
     sched = base.scheduler.model_copy(update={
         "gamma": base.scheduler.gamma if v["gamma"] else 1.0,
         "cost_exponent": base.scheduler.cost_exponent if v["cost"] else 0.0,
@@ -110,7 +110,7 @@ class Recorder:
 
 def run_cell(task: tuple) -> dict:
     sid, name, v, seeds = task
-    cfg = variant_cfg(v) if v is not None else load_config(REPO_ROOT / "configs" / "base.yaml")
+    cfg = variant_cfg(v) if v is not None else load_config(FROZEN_D68_D94)
     sc = scenario_with_calibration(sid, cfg.calib.interval_rounds)
     ids = [e.env_id for e in sc.envs]
     method = "curator" if v is not None else name
