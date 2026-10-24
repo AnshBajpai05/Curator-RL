@@ -1,0 +1,259 @@
+[curator] uniform seed 0: backend=vllm, fresh start, syncing to hf://AnshBajpai05/curator-runs/olmo1b
+[curator] pre-flight verifier check: the reward pays for junk on noisy
+[curator] GRPO log-prob path: triton
+(MainProcess pid=2132) ERROR 10-21 10:08:40 [fa_utils.py:212] Cannot use FA version 2 is not supported due to FA2 is only supported on devices with compute capability >= 8
+Loading pt checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:04<00:00,  4.60s/it]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:04<00:00,  4.60s/it]
+
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   3%|▎         | 1/35 [00:00<00:05,  6.60it/s]Capturing CUDA graphs (PIECEWISE):   9%|▊         | 3/35 [00:00<00:03,  9.35it/s]Capturing CUDA graphs (PIECEWISE):  14%|█▍        | 5/35 [00:00<00:02, 11.55it/s]Capturing CUDA graphs (PIECEWISE):  20%|██        | 7/35 [00:00<00:02, 13.27it/s]Capturing CUDA graphs (PIECEWISE):  26%|██▌       | 9/35 [00:00<00:01, 14.54it/s]Capturing CUDA graphs (PIECEWISE):  31%|███▏      | 11/35 [00:00<00:01, 15.50it/s]Capturing CUDA graphs (PIECEWISE):  37%|███▋      | 13/35 [00:00<00:01, 16.20it/s]Capturing CUDA graphs (PIECEWISE):  43%|████▎     | 15/35 [00:01<00:01, 16.70it/s]Capturing CUDA graphs (PIECEWISE):  49%|████▊     | 17/35 [00:01<00:01, 17.18it/s]Capturing CUDA graphs (PIECEWISE):  54%|█████▍    | 19/35 [00:01<00:00, 17.65it/s]Capturing CUDA graphs (PIECEWISE):  63%|██████▎   | 22/35 [00:01<00:00, 18.90it/s]Capturing CUDA graphs (PIECEWISE):  71%|███████▏  | 25/35 [00:01<00:00, 20.11it/s]Capturing CUDA graphs (PIECEWISE):  80%|████████  | 28/35 [00:01<00:00, 21.59it/s]Capturing CUDA graphs (PIECEWISE):  89%|████████▊ | 31/35 [00:01<00:00, 22.38it/s]Capturing CUDA graphs (PIECEWISE):  97%|█████████▋| 34/35 [00:01<00:00, 23.90it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 35/35 [00:01<00:00, 18.07it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/2 [00:00<?, ?it/s]Capturing CUDA graphs (FULL): 100%|██████████| 2/2 [00:00<00:00, 25.96it/s]
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   6%|▌         | 2/35 [00:00<00:02, 11.46it/s]Capturing CUDA graphs (PIECEWISE):  11%|█▏        | 4/35 [00:00<00:02, 13.12it/s]Capturing CUDA graphs (PIECEWISE):  17%|█▋        | 6/35 [00:00<00:02, 14.48it/s]Capturing CUDA graphs (PIECEWISE):  23%|██▎       | 8/35 [00:00<00:01, 15.30it/s]Capturing CUDA graphs (PIECEWISE):  29%|██▊       | 10/35 [00:00<00:01, 16.05it/s]Capturing CUDA graphs (PIECEWISE):  34%|███▍      | 12/35 [00:00<00:01, 16.68it/s]Capturing CUDA graphs (PIECEWISE):  40%|████      | 14/35 [00:00<00:01, 17.09it/s]Capturing CUDA graphs (PIECEWISE):  46%|████▌     | 16/35 [00:00<00:01, 17.44it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████▏    | 18/35 [00:01<00:00, 17.74it/s]Capturing CUDA graphs (PIECEWISE):  60%|██████    | 21/35 [00:01<00:00, 18.77it/s]Capturing CUDA graphs (PIECEWISE):  69%|██████▊   | 24/35 [00:01<00:00, 20.07it/s]Capturing CUDA graphs (PIECEWISE):  77%|███████▋  | 27/35 [00:01<00:00, 21.48it/s]Capturing CUDA graphs (PIECEWISE):  86%|████████▌ | 30/35 [00:01<00:00, 23.21it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▍| 33/35 [00:01<00:00, 24.74it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 35/35 [00:01<00:00, 19.60it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/19 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):  16%|█▌        | 3/19 [00:00<00:00, 25.13it/s]Capturing CUDA graphs (FULL):  32%|███▏      | 6/19 [00:00<00:00, 25.96it/s]Capturing CUDA graphs (FULL):  53%|█████▎    | 10/19 [00:00<00:00, 28.24it/s]Capturing CUDA graphs (FULL):  74%|███████▎  | 14/19 [00:00<00:00, 30.89it/s]Capturing CUDA graphs (FULL):  95%|█████████▍| 18/19 [00:00<00:00, 33.53it/s]Capturing CUDA graphs (FULL): 100%|██████████| 19/19 [00:00<00:00, 31.36it/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': 100257}.
+  0%|          | 0/120 [00:00<?, ?it/s][rank0]: Traceback (most recent call last):
+[rank0]:   File "/kaggle/working/curator/run.py", line 689, in <module>
+[rank0]:     raise SystemExit(main())
+[rank0]:                      ~~~~^^
+[rank0]:   File "/kaggle/working/curator/run.py", line 684, in main
+[rank0]:     return {"setup": cmd_setup, "smoke": cmd_smoke, "compare": cmd_compare, "sysid": cmd_sysid, "loo": cmd_loo,
+[rank0]:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[rank0]:             "train": cmd_train, "report": lambda a: cmd_report(a, quiet=a.quiet), "status": cmd_status}[args.command](args)
+[rank0]:             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+[rank0]:   File "/kaggle/working/curator/run.py", line 247, in cmd_train
+[rank0]:     summary = run_single(cfg, CODE, resume=not args.fresh, gradient_checkpointing=not args.no_grad_ckpt)
+[rank0]:   File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/runner.py", line 145, in run_single
+[rank0]:     run_trl(ctl, cfg, out, backend=backend, resume_dir=ckpt,
+[rank0]:     ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:             gradient_checkpointing=gradient_checkpointing)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/trl_adapter.py", line 409, in run_trl
+[rank0]:     trainer.train()
+[rank0]:     ~~~~~~~~~~~~~^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 1520, in train
+[rank0]:     return inner_training_loop(
+[rank0]:         args=args,
+[rank0]:     ...<2 lines>...
+[rank0]:         ignore_keys_for_eval=ignore_keys_for_eval,
+[rank0]:     )
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 1602, in _inner_training_loop
+[rank0]:     self._run_epoch(
+[rank0]:     ~~~~~~~~~~~~~~~^
+[rank0]:         model=model,
+[rank0]:         ^^^^^^^^^^^^
+[rank0]:     ...<9 lines>...
+[rank0]:         steps_trained_in_current_epoch=steps_trained_in_current_epoch,
+[rank0]:         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:     )
+[rank0]:     ^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 1842, in _run_epoch
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 1470, in training_step
+[rank0]:     output = super().training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 2008, in training_step
+[rank0]:     inputs = self._prepare_inputs(inputs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/extras/profiling.py", line 211, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 1499, in _prepare_inputs
+[rank0]:     generation_batch = self._generate_and_score_completions(generation_batch)
+[rank0]:   File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/trl_adapter.py", line 51, in _generate_and_score_completions
+[rank0]:     output = super()._generate_and_score_completions(ctl.fill_generation_batch(list(inputs), g, n_draw))
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 2572, in _generate_and_score_completions
+[rank0]:     old_per_token_logps, _, _ = self._get_per_token_logps_and_entropies(
+[rank0]:                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+[rank0]:         self.model,
+[rank0]:         ^^^^^^^^^^^
+[rank0]:     ...<6 lines>...
+[rank0]:         **forward_kwargs,  # may contain pixel_values, image_grid_thw, pixel_attention_mask, spatial_shapes, image_sizes, image_position_ids
+[rank0]:         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:     )
+[rank0]:     ^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/extras/profiling.py", line 211, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 1456, in _get_per_token_logps_and_entropies
+[rank0]:     outputs = model(**model_inputs, labels=labels, fused_lm_head=True)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/accelerate/utils/operations.py", line 943, in forward
+[rank0]:     return model_forward(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/accelerate/utils/operations.py", line 931, in __call__
+[rank0]:     return convert_to_fp32(self.model_forward(*args, **kwargs))
+[rank0]:                            ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/amp/autocast_mode.py", line 44, in decorate_autocast
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/peft/peft_model.py", line 2101, in forward
+[rank0]:     return self.base_model(
+[rank0]:            ~~~~~~~~~~~~~~~^
+[rank0]:         input_ids=input_ids,
+[rank0]:         ^^^^^^^^^^^^^^^^^^^^
+[rank0]:     ...<6 lines>...
+[rank0]:         **kwargs,
+[rank0]:         ^^^^^^^^^
+[rank0]:     )
+[rank0]:     ^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/peft/tuners/tuners_utils.py", line 333, in forward
+[rank0]:     return self.model.forward(*args, **kwargs)
+[rank0]:            ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/utils.py", line 1613, in _fused_forward
+[rank0]:     backbone_outputs = getattr(self, backbone_attr)(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/vllm/compilation/decorators.py", line 506, in __call__
+[rank0]:     if self.do_not_compile or torch.compiler.is_compiling():
+[rank0]:        ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1967, in __getattr__
+[rank0]:     raise AttributeError(
+[rank0]:         f"'{type(self).__name__}' object has no attribute '{name}'"
+[rank0]:     )
+[rank0]: AttributeError: 'Olmo2Model' object has no attribute 'do_not_compile'. Did you mean: 'aot_compile'?
+  0%|          | 0/120 [01:18<?, ?it/s]
+[curator] uniform seed 0: backend=vllm, fresh start, syncing to hf://AnshBajpai05/curator-runs/olmo1b
+[curator] pre-flight verifier check: the reward pays for junk on noisy
+[curator] GRPO log-prob path: triton
+(MainProcess pid=3573) ERROR 10-21 10:11:42 [fa_utils.py:212] Cannot use FA version 2 is not supported due to FA2 is only supported on devices with compute capability >= 8
+Loading pt checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:04<00:00,  4.60s/it]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:04<00:00,  4.60s/it]
+
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   3%|▎         | 1/35 [00:00<00:05,  6.49it/s]Capturing CUDA graphs (PIECEWISE):   6%|▌         | 2/35 [00:00<00:04,  7.57it/s]Capturing CUDA graphs (PIECEWISE):  11%|█▏        | 4/35 [00:00<00:03, 10.17it/s]Capturing CUDA graphs (PIECEWISE):  17%|█▋        | 6/35 [00:00<00:02, 12.03it/s]Capturing CUDA graphs (PIECEWISE):  23%|██▎       | 8/35 [00:00<00:02, 13.47it/s]Capturing CUDA graphs (PIECEWISE):  29%|██▊       | 10/35 [00:00<00:01, 14.62it/s]Capturing CUDA graphs (PIECEWISE):  34%|███▍      | 12/35 [00:00<00:01, 15.47it/s]Capturing CUDA graphs (PIECEWISE):  40%|████      | 14/35 [00:01<00:01, 16.11it/s]Capturing CUDA graphs (PIECEWISE):  46%|████▌     | 16/35 [00:01<00:01, 16.60it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████▏    | 18/35 [00:01<00:00, 17.12it/s]Capturing CUDA graphs (PIECEWISE):  57%|█████▋    | 20/35 [00:01<00:00, 17.56it/s]Capturing CUDA graphs (PIECEWISE):  63%|██████▎   | 22/35 [00:01<00:00, 18.22it/s]Capturing CUDA graphs (PIECEWISE):  71%|███████▏  | 25/35 [00:01<00:00, 19.81it/s]Capturing CUDA graphs (PIECEWISE):  80%|████████  | 28/35 [00:01<00:00, 21.71it/s]Capturing CUDA graphs (PIECEWISE):  89%|████████▊ | 31/35 [00:01<00:00, 22.42it/s]Capturing CUDA graphs (PIECEWISE):  97%|█████████▋| 34/35 [00:01<00:00, 23.38it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 35/35 [00:02<00:00, 17.46it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/2 [00:00<?, ?it/s]Capturing CUDA graphs (FULL): 100%|██████████| 2/2 [00:00<00:00, 24.64it/s]
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   6%|▌         | 2/35 [00:00<00:03, 10.88it/s]Capturing CUDA graphs (PIECEWISE):  11%|█▏        | 4/35 [00:00<00:02, 12.45it/s]Capturing CUDA graphs (PIECEWISE):  17%|█▋        | 6/35 [00:00<00:02, 14.14it/s]Capturing CUDA graphs (PIECEWISE):  23%|██▎       | 8/35 [00:00<00:01, 15.16it/s]Capturing CUDA graphs (PIECEWISE):  29%|██▊       | 10/35 [00:00<00:01, 16.04it/s]Capturing CUDA graphs (PIECEWISE):  34%|███▍      | 12/35 [00:00<00:01, 16.62it/s]Capturing CUDA graphs (PIECEWISE):  40%|████      | 14/35 [00:00<00:01, 17.05it/s]Capturing CUDA graphs (PIECEWISE):  46%|████▌     | 16/35 [00:01<00:01, 17.43it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████▏    | 18/35 [00:01<00:00, 17.97it/s]Capturing CUDA graphs (PIECEWISE):  60%|██████    | 21/35 [00:01<00:00, 18.93it/s]Capturing CUDA graphs (PIECEWISE):  69%|██████▊   | 24/35 [00:01<00:00, 20.18it/s]Capturing CUDA graphs (PIECEWISE):  77%|███████▋  | 27/35 [00:01<00:00, 21.79it/s]Capturing CUDA graphs (PIECEWISE):  86%|████████▌ | 30/35 [00:01<00:00, 23.78it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▍| 33/35 [00:01<00:00, 25.33it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 35/35 [00:01<00:00, 19.68it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/19 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):  16%|█▌        | 3/19 [00:00<00:00, 26.39it/s]Capturing CUDA graphs (FULL):  32%|███▏      | 6/19 [00:00<00:00, 27.65it/s]Capturing CUDA graphs (FULL):  53%|█████▎    | 10/19 [00:00<00:00, 29.23it/s]Capturing CUDA graphs (FULL):  74%|███████▎  | 14/19 [00:00<00:00, 31.00it/s]Capturing CUDA graphs (FULL):  95%|█████████▍| 18/19 [00:00<00:00, 33.37it/s]Capturing CUDA graphs (FULL): 100%|██████████| 19/19 [00:00<00:00, 31.78it/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': 100257}.
+  0%|          | 0/120 [00:00<?, ?it/s][rank0]: Traceback (most recent call last):
+[rank0]:   File "/kaggle/working/curator/run.py", line 689, in <module>
+[rank0]:     raise SystemExit(main())
+[rank0]:                      ~~~~^^
+[rank0]:   File "/kaggle/working/curator/run.py", line 684, in main
+[rank0]:     return {"setup": cmd_setup, "smoke": cmd_smoke, "compare": cmd_compare, "sysid": cmd_sysid, "loo": cmd_loo,
+[rank0]:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[rank0]:             "train": cmd_train, "report": lambda a: cmd_report(a, quiet=a.quiet), "status": cmd_status}[args.command](args)
+[rank0]:             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+[rank0]:   File "/kaggle/working/curator/run.py", line 247, in cmd_train
+[rank0]:     summary = run_single(cfg, CODE, resume=not args.fresh, gradient_checkpointing=not args.no_grad_ckpt)
+[rank0]:   File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/runner.py", line 145, in run_single
+[rank0]:     run_trl(ctl, cfg, out, backend=backend, resume_dir=ckpt,
+[rank0]:     ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:             gradient_checkpointing=gradient_checkpointing)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/trl_adapter.py", line 409, in run_trl
+[rank0]:     trainer.train()
+[rank0]:     ~~~~~~~~~~~~~^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 1520, in train
+[rank0]:     return inner_training_loop(
+[rank0]:         args=args,
+[rank0]:     ...<2 lines>...
+[rank0]:         ignore_keys_for_eval=ignore_keys_for_eval,
+[rank0]:     )
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 1602, in _inner_training_loop
+[rank0]:     self._run_epoch(
+[rank0]:     ~~~~~~~~~~~~~~~^
+[rank0]:         model=model,
+[rank0]:         ^^^^^^^^^^^^
+[rank0]:     ...<9 lines>...
+[rank0]:         steps_trained_in_current_epoch=steps_trained_in_current_epoch,
+[rank0]:         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:     )
+[rank0]:     ^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 1842, in _run_epoch
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 1470, in training_step
+[rank0]:     output = super().training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/transformers/trainer.py", line 2008, in training_step
+[rank0]:     inputs = self._prepare_inputs(inputs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/extras/profiling.py", line 211, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 1499, in _prepare_inputs
+[rank0]:     generation_batch = self._generate_and_score_completions(generation_batch)
+[rank0]:   File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/trl_adapter.py", line 51, in _generate_and_score_completions
+[rank0]:     output = super()._generate_and_score_completions(ctl.fill_generation_batch(list(inputs), g, n_draw))
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 2572, in _generate_and_score_completions
+[rank0]:     old_per_token_logps, _, _ = self._get_per_token_logps_and_entropies(
+[rank0]:                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+[rank0]:         self.model,
+[rank0]:         ^^^^^^^^^^^
+[rank0]:     ...<6 lines>...
+[rank0]:         **forward_kwargs,  # may contain pixel_values, image_grid_thw, pixel_attention_mask, spatial_shapes, image_sizes, image_position_ids
+[rank0]:         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:     )
+[rank0]:     ^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/extras/profiling.py", line 211, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/grpo_trainer.py", line 1456, in _get_per_token_logps_and_entropies
+[rank0]:     outputs = model(**model_inputs, labels=labels, fused_lm_head=True)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/accelerate/utils/operations.py", line 943, in forward
+[rank0]:     return model_forward(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/accelerate/utils/operations.py", line 931, in __call__
+[rank0]:     return convert_to_fp32(self.model_forward(*args, **kwargs))
+[rank0]:                            ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/amp/autocast_mode.py", line 44, in decorate_autocast
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/peft/peft_model.py", line 2101, in forward
+[rank0]:     return self.base_model(
+[rank0]:            ~~~~~~~~~~~~~~~^
+[rank0]:         input_ids=input_ids,
+[rank0]:         ^^^^^^^^^^^^^^^^^^^^
+[rank0]:     ...<6 lines>...
+[rank0]:         **kwargs,
+[rank0]:         ^^^^^^^^^
+[rank0]:     )
+[rank0]:     ^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/peft/tuners/tuners_utils.py", line 333, in forward
+[rank0]:     return self.model.forward(*args, **kwargs)
+[rank0]:            ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/trl/trainer/utils.py", line 1613, in _fused_forward
+[rank0]:     backbone_outputs = getattr(self, backbone_attr)(*args, **kwargs)
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/vllm/compilation/decorators.py", line 506, in __call__
+[rank0]:     if self.do_not_compile or torch.compiler.is_compiling():
+[rank0]:        ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/venv_vllm/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1967, in __getattr__
+[rank0]:     raise AttributeError(
+[rank0]:         f"'{type(self).__name__}' object has no attribute '{name}'"
+[rank0]:     )
+[rank0]: AttributeError: 'Olmo2Model' object has no attribute 'do_not_compile'. Did you mean: 'aot_compile'?
+  0%|          | 0/120 [01:48<?, ?it/s]
+[curator] uniform seed 0: backend=vllm, resuming from round-0008, syncing to hf://AnshBajpai05/curator-runs/olmo1b
+[curator] GRPO log-prob path: triton
+(MainProcess pid=341) ERROR 10-21 12:23:34 [fa_utils.py:212] Cannot use FA version 2 is not supported due to FA2 is only supported on devices with compute capability >= 8
+Loading pt checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:05<00:00,  5.53s/it]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:05<00:00,  5.53s/it]
+
+[rank0]:W1021 12:23:52.426000 341 torch/_inductor/utils.py:1953] Not enough SMs to use max_autotune_gemm mode
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   3%|▎         | 1/35 [00:01<00:43,  1.28s/it]Capturing CUDA graphs (PIECEWISE):   9%|▊         | 3/35 [00:01<00:12,  2.54it/s]Capturing CUDA graphs (PIECEWISE):  14%|█▍        | 5/35 [00:01<00:06,  4.43it/s]Capturing CUDA graphs (PIECEWISE):  20%|██        | 7/35 [00:01<00:04,  6.41it/s]Capturing CUDA graphs (PIECEWISE):  26%|██▌       | 9/35 [00:01<00:03,  8.40it/s]Capturing CUDA graphs (PIECEWISE):  31%|███▏      | 11/35 [00:01<00:02, 10.32it/s]Capturing CUDA graphs (PIECEWISE):  37%|███▋      | 13/35 [00:02<00:01, 12.02it/s]Capturing CUDA graphs (PIECEWISE):  43%|████▎     | 15/35 [00:02<00:01, 13.43it/s]Capturing CUDA graphs (PIECEWISE):  49%|████▊     | 17/35 [00:02<00:01, 14.59it/s]Capturing CUDA graphs (PIECEWISE):  54%|█████▍    | 19/35 [00:03<00:03,  4.59it/s]Capturing CUDA graphs (PIECEWISE):  63%|██████▎   | 22/35 [00:03<00:01,  6.66it/s]Capturing CUDA graphs (PIECEWISE):  71%|███████▏  | 25/35 [00:03<00:01,  9.01it/s]Capturing CUDA graphs (PIECEWISE):  80%|████████  | 28/35 [00:03<00:00, 11.63it/s]Capturing CUDA graphs (PIECEWISE):  89%|████████▊ | 31/35 [00:03<00:00, 13.73it/s]Capturing CUDA graphs (PIECEWISE):  97%|█████████▋| 34/35 [00:04<00:00,  6.48it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 35/35 [00:05<00:00,  6.01it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/2 [00:00<?, ?it/s]Capturing CUDA graphs (FULL): 100%|██████████| 2/2 [00:00<00:00, 15.89it/s]Capturing CUDA graphs (FULL): 100%|██████████| 2/2 [00:00<00:00, 15.87it/s]
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   3%|▎         | 1/35 [00:00<00:04,  7.71it/s]Capturing CUDA graphs (PIECEWISE):   9%|▊         | 3/35 [00:00<00:03, 10.38it/s]Capturing CUDA graphs (PIECEWISE):  14%|█▍        | 5/35 [00:00<00:02, 12.27it/s]Capturing CUDA graphs (PIECEWISE):  20%|██        | 7/35 [00:00<00:02, 13.78it/s]Capturing CUDA graphs (PIECEWISE):  26%|██▌       | 9/35 [00:00<00:01, 14.88it/s]Capturing CUDA graphs (PIECEWISE):  31%|███▏      | 11/35 [00:00<00:01, 15.78it/s]Capturing CUDA graphs (PIECEWISE):  37%|███▋      | 13/35 [00:00<00:01, 16.38it/s]Capturing CUDA graphs (PIECEWISE):  43%|████▎     | 15/35 [00:01<00:01, 16.77it/s]Capturing CUDA graphs (PIECEWISE):  49%|████▊     | 17/35 [00:01<00:01, 17.21it/s]Capturing CUDA graphs (PIECEWISE):  54%|█████▍    | 19/35 [00:01<00:00, 17.84it/s]Capturing CUDA graphs (PIECEWISE):  63%|██████▎   | 22/35 [00:01<00:00, 18.95it/s]Capturing CUDA graphs (PIECEWISE):  71%|███████▏  | 25/35 [00:01<00:00, 20.29it/s]Capturing CUDA graphs (PIECEWISE):  80%|████████  | 28/35 [00:01<00:00, 21.81it/s]Capturing CUDA graphs (PIECEWISE):  89%|████████▊ | 31/35 [00:01<00:00, 23.43it/s]Capturing CUDA graphs (PIECEWISE):  97%|█████████▋| 34/35 [00:01<00:00, 24.29it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 35/35 [00:01<00:00, 18.68it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/19 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):  16%|█▌        | 3/19 [00:00<00:00, 24.34it/s]Capturing CUDA graphs (FULL):  32%|███▏      | 6/19 [00:00<00:00, 25.85it/s]Capturing CUDA graphs (FULL):  47%|████▋     | 9/19 [00:00<00:00, 27.08it/s]Capturing CUDA graphs (FULL):  68%|██████▊   | 13/19 [00:00<00:00, 29.17it/s]Capturing CUDA graphs (FULL):  89%|████████▉ | 17/19 [00:00<00:00, 30.38it/s]Capturing CUDA graphs (FULL): 100%|██████████| 19/19 [00:00<00:00, 29.15it/s]
+[curator] 1 module(s) of the training model released from vLLM's compile hook
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': 100257}.
+  0%|          | 0/104 [00:00<?, ?it/s]  1%|          | 1/104 [03:25<5:52:05, 205.10s/it]                                                    1%|          | 1/104 [03:25<5:52:05, 205.10s/it]  2%|▏         | 2/104 [06:41<5:40:08, 200.09s/it]                                                    2%|▏         | 2/104 [06:41<5:40:08, 200.09s/it]  3%|▎         | 3/104 [10:03<5:37:50, 200.70s/it]                                                    3%|▎         | 3/104 [10:03<5:37:50, 200.70s/it]  4%|▍         | 4/104 [34:01<19:08:47, 689.28s/it]                                                     4%|▍         | 4/104 [34:01<19:08:47, 689.28s/it]  5%|▍         | 5/104 [37:21<14:06:11, 512.84s/it]                                                     5%|▍         | 5/104 [37:21<14:06:11, 512.84s/it]  6%|▌         | 6/104 [40:26<10:55:42, 401.45s/it]                                                     6%|▌         | 6/104 [40:26<10:55:42, 401.45s/it]  7%|▋         | 7/104 [44:01<9:10:34, 340.57s/it]                                                     7%|▋         | 7/104 [44:01<9:10:34, 340.57s/it]  8%|▊         | 8/104 [47:32<7:58:32, 299.08s/it]                                                    8%|▊         | 8/104 [47:32<7:58:32, 299.08s/it]  9%|▊         | 9/104 [50:56<7:06:42, 269.50s/it]                                                  {'loss': '0.005814', 'grad_norm': '0.0292', 'learning_rate': '1e-05', 'num_tokens': '5.468e+04', 'completions/mean_length': '327.1', 'completions/min_length': '7', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04688', 'completions/mean_terminated_length': '292.8', 'completions/min_terminated_length': '7', 'completions/max_terminated_length': '1024', 'rewards/curator_reward/mean': '0.1953', 'rewards/curator_reward/std': '0.398', 'reward': '0.1953', 'reward_std': '0.398', 'frac_reward_zero_std': '0.5625', 'sampling/sampling_logp_difference/mean': '0.00148', 'sampling/sampling_logp_difference/max': '0.08495', 'sampling/importance_sampling_ratio/min': '0.8172', 'sampling/importance_sampling_ratio/mean': '0.9946', 'sampling/importance_sampling_ratio/max': '1.356', 'entropy': '0.8029', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '192.9', 'epoch': '0.009524'}
+{'loss': '0.01493', 'grad_norm': '0.03922', 'learning_rate': '1e-05', 'num_tokens': '1.075e+05', 'completions/mean_length': '319.7', 'completions/min_length': '12', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.02344', 'completions/mean_terminated_length': '302.8', 'completions/min_terminated_length': '12', 'completions/max_terminated_length': '1015', 'rewards/curator_reward/mean': '0.1562', 'rewards/curator_reward/std': '0.3645', 'reward': '0.1562', 'reward_std': '0.3645', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001393', 'sampling/sampling_logp_difference/max': '0.05709', 'sampling/importance_sampling_ratio/min': '0.8208', 'sampling/importance_sampling_ratio/mean': '0.9968', 'sampling/importance_sampling_ratio/max': '1.16', 'entropy': '0.7074', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '184', 'epoch': '0.01905'}
+{'loss': '-0.03163', 'grad_norm': '0.03554', 'learning_rate': '1e-05', 'num_tokens': '1.623e+05', 'completions/mean_length': '338.5', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.03125', 'completions/mean_terminated_length': '316.3', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '1009', 'rewards/curator_reward/mean': '0.1953', 'rewards/curator_reward/std': '0.398', 'reward': '0.1953', 'reward_std': '0.398', 'frac_reward_zero_std': '0.625', 'sampling/sampling_logp_difference/mean': '0.001564', 'sampling/sampling_logp_difference/max': '0.07719', 'sampling/importance_sampling_ratio/min': '0.8591', 'sampling/importance_sampling_ratio/mean': '1.005', 'sampling/importance_sampling_ratio/max': '1.299', 'entropy': '0.7963', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '189.3', 'epoch': '0.02857'}
+{'loss': '0.02921', 'grad_norm': '0.03213', 'learning_rate': '1e-05', 'num_tokens': '2.162e+05', 'completions/mean_length': '325.8', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.01562', 'completions/mean_terminated_length': '314.7', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '1021', 'rewards/curator_reward/mean': '0.1016', 'rewards/curator_reward/std': '0.3033', 'reward': '0.1016', 'reward_std': '0.3033', 'frac_reward_zero_std': '0.5625', 'sampling/sampling_logp_difference/mean': '0.001452', 'sampling/sampling_logp_difference/max': '0.05743', 'sampling/importance_sampling_ratio/min': '0.7965', 'sampling/importance_sampling_ratio/mean': '1.002', 'sampling/importance_sampling_ratio/max': '1.178', 'entropy': '0.7018', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '187.2', 'epoch': '0.0381'}
+{'loss': '0.02079', 'grad_norm': '0.02783', 'learning_rate': '1e-05', 'num_tokens': '2.675e+05', 'completions/mean_length': '303.8', 'completions/min_length': '14', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.03125', 'completions/mean_terminated_length': '280.6', 'completions/min_terminated_length': '14', 'completions/max_terminated_length': '984', 'rewards/curator_reward/mean': '0.1328', 'rewards/curator_reward/std': '0.3407', 'reward': '0.1328', 'reward_std': '0.3407', 'frac_reward_zero_std': '0.6875', 'sampling/sampling_logp_difference/mean': '0.001522', 'sampling/sampling_logp_difference/max': '0.06031', 'sampling/importance_sampling_ratio/min': '0.8505', 'sampling/importance_sampling_ratio/mean': '1.002', 'sampling/importance_sampling_ratio/max': '1.158', 'entropy': '0.8216', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '187.5', 'epoch': '0.04762'}
+{'loss': '0.004501', 'grad_norm': '0.02751', 'learning_rate': '1e-05', 'num_tokens': '3.179e+05', 'completions/mean_length': '293.5', 'completions/min_length': '12', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.02344', 'completions/mean_terminated_length': '276', 'completions/min_terminated_length': '12', 'completions/max_terminated_length': '931', 'rewards/curator_reward/mean': '0.2656', 'rewards/curator_reward/std': '0.4434', 'reward': '0.2656', 'reward_std': '0.4434', 'frac_reward_zero_std': '0.6875', 'sampling/sampling_logp_difference/mean': '0.001367', 'sampling/sampling_logp_difference/max': '0.04755', 'sampling/importance_sampling_ratio/min': '0.8575', 'sampling/importance_sampling_ratio/mean': '1.004', 'sampling/importance_sampling_ratio/max': '1.264', 'entropy': '0.6592', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '172.7', 'epoch': '0.05714'}
+{'loss': '0.01384', 'grad_norm': '0.02818', 'learning_rate': '1e-05', 'num_tokens': '3.782e+05', 'completions/mean_length': '378.7', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.0625', 'completions/mean_terminated_length': '335.7', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '990', 'rewards/curator_reward/mean': '0.2578', 'rewards/curator_reward/std': '0.4391', 'reward': '0.2578', 'reward_std': '0.4391', 'frac_reward_zero_std': '0.625', 'sampling/sampling_logp_difference/mean': '0.001443', 'sampling/sampling_logp_difference/max': '0.0562', 'sampling/importance_sampling_ratio/min': '0.7738', 'sampling/importance_sampling_ratio/mean': '1.001', 'sampling/importance_sampling_ratio/max': '1.355', 'entropy': '0.7558', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '203.1', 'epoch': '0.06667'}
+{'loss': '0.002067', 'grad_norm': '0.0217', 'learning_rate': '1e-05', 'num_tokens': '4.354e+05', 'completions/mean_length': '349.2', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04688', 'completions/mean_terminated_length': '316', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '1006', 'rewards/curator_reward/mean': '0.1953', 'rewards/curator_reward/std': '0.398', 'reward': '0.1953', 'reward_std': '0.398', 'frac_reward_zero_std': '0.6875', 'sampling/sampling_logp_difference/mean': '0.001443', 'sampling/sampling_logp_difference/max': '0.04682', 'sampling/importance_sampling_ratio/min': '0.8089', 'sampling/importance_sampling_ratio/mean': '0.9988', 'sampling/importance_sampling_ratio/max': '1.223', 'entropy': '0.7061', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '197.8', 'epoch': '0.07619'}
+{'loss': '0.009958', 'grad_norm': '0.03263', 'learning_rate': '1e-05', 'num_tokens': '4.9e+05', 'completions/mean_length': '336.8', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05469', 'completions/mean_terminated_length': '297', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '967', 'rewards/curator_reward/mean': '0.2891', 'rewards/curator_reward/std': '0.4551', 'reward': '0.2891', 'reward_std': '0.4551', 'frac_reward_zero_std': '0.5625', 'sampling/sampling_logp_difference/mean': '0.001488', 'sampling/sampling_logp_difference/max': '0.08978', 'sampling/importance_sampling_ratio/min': '0.7509', 'sampling/importance_sampling_ratio/mean': '1.004', 'sampling/importance_sampling_ratio/max': '1.276', 'entropy': '0.7155', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '192.3', 'epoch': '0.08571'}  9%|▊         | 9/104 [50:56<7:06:42, 269.50s/it] 10%|▉         | 10/104 [54:30<6:35:13, 252.27s/it]                                                    10%|▉         | 10/104 [54:30<6:35:13, 252.27s/it] 11%|█         | 11/104 [58:24<6:22:34, 246.83s/it]                                                    11%|█         | 11/104 [58:24<6:22:34, 246.83s/it] 12%|█▏        | 12/104 [1:01:36<5:52:57, 230.19s/it]                                                      12%|█▏        | 12/104 [1:01:36<5:52:57, 230.19s/it]                                                      12%|█▏        | 12/104 [1:01:36<5:52:57, 230.19s/it] 12%|█▏        | 12/104 [1:01:36<7:52:22, 308.07s/it]
+
+{'loss': '0.008866', 'grad_norm': '0.02887', 'learning_rate': '1e-05', 'num_tokens': '5.482e+05', 'completions/mean_length': '361.1', 'completions/min_length': '11', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.07812', 'completions/mean_terminated_length': '304.9', 'completions/min_terminated_length': '11', 'completions/max_terminated_length': '1015', 'rewards/curator_reward/mean': '0.1719', 'rewards/curator_reward/std': '0.3788', 'reward': '0.1719', 'reward_std': '0.3788', 'frac_reward_zero_std': '0.625', 'sampling/sampling_logp_difference/mean': '0.001523', 'sampling/sampling_logp_difference/max': '0.1905', 'sampling/importance_sampling_ratio/min': '0.7794', 'sampling/importance_sampling_ratio/mean': '1', 'sampling/importance_sampling_ratio/max': '1.283', 'entropy': '0.8119', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '201.1', 'epoch': '0.09524'}
+{'loss': '0.007621', 'grad_norm': '0.02968', 'learning_rate': '1e-05', 'num_tokens': '6.072e+05', 'completions/mean_length': '348.8', 'completions/min_length': '10', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.07031', 'completions/mean_terminated_length': '297.8', 'completions/min_terminated_length': '10', 'completions/max_terminated_length': '1016', 'rewards/curator_reward/mean': '0.2969', 'rewards/curator_reward/std': '0.4587', 'reward': '0.2969', 'reward_std': '0.4587', 'frac_reward_zero_std': '0.625', 'sampling/sampling_logp_difference/mean': '0.001395', 'sampling/sampling_logp_difference/max': '0.08467', 'sampling/importance_sampling_ratio/min': '0.8299', 'sampling/importance_sampling_ratio/mean': '0.9994', 'sampling/importance_sampling_ratio/max': '1.226', 'entropy': '0.7433', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '220.2', 'epoch': '0.1048'}
+{'loss': '-0.01782', 'grad_norm': '0.04139', 'learning_rate': '1e-05', 'num_tokens': '6.611e+05', 'completions/mean_length': '322.6', 'completions/min_length': '18', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.007812', 'completions/mean_terminated_length': '317.1', 'completions/min_terminated_length': '18', 'completions/max_terminated_length': '1006', 'rewards/curator_reward/mean': '0.2891', 'rewards/curator_reward/std': '0.4551', 'reward': '0.2891', 'reward_std': '0.4551', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001498', 'sampling/sampling_logp_difference/max': '0.09405', 'sampling/importance_sampling_ratio/min': '0.7749', 'sampling/importance_sampling_ratio/mean': '1.002', 'sampling/importance_sampling_ratio/max': '1.238', 'entropy': '0.7368', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '180', 'epoch': '0.1143'}
+{'train_runtime': '3697', 'train_samples_per_second': '3.6', 'train_steps_per_second': '0.028', 'train_loss': '0.005679', 'epoch': '0.1143'}
+[curator] uniform seed 0: final macro 0.2175 after 14 rounds, 1.597 charged GPU-h

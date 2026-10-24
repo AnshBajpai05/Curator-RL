@@ -1,0 +1,25 @@
+{
+  "budget_gpu_hours": 1.5,
+  "charged_gpu_hours": 1.55553,
+  "eval_errors": 0,
+  "global_step": 30,
+  "label": "curator",
+  "last_checkpoint_round": 15,
+  "max_rounds": 60,
+  "method": "curator",
+  "round": 15,
+  "round_wall_seconds": 297.6817488670349,
+  "seed": 0,
+  "status": "finished",
+  "stop_reason": "budget",
+  "sync": {
+    "failed": 0,
+    "last_error": null,
+    "last_ok_utc": "2026-10-21T14:18:23Z",
+    "last_round": 15,
+    "ok": 5,
+    "target": "hf://AnshBajpai05/curator-runs/olmo1b"
+  },
+  "updated_utc": "2026-10-21T14:18:23Z",
+  "verifier_errors": 0
+}

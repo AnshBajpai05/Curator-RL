@@ -1,0 +1,41 @@
+{
+  "backend": "auto",
+  "budget_gpu_hours": 1.5,
+  "calib_interval": 10,
+  "calib_items": 100,
+  "checkpoint_every": 1,
+  "deadline_unix": 1792558672.0272894,
+  "envs": [
+    "gsm8k",
+    "math35",
+    "mbpp",
+    "countdown",
+    "noisy"
+  ],
+  "eval_samples": 4,
+  "eval_temperature": 1.0,
+  "final_items": 300,
+  "group_size": 8,
+  "keep_checkpoints": 3,
+  "label": "",
+  "learning_rate": 1e-05,
+  "lora_r": 16,
+  "max_completion_tokens": 1024,
+  "max_rounds": 60,
+  "method": "lp",
+  "micro_batch": 8,
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "out_dir": "/kaggle/working/curator_runs",
+  "overrides": [
+    "baselines.lp.tau=0.75"
+  ],
+  "prompts_per_step": 16,
+  "report_every": 10,
+  "report_items": 100,
+  "seed": 0,
+  "steps_per_round": 2,
+  "sync_every_min": 5.0,
+  "sync_to": "hf://AnshBajpai05/curator-runs",
+  "verify_workers": 4,
+  "vllm_gpu_memory_utilization": 0.3
+}
