@@ -3,6 +3,40 @@
 Cost-aware, calibrated environment scheduling for RL training of LLMs.
 Repository: `curator-rl/`. Every number below comes from the code, `configs/base.yaml`, or a committed report. Decision numbers (D-xx) refer to `curator-rl/docs/DECISIONS.md`.
 
+> ## Read first: updates as of 2026-11-01
+>
+> These notes were written before the GPU runs. Where a later section disagrees with this block,
+> this block is current. Sources: `curator_results*/comparison.md`, the run configs and logs, and
+> `curator-rl/docs/DECISIONS.md` D-96 … D-107.
+>
+> - **GPU runs are done.** Qwen2.5-0.5B-Instruct on Kaggle T4, 1.5 charged GPU-hours per run
+>   (R = 2, P = 16, G = 8, LoRA r 16, learning rate 1e-5), plus one OLMo-2-0425-1B-DPO pair.
+>   Every method gains +4.2 to +6.8 points of sampled accuracy over the untrained model.
+>   **Curator ties Uniform:** −0.0013, 95% t-interval [−0.012, +0.010], 3 seeds (D-101). The claim
+>   "Curator beats Uniform" is dropped; the thesis is now robustness (D-103).
+> - **The GPU used a different preset from the defaults below** (`kaggle/run.py --preset gpu_tuned`,
+>   D-98): γ = 1 (no forgetting), κ = 0.25, τ = 1.0, reward audit on, S5 capped at the floor ε/N
+>   (2% per arm), 3 mismatch windows for a calibration flag. The γ = 0.95 / κ = 0.5 / τ = 0.3 values
+>   in sections 4 and 10 are the simulator defaults in `configs/base.yaml`.
+> - **The reward audit, not calibration, catches the random-reward arm.** On GPU every S5 came from
+>   the label-free audit (`signals/audit.py`, dispersion ratio D below 1.5): first flag at round 8, 23
+>   and 8 (Curator seeds 0–2), 9 (Curator without calibration), 7 (OLMo), 1 (`curator_q`, pre-flight
+>   gate). No real arm was ever flagged. Calibration raised no flag and added nothing measurable.
+> - **The 78–86% calibration detection (D-95) no longer holds.** At the GPU batch shape it is 0%
+>   before the audit fixes and 10–28% after (D-96), and 0.07 with a shared noisy slice (D-104).
+> - **Calibration credit is now joint (`calib.credit: transfer`)** for arms sharing a slice (audit
+>   E-03); section 5.3 describes the legacy own-slice credit.
+> - **Real training cost differs less than generation cost.** The system-identification
+>   (`dirichlet`) runs fitted full-step cost per arm: MATH35 1.22–1.58× GSM8K, MBPP 0.84–0.89×, with a
+>   fixed 56–66 s per step dominating (R² 0.45–0.54). The 2.67× in section 8.3 is generation only.
+> - **What Curator does to the mix on GPU:** Countdown about 5% of prompts against Uniform's 20%; the
+>   noisy arm 6–16% against 20%; SEC and DUMP put 34% and 31% into the noisy arm (seed 0).
+> - **Built since these notes:** cost attribution and ledger, the TRL runner with crash-safe
+>   checkpoints, ROI leaderboard and leave-one-out (LOO not yet run on GPU), plots, the pre-flight
+>   verifier check (`signals/verifier_fuzz.py`), question filtering (`_q` methods,
+>   `trainer/group_filter.py`), the `hackable` stress arm, and evaluation protocol 2 (sampled
+>   accuracy, item-paired). Tests: 521 passed, 1 skipped (2026-11-01).
+
 ---
 
 ## 0. The project in one paragraph
@@ -63,7 +97,7 @@ s.t.   Σ_t cost(w_t) ≤ B                        charged cost (training + cali
 | Loop | Agent | Action | Reward | Built? |
 |---|---|---|---|---|
 | Inner | the LLM, GRPO via TRL 1.15 with LoRA | tokens | verifier score 0/1 | off-the-shelf trainer, unchanged |
-| Outer | CURATOR scheduler | mixture weights over environments | proxy reward per measured cost, checked against held-out benchmark | built and tested in simulation; not yet connected to the trainer |
+| Outer | CURATOR scheduler | mixture weights over environments | proxy reward per measured cost, checked against held-out benchmark | built, tested in simulation, and run on Kaggle T4 (see the update block at the top) |
 
 ### 2.2 Code layers (enforced by `tests/architecture/test_import_rules.py`)
 
@@ -78,8 +112,8 @@ The point of this rule: the scheduler is a pure function of `RoundObservation`s.
 
 ### 2.3 What exists and what is empty
 
-- **Built and tested (326 tests pass, 24 skip without downloaded data):** config, all 5 environments, splits and the sealed-test guard, simulator and oracles, signal engine, D-UCB scheduler, 6 baselines, calibrator, CRE (built, not adopted), and the Kaggle measurement scripts.
-- **Empty packages (one-line `__init__.py`):** `cost/` (cost meter), `trainer/` (TRL adapter), `roi/` (ROI leaderboard), `viz/`. These are Phase F and later.
+- **Built and tested (at the time of writing; 521 tests pass as of 2026-11-01):** config, all 5 environments, splits and the sealed-test guard, simulator and oracles, signal engine, D-UCB scheduler, 6 baselines, calibrator, CRE (built, not adopted), and the Kaggle measurement scripts.
+- **Packages that were empty when these notes were written and are now built:** `cost/` (step attribution, ledger), `trainer/` (TRL adapter, round controller, checkpoints, sysid), `roi/` (ROI leaderboard), `viz/` (plots).
 
 ---
 
@@ -560,11 +594,11 @@ A 2⁵ design switched discounting, cost normalisation, status layer, calibratio
 
 | ID | Hypothesis | Status |
 |---|---|---|
-| H1 | Curator > Uniform, heterogeneous costs | supported in sim (+0.028 to +0.030); GPU test pending |
-| H2 | Curator > SEC/DUMP-style | supported in refit sim (+0.027 to +0.033); GPU test pending |
+| H1 | Curator > Uniform, heterogeneous costs | supported in sim (+0.028 to +0.030); **not supported on GPU** (ties Uniform, 3 seeds; D-101) |
+| H2 | Curator > SEC/DUMP-style | supported in refit sim (+0.027 to +0.033); on GPU SEC and DUMP are below Uniform on seed 0, confirmation runs pending (D-103) |
 | H3 | cost normalisation drives H1/H2 | **not supported** on refit scenarios (same gain at equal cost); strongly supported in S-C |
-| H4 | calibration detects the noisy arm and cuts its share | detection supported (78–86%); share cut is small (0.23 → 0.19) |
-| H5 | ROI ranking agrees with leave-one-out | not built |
+| H4 | calibration detects the noisy arm and cuts its share | 78–86% in the pre-audit simulator, **not at the GPU shape** (10–28%, D-96); on GPU the reward audit detects it instead |
+| H5 | ROI ranking agrees with leave-one-out | built (D-100); one-run GPU ROI is descriptive only; LOO not yet run on GPU |
 | H6 | equal costs: Curator ≈ Uniform | Curator is *above* Uniform (+0.033); the non-inferiority check passes |
 | H7 | discounting helps under drift | evidence against: γ = 1 shows no significant loss even in drift scenario S-E; formally open |
 

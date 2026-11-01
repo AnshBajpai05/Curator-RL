@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "What Makes CURATOR Different: One Scheduling Round",
+    "output": "Diagram_&_Documentation/03-one-round-game-changers.html",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "measure", "label": "1. Measure" },
+    { "id": "score", "label": "2. Score" },
+    { "id": "decide", "label": "3. Decide" },
+    { "id": "guard", "label": "Reward health", "variant": "exception" }
+  ],
+  "mainPath": ["obs", "signal", "proxy", "cost", "ducb", "mix", "quota"],
+  "nodes": [
+    { "id": "obs", "lane": "measure", "col": 0, "type": "external", "label": "Round results", "sublabel": "successes, tokens, seconds", "width": 140 },
+    { "id": "signal", "lane": "measure", "col": 1, "type": "backend", "label": "Signals", "sublabel": "pass, progress, richness", "tag": "standard", "width": 140 },
+    { "id": "proxy", "lane": "score", "col": 1, "type": "backend", "label": "Proxy reward", "sublabel": "0.5 progress + 0.5 richness", "width": 140 },
+    { "id": "cost", "lane": "score", "col": 2, "type": "backend", "label": "Divide by cost", "sublabel": "measured unit cost", "tag": "added here", "width": 140 },
+    { "id": "ducb", "lane": "score", "col": 3, "type": "backend", "label": "Discounted UCB", "sublabel": "GPU: gamma 1, kappa 0.25", "tag": "standard", "width": 140 },
+    { "id": "mix", "lane": "decide", "col": 3, "type": "backend", "label": "Mixture", "sublabel": "softmax + 10% floor", "width": 140 },
+    { "id": "status", "lane": "decide", "col": 2, "type": "security", "label": "Status rules", "sublabel": "solved, too hard, spurious", "tag": "ours", "width": 140 },
+    { "id": "quota", "lane": "decide", "col": 4, "type": "messagebus", "label": "Prompt quotas", "sublabel": "next round to GRPO", "width": 140 },
+    { "id": "audit", "lane": "guard", "col": 1, "type": "security", "label": "Reward audit", "sublabel": "every round, label-free", "tag": "ours", "width": 140 },
+    { "id": "flag", "lane": "guard", "col": 2, "type": "security", "label": "Spurious flag", "sublabel": "reward ignores prompt", "width": 140 },
+    { "id": "heldout", "lane": "guard", "col": 3, "type": "database", "label": "Held-out check", "sublabel": "every 10 rounds", "width": 140 }
+  ],
+  "edges": [
+    { "id": "obs-signal", "from": "obs", "to": "signal", "variant": "default" },
+    { "id": "signal-proxy", "from": "signal", "to": "proxy", "variant": "emphasis" },
+    { "id": "proxy-cost", "from": "proxy", "to": "cost", "label": "gain per dollar", "variant": "emphasis" },
+    { "id": "cost-ducb", "from": "cost", "to": "ducb", "variant": "emphasis" },
+    { "id": "ducb-mix", "from": "ducb", "to": "mix", "label": "scores", "variant": "emphasis" },
+    { "id": "mix-quota", "from": "mix", "to": "quota", "label": "largest remainder", "variant": "emphasis" },
+    { "id": "status-mix", "from": "status", "to": "mix", "label": "cap weight", "variant": "security", "role": "branch" },
+    { "id": "signal-status", "from": "signal", "to": "status", "label": "p, z, richness", "variant": "dashed", "role": "branch" },
+    { "id": "audit-flag", "from": "audit", "to": "flag", "label": "D below 1.5", "variant": "security" },
+    { "id": "heldout-flag", "from": "heldout", "to": "flag", "label": "gain short", "variant": "dashed" },
+    { "id": "flag-status", "from": "flag", "to": "status", "label": "S5", "variant": "security", "role": "branch" }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "1. Cost-aware",
+      "items": [
+        "Gain is divided by the measured cost of each environment",
+        "Generation: MATH costs 2.7x GSM8K; a full training step only 1.2-1.6x"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "2. Status-aware",
+      "items": [
+        "Saturated, too-hard and spurious environments are capped",
+        "On GPU, Countdown fell from Uniform's 20% to about 5% of prompts"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "3. Reward-aware",
+      "items": [
+        "The reward audit flagged the random-reward arm in every GPU run",
+        "It never flagged a real environment; calibration added nothing measurable"
+      ]
+    }
+  ]
+}

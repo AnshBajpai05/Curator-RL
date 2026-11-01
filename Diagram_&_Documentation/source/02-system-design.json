@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CURATOR System Design",
+    "output": "Diagram_&_Documentation/02-system-design.html",
+    "quality_profile": "showcase"
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 5,
+    "gapX": 96,
+    "cellW": 130
+  },
+  "components": [
+    {
+      "id": "envs",
+      "type": "external",
+      "label": "Environments",
+      "sublabel": "5 task environments",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "stream",
+      "type": "backend",
+      "label": "Prompt stream",
+      "sublabel": "quotas, question filter",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "trainer",
+      "type": "messagebus",
+      "label": "TRL GRPO trainer",
+      "sublabel": "vLLM, LoRA r16, lr 1e-5",
+      "tag": "unmodified",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "reward",
+      "type": "backend",
+      "label": "Reward router",
+      "sublabel": "per-env verifiers, pool",
+      "row": 0,
+      "col": 3
+    },
+    {
+      "id": "sandbox",
+      "type": "security",
+      "label": "MBPP sandbox",
+      "sublabel": "isolated test run",
+      "row": 0,
+      "col": 4
+    },
+    {
+      "id": "sim",
+      "type": "cloud",
+      "label": "Simulator",
+      "sublabel": "scenarios S-A to S-J",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "sched",
+      "type": "backend",
+      "label": "D-UCB scheduler",
+      "sublabel": "mixture + status layer",
+      "tag": "pure CPU",
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "signals",
+      "type": "backend",
+      "label": "Signal engine",
+      "sublabel": "LP, richness, reward audit",
+      "tag": "pure CPU",
+      "row": 1,
+      "col": 2
+    },
+    {
+      "id": "cost",
+      "type": "backend",
+      "label": "Cost meter",
+      "sublabel": "verify time + token share",
+      "row": 1,
+      "col": 3
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "Checkpoints",
+      "sublabel": "per round, HF mirror",
+      "row": 1,
+      "col": 4
+    },
+    {
+      "id": "fuzz",
+      "type": "security",
+      "label": "Pre-flight check",
+      "sublabel": "junk answers, before round 1",
+      "row": 2,
+      "col": 1
+    },
+    {
+      "id": "calib",
+      "type": "security",
+      "label": "Calibrator",
+      "sublabel": "targeted, paired, S5 flags",
+      "tag": "pure CPU",
+      "row": 2,
+      "col": 2
+    },
+    {
+      "id": "heldout",
+      "type": "database",
+      "label": "Held-out slices",
+      "sublabel": "calibration split, sealed test",
+      "row": 2,
+      "col": 3
+    }
+  ],
+  "connections": [
+    {
+      "id": "envs-stream",
+      "from": "envs",
+      "to": "stream",
+      "label": "prompts"
+    },
+    {
+      "id": "stream-trainer",
+      "from": "stream",
+      "to": "trainer",
+      "label": "batch",
+      "variant": "emphasis"
+    },
+    {
+      "id": "trainer-reward",
+      "from": "trainer",
+      "to": "reward",
+      "label": "completions"
+    },
+    {
+      "id": "reward-sandbox",
+      "from": "reward",
+      "to": "sandbox",
+      "label": "code",
+      "variant": "dashed"
+    },
+    {
+      "id": "reward-cost",
+      "from": "reward",
+      "to": "cost",
+      "label": "spans"
+    },
+    {
+      "id": "trainer-signals",
+      "from": "trainer",
+      "to": "signals",
+      "label": "RoundObservation",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cost-signals",
+      "from": "cost",
+      "to": "signals",
+      "label": "unit cost"
+    },
+    {
+      "id": "signals-sched",
+      "from": "signals",
+      "to": "sched",
+      "label": "signals",
+      "variant": "emphasis"
+    },
+    {
+      "id": "sched-stream",
+      "from": "sched",
+      "to": "stream",
+      "label": "quotas",
+      "variant": "emphasis"
+    },
+    {
+      "id": "sim-sched",
+      "from": "sim",
+      "to": "sched",
+      "label": "same observation type",
+      "variant": "dashed"
+    },
+    {
+      "id": "fuzz-sched",
+      "from": "fuzz",
+      "to": "sched",
+      "label": "S5 at start",
+      "variant": "security"
+    },
+    {
+      "id": "signals-calib",
+      "from": "signals",
+      "to": "calib",
+      "label": "claims",
+      "variant": "dashed"
+    },
+    {
+      "id": "calib-signals",
+      "from": "calib",
+      "to": "signals",
+      "label": "mismatch",
+      "variant": "security"
+    },
+    {
+      "id": "heldout-calib",
+      "from": "heldout",
+      "to": "calib",
+      "label": "paired items"
+    },
+    {
+      "id": "cost-ledger",
+      "from": "cost",
+      "to": "ledger",
+      "label": "ledger",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Two loops",
+      "items": [
+        "Inner loop: GRPO trains the model, rewards come from verifiers",
+        "Outer loop: CURATOR chooses the environment mix each round"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Layering rule",
+      "items": [
+        "Scheduler, signals and calibrator are pure CPU code with no torch",
+        "Simulator and trainer emit the same observation type",
+        "So scheduler code tested in simulation is the code that runs on GPU"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Reward health",
+      "items": [
+        "Reward audit inside the signal engine runs every round at no cost",
+        "Calibration mismatch flags go to the status machine in the signal engine",
+        "All checks change the mixture, never the reward"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Safety and recovery",
+      "items": [
+        "Sealed test sets are opened once, at the very end",
+        "Every round is checkpointed so a lost Kaggle session resumes"
+      ]
+    }
+  ]
+}

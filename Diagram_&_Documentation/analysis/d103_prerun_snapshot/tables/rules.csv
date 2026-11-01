@@ -1,0 +1,5 @@
+rule,comparison,seeds,mean,se,t_lo,t_hi,sign_flip_p,verdict,reason
+R1,curator_q - uniform_q,0,0.018333333333333333,,,,,PENDING,"needs seeds [0, 1, 2]; missing [1, 2]"
+R2,sec - uniform,0,-0.023124999999999996,,,,,PENDING,"needs seeds [0, 1, 2]; missing [1, 2]"
+R2,dump - uniform,0,-0.014791666666666667,,,,,PENDING,"needs seeds [0, 1, 2]; missing [1, 2]"
+R4,curator_nocal - curator,0,-0.011041666666666667,,,,,PENDING,"needs seeds [0, 1, 2]; missing [1, 2]"

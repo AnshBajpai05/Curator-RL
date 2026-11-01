@@ -1,0 +1,65 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "CURATOR Project Overview",
+    "output": "Diagram_&_Documentation/01-project-overview.html",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "inputs", "label": "Inputs" },
+    { "id": "curator", "label": "CURATOR (our contribution)" },
+    { "id": "train", "label": "RL training (unchanged)" },
+    { "id": "check", "label": "Reward health" }
+  ],
+  "mainPath": ["budget", "scheduler", "quotas", "grpo", "final"],
+  "nodes": [
+    { "id": "budget", "lane": "inputs", "col": 0, "type": "external", "label": "GPU budget", "sublabel": "1.5 GPU-hours per run", "width": 132 },
+    { "id": "envs", "lane": "inputs", "col": 1, "type": "external", "label": "5 environments", "sublabel": "GSM8K, MATH35, MBPP, Countdown, Noisy", "width": 160 },
+    { "id": "scheduler", "lane": "curator", "col": 1, "type": "backend", "label": "Scheduler", "sublabel": "picks the mix each round", "tag": "bandit", "width": 140 },
+    { "id": "quotas", "lane": "curator", "col": 2, "type": "backend", "label": "Prompt quotas", "sublabel": "prompts per environment", "width": 132 },
+    { "id": "signals", "lane": "curator", "col": 4, "type": "backend", "label": "Signals", "sublabel": "pass rate, progress, cost", "width": 132 },
+    { "id": "grpo", "lane": "train", "col": 3, "type": "messagebus", "label": "GRPO trainer", "sublabel": "Qwen2.5-0.5B, OLMo-2-1B", "tag": "unmodified", "width": 140 },
+    { "id": "final", "lane": "train", "col": 5, "type": "external", "label": "Final score", "sublabel": "held-out benchmark", "width": 132 },
+    { "id": "calib", "lane": "check", "col": 2, "type": "security", "label": "Reward checks", "sublabel": "audit every round", "tag": "label-free", "width": 132 }
+  ],
+  "edges": [
+    { "id": "budget-sched", "from": "budget", "to": "scheduler", "label": "budget", "variant": "default" },
+    { "id": "envs-sched", "from": "envs", "to": "scheduler", "label": "tasks", "variant": "default" },
+    { "id": "sched-quotas", "from": "scheduler", "to": "quotas", "label": "weights", "variant": "emphasis" },
+    { "id": "quotas-grpo", "from": "quotas", "to": "grpo", "label": "prompts", "variant": "emphasis" },
+    { "id": "grpo-signals", "from": "grpo", "to": "signals", "label": "results", "variant": "default" },
+    { "id": "signals-sched", "from": "signals", "to": "scheduler", "label": "next round", "variant": "dashed", "role": "return" },
+    { "id": "signals-calib", "from": "signals", "to": "calib", "label": "group stats", "variant": "dashed", "role": "branch" },
+    { "id": "calib-sched", "from": "calib", "to": "scheduler", "label": "flag spurious", "variant": "security", "role": "branch" },
+    { "id": "grpo-final", "from": "grpo", "to": "final", "label": "budget spent", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The idea",
+      "items": [
+        "Train one model on several task environments at once",
+        "Each round, decide how many prompts each environment gets",
+        "Goal: best held-out score when the GPU budget runs out"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "What we do not touch",
+      "items": [
+        "The GRPO trainer and the reward functions stay unchanged",
+        "CURATOR only controls the prompt mixture"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Reward checks",
+      "items": [
+        "Before training: a pre-flight check feeds each verifier junk answers",
+        "Every round: a label-free audit tests if the reward depends on the prompt",
+        "Every 10 rounds: a held-out calibration check"
+      ]
+    }
+  ]
+}

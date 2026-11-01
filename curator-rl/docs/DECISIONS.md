@@ -692,6 +692,17 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
 - With 3 seeds, "mean >= 2 SE" is evidence at roughly one-sided p 0.1, not proof; the t-interval is reported next to it and the write-up says so.
 - Record (21 Oct): the OLMo run started from a notebook with D-102's step, so it is full Curator vs Uniform on OLMo-2-1B, seed 0 (D-102 H-B as pre-registered), not Curator-lite. With the vLLM compile-hook fix, OLMo trains; about 6.5 min per round, so about 14 rounds per 1.5 GPU-hour run. It is reported as H-B; no Curator-lite OLMo run is added.
 - **Story decision on the analysis day** (after `confirm` and `lite`), not later: R1 and R2 hold, the robustness thesis leads; otherwise the fallback (rigorous negative result with its mechanism, plus the deterministic pre-flight check and the in-run audit as the contribution). No change of story after that day.
+- Record (1 Nov, before any `confirm`, `lite`, `clean` or `sec_tau1` run exists; owner request):
+  - Session B is `["clean", "sec_tau1"]`. The OLMo run is complete (record of 21 Oct); no OLMo run is added.
+  - **Declared secondary check, not part of R1-R4:** SEC at the authors' default Boltzmann temperature 1.0
+    (ServiceNow/sec `verl/verl/utils/auto_curriculum/priority.py`; our tuning grid was {0.1, 0.4}), alpha 0.1,
+    seed 0, its own namespace `sec_tau1` so it never touches the pre-registered `sec_s0`. Reported descriptively
+    next to the tuned SEC. Why: `reports/analysis/sec_dump_fidelity.md` (simulator, tuning seeds 0-39: 26% of
+    the budget on the noisy arm at the authors' default vs 37% at our point, the same score). DUMP needs no
+    such check: the authors' sharper temperature (0.1) was in its grid and is worse in the simulator.
+  - The analysis is fixed now, before the runs: `experiments/analysis/d103_confirm.py` applies R1-R4 exactly
+    as written above (same-sign 3 seeds and |mean| >= 2 SE; R4 on the mean paired difference, the t-interval
+    reported next to it) and writes `Curator-Nov-results/analysis/` (report, tables, figures).
 
 ## D-104 — This branch adopted as the base; parallel local work archived (L-96 … L-101)
 

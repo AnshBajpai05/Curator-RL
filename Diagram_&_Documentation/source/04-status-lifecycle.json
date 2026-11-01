@@ -1,0 +1,55 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Environment Status Lifecycle (S1 to S5)",
+    "output": "Diagram_&_Documentation/04-status-lifecycle.html",
+    "quality_profile": "showcase"
+  },
+  "mainPath": ["s1", "s2", "s3"],
+  "states": [
+    { "id": "s1", "type": "start", "label": "S1 Exploring", "sublabel": "guaranteed 30% share", "tag": "new", "step": "01" },
+    { "id": "s2", "type": "active", "label": "S2 Learning", "sublabel": "normal bandit weight", "tag": "default", "step": "02" },
+    { "id": "s3", "type": "waiting", "label": "S3 Saturated", "sublabel": "x0.5, cap 2x floor", "tag": "solved", "step": "03" },
+    { "id": "s4", "type": "failure", "label": "S4 Too hard", "sublabel": "x0.5, cap at floor", "tag": "no signal" },
+    { "id": "s5", "type": "failure", "label": "S5 Spurious", "sublabel": "GPU: cap at 2% floor", "tag": "unreliable reward" }
+  ],
+  "transitions": [
+    { "id": "s1-s2", "from": "s1", "to": "s2", "label": "enough evidence" },
+    { "id": "s2-s3", "from": "s2", "to": "s3", "label": "pass rate high" },
+    { "id": "s2-s4", "from": "s2", "to": "s4", "label": "pass rate near 0" },
+    { "id": "s3-s2", "from": "s3", "to": "s2", "label": "progress resumes" },
+    { "id": "s4-s2", "from": "s4", "to": "s2", "label": "progress resumes" },
+    { "id": "s1-s5", "from": "s1", "to": "s5", "label": "pre-flight or audit", "variant": "security" },
+    { "id": "s2-s5", "from": "s2", "to": "s5", "label": "audit or bad windows", "variant": "security" },
+    { "id": "s5-s2", "from": "s5", "to": "s2", "label": "audit clears", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Why statuses exist",
+      "items": [
+        "GRPO only learns from prompts with mixed right and wrong answers",
+        "Always-solved or never-solved environments teach nothing"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "How S5 is reached",
+      "items": [
+        "The reward audit finds a reward that ignores the prompt (any round, even S1)",
+        "The pre-flight check flags a verifier that pays for junk (curator_q)",
+        "Or calibration flags 3 windows in a row (GPU preset; 2 in the simulator)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Stability",
+      "items": [
+        "Entering S3 or S4 needs the condition to hold for 4 rounds",
+        "A 3-round minimum dwell stops flip-flopping",
+        "A pre-flight flag never clears"
+      ]
+    }
+  ]
+}

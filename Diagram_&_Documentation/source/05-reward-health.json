@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Catching a Spurious Reward: Three Reward-Health Checks",
+    "output": "Diagram_&_Documentation/05-reward-health-checks.html",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "pre", "label": "Before training" },
+    { "id": "round", "label": "Every round" },
+    { "id": "window", "label": "Every 10 rounds" },
+    { "id": "act", "label": "Scheduler response", "variant": "exception" }
+  ],
+  "mainPath": ["groups", "audit", "s5", "mix"],
+  "nodes": [
+    { "id": "junk", "lane": "pre", "col": 0, "type": "external", "label": "Junk answers", "sublabel": "empty, echo, number spray", "width": 144 },
+    { "id": "fuzz", "lane": "pre", "col": 1, "type": "security", "label": "Pre-flight check", "sublabel": "pays over 5% for junk?", "tag": "verifier fuzz", "width": 144 },
+    { "id": "groups", "lane": "round", "col": 0, "type": "external", "label": "Group pass rates", "sublabel": "already in every round", "width": 144 },
+    { "id": "audit", "lane": "round", "col": 1, "type": "security", "label": "Reward audit", "sublabel": "dispersion D below 1.5?", "tag": "label-free", "width": 144 },
+    { "id": "heldout", "lane": "window", "col": 0, "type": "database", "label": "Held-out slices", "sublabel": "100 paired items each", "width": 144 },
+    { "id": "calib", "lane": "window", "col": 1, "type": "security", "label": "Calibration", "sublabel": "gain 2 SE below claim?", "width": 144 },
+    { "id": "s5", "lane": "act", "col": 2, "type": "security", "label": "S5 spurious", "sublabel": "capped at the 2% floor", "width": 144 },
+    { "id": "mix", "lane": "act", "col": 3, "type": "backend", "label": "Next mixture", "sublabel": "budget to real arms", "width": 144 }
+  ],
+  "edges": [
+    { "id": "junk-fuzz", "from": "junk", "to": "fuzz", "variant": "default" },
+    { "id": "fuzz-s5", "from": "fuzz", "to": "s5", "label": "flagged", "variant": "security" },
+    { "id": "groups-audit", "from": "groups", "to": "audit", "variant": "emphasis" },
+    { "id": "audit-s5", "from": "audit", "to": "s5", "label": "flag", "variant": "security" },
+    { "id": "heldout-calib", "from": "heldout", "to": "calib", "variant": "default" },
+    { "id": "calib-s5", "from": "calib", "to": "s5", "label": "3 bad windows", "variant": "dashed" },
+    { "id": "s5-mix", "from": "s5", "to": "mix", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Measured on Kaggle",
+      "items": [
+        "Pre-flight: noisy arm paid 0.30 for junk, the 4 real arms 0.00",
+        "Audit flagged the noisy arm in every Curator run, never a real arm",
+        "First flag at round 7-9 in 5 runs, round 23 in one seed"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Calibration",
+      "items": [
+        "Raised no flag on GPU and added nothing measurable at this budget",
+        "Curator without calibration caught the noisy arm just as fast"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Blind spots",
+      "items": [
+        "The audit misses a reward that depends on the prompt but pays the wrong thing",
+        "The pre-flight check covers known junk, e.g. the hackable checker pays 1.00"
+      ]
+    }
+  ]
+}

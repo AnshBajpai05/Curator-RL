@@ -6,17 +6,23 @@ reinforcement learning on several task environments (math, code, puzzles), it de
 round which share of the GPU budget each environment gets. The aim is the highest held-out score
 when the budget runs out.
 
-> **Status (2026-10-12, branch `audit-fixes-and-gpu-run`):** the code is complete for the Level-1 GPU
-> runs. Design, simulator, scheduler, baselines, calibration and all five environments are built and
-> tested; a full audit found and fixed 30+ errors (`../errors_found.md`). New since the audit: a
-> label-free **reward audit** that catches a reward which ignores the prompt (the random-reward arm)
-> at zero cost, the alpha/beta fit, drift-triggered discounting, realism-v2 simulator scenarios, the
-> ROI leaderboard and leave-one-out, figures, and runs that **survive a lost Kaggle session** (every
-> round checkpointed, mirrored to a Hugging Face dataset, resumed by rerunning the same command).
-> On tuning seeds, Curator with the audit gains +11-12% over Uniform at the GPU shape versus +6% for
-> the best baseline (`../CHANGES_AND_IMPACT.md`). Nothing has run on a real GPU yet: the Kaggle
-> package (`kaggle/`) is the next step. 481 tests pass (1 Linux-only skip) with the datasets
-> downloaded; pyright reports 0 errors; CI also rebuilds the datasets and enforces 85% coverage.
+> **Status (2026-11-01, branch `audit-fixes-and-gpu-run`):** the Level-1 GPU runs are done and
+> analysed (Qwen2.5-0.5B on Kaggle T4, plus one OLMo-2-1B pair). Design, simulator, scheduler,
+> baselines, calibration, the ROI leaderboard and all five environments are built and tested; a full
+> audit found and fixed 30+ errors (`../errors_found.md`), and D-106 fixed a scheduler-checkpoint bug
+> found after a merge. Runs **survive a lost Kaggle session** (every round checkpointed, mirrored to a
+> Hugging Face dataset, resumed by rerunning the same command).
+>
+> **Real-GPU result (see [section 5](#5-results-so-far)):** every method gains 4-7 points of sampled
+> accuracy over the untrained model, and **Curator ties Uniform** (-0.1 points, 95% interval
+> [-1.2, +1.0], 3 seeds). The claim "Curator beats Uniform" was dropped (D-103). The project thesis is
+> now **robustness**: selectors that steer on learning signals (SEC, DUMP) are pulled into a
+> random-reward environment and lose accuracy (34% / 31% of questions on that arm vs 20% for Uniform
+> and 6% for Curator), while Curator's audit flags that arm (S5) and is not pulled in.
+> **Next:** the D-103 confirmation runs (SEC, DUMP, uniform_q, curator_q, curator-lite, seeds 1-2) and
+> the phases of `docs/ROADMAP_v4.md` (proposed, D-107).
+> Tests: 521 passed, 1 skipped (POSIX-only) with the datasets downloaded (run 2026-11-01); CI rebuilds
+> the datasets and enforces 85% coverage.
 
 ---
 
@@ -83,7 +89,7 @@ signal used to reach it, and a reported metric, but never the objective itself.
 | Loop | Agent | Action | Reward | Status |
 |---|---|---|---|---|
 | Inner | the LLM (GRPO, TRL 1.15, LoRA) | tokens | verifier score 0/1 | unchanged off-the-shelf trainer |
-| **Outer (this project)** | the CURATOR scheduler | mixture weights over environments | learning gain per measured dollar, checked against a held-out benchmark | built and tested on the simulator |
+| **Outer (this project)** | the CURATOR scheduler | mixture weights over environments | learning gain per measured dollar, checked against a held-out benchmark | built; tested in the simulator and run on Kaggle T4 (Qwen2.5-0.5B, OLMo-2-1B) |
 
 ### The outer MDP
 
@@ -103,10 +109,13 @@ signal used to reach it, and a reported metric, but never the objective itself.
   1. Learning signal: `x_i = α·clip(LP_i/σ_LP, ±3) + β·SR_i`, with α = β = 0.5.
   2. Divide by normalised measured cost: `r̃_i = x_i / c̃_i`. Then map to [0, 1] with running
      5th/95th percentiles.
-  3. Every K = 10 rounds, a held-out calibration check. Its gain credit comes from a WLS
-     regression of each environment's own-slice gain on its compute share. An environment is
-     flagged when its benchmark gain is more than 2 SE below what its proxy implies; two flagged
-     windows put it in S5.
+  3. Every K = 10 rounds, a held-out calibration check on 2 targeted slices (`claim_stale`). Gain
+     credit is a weighted regression of each slice's gain on compute share, fitted jointly for arms
+     that share a slice (`calib.credit: transfer`, audit E-03; the older own-slice credit is a legacy
+     switch). An environment is flagged when its benchmark gain is more than 2 SE below what its
+     proxy implies; 2 consecutive flagged windows (3 in the GPU preset) put it in S5.
+  4. Every round, label-free reward-health checks (see *Reward-health checks* below). The reward
+     audit can put an arm in S5 at any round boundary.
 - **Episode and terminal condition.** One training run. It ends at the first optimiser step where
   the charged cost (training + calibration + overhead) reaches `B`. The MDP discount is 1.
 
@@ -122,12 +131,45 @@ w   ← status constraints                                    S3 saturated: ×0.
 Ñ_i ← γ·Ñ_i + u_i ;  S̃_i ← γ·S̃_i + u_i·r̄_i                 exposure-weighted discounted update
 ```
 
+**Settings used on the GPU (`kaggle/run.py --preset gpu_tuned`, D-98).** The values above are the
+simulator defaults in `configs/base.yaml`. Every Curator run on Kaggle used the preset re-tuned on the
+realism-v2 scenarios (tuning seeds only, 8 configurations per method): γ = 1 (no forgetting), κ = 0.25,
+τ = 1.0, reward audit on, S5 capped at the floor ε/N (`s5_cap: floor`, 2% per arm with 5 arms) and
+3 consecutive mismatch windows for a calibration flag. `n_min` is rescaled to the GPU batch shape
+(32 prompts per round, R = 2; `rescale_for_batch_shape`, audit E-28). The preset stays exploratory
+until a pre-registered confirmation (D-99).
+
 **Why a bandit and not deep RL.** One episode is a full LLM training run (≈ 1.4 GPU-hours), so
 only tens of episodes are affordable. A bandit learns within one episode. Discounting tracks
 drifting value. Dividing by cost is the bang-per-buck rule of bandits with knapsacks.
 
 The full specification (state table, reward stages, pseudocode, hyperparameter provenance, GRPO
 formulas) is in `docs/ROADMAP_v3.md`, `docs/SPEC.md` and the review brief.
+
+### Reward-health checks
+
+Three checks act on the mixture, never on the reward, so the policy is never trained to evade them.
+
+| Check | Code | When | Catches | Misses |
+|---|---|---|---|---|
+| Pre-flight verifier check | `signals/verifier_fuzz.py` | once before training (seconds, no GPU) | a checker that pays for junk: empty or echoed answers, empty or wrong boxes, number spray, code that exits early or prints its globals | anything that only shows up during training |
+| Reward audit (label-free) | `signals/audit.py` | every round, from moments every observation already carries (zero extra compute) | a reward that ignores the prompt. The dispersion ratio D of group pass rates is 1 for such a reward and 3.0–4.4 for the real verifiers; the arm is flagged when the 99% upper bound of D is below 1.5 (after 40 degrees of freedom) | a reward that depends on the prompt but rewards the wrong thing |
+| Held-out calibration | `calibration/calibrator.py` | every 10 rounds, charged to the budget | an arm whose benchmark gain falls short of its proxy claim | weak at the Level-1 budget (section 5) |
+
+- **On the GPU the audit did the work.** Every S5 in every Curator run came from the audit, and it
+  never flagged a real arm. Curator-lite (no calibration) caught the noisy arm just as fast.
+- **Pre-flight results on our arms:** gsm8k, math35, mbpp and countdown pay 0.00 for junk; noisy
+  pays 0.30 and the stress-only `hackable` arm 1.00, so both are flagged. With
+  `signals.reward_audit.preflight_gate` (used by `curator_q`) a flagged arm starts in S5 at round 1.
+
+### Question filtering (`_q` methods, D-102)
+
+35–50% of GRPO groups carry no reward signal in every method (all answers right or all wrong). A `_q`
+method draws ⌈1.75·P⌉ questions per step, generates and scores all of them (every token is charged),
+and trains on P groups, the ones with a signal first (`trainer/group_filter.py`; online difficulty
+filtering and DAPO-style dynamic sampling). `uniform_q` isolates the filter; `curator_q` is Curator +
+the filter + the pre-flight gate. The filter changes which questions train, not which environments
+are chosen.
 
 ### Code path of one round
 
@@ -137,6 +179,8 @@ RoundObservation (per env: prompts, successes, mixed groups, tokens, seconds, do
   → scheduler/ducb.py   discounted counters, UCB scores
   → scheduler/mixture.py  z-score → softmax → floor → status constraints
   → core/quotas.py      integer prompt quotas
+before round 1: signals/verifier_fuzz.py (pre-flight check) → optional S5 from the start
+every round:    signals/audit.py (reward audit, label-free) → S5 flags → status machine
 every K rounds: calibration/calibrator.py (targeted, paired) → S5 flags → status machine
 ```
 
@@ -150,7 +194,11 @@ every K rounds: calibration/calibrator.py (targeted, paired) → S5 flags → st
 | SEC (COLM 2026) | mean \|advantage\|, TD(0) | ✗ | ✗ | ✗ |
 | TAC (ICML 2026) | learnability + gradient transfer | ✗ | ✗ | ✗ |
 | HarnessBandit (2026) | \|advantage\| + gradient sketch | ✗ | ✗ | ✗ |
-| **CURATOR** | LP + richness ÷ measured cost, D-UCB | ✓ | ✓ | ✓ (planned: ROI vs leave-one-out) |
+| **CURATOR** | LP + richness ÷ measured cost, D-UCB | ✓ | ✓ | ✓ built (ROI vs leave-one-out); not yet run on GPU |
+
+**Also not in the compared work:** a label-free reward audit and a pre-flight verifier check that act
+on the mixture (section 2). On the GPU these, not the cost term or calibration, are what changed
+Curator's behaviour.
 
 DataFlex-RL (Sept 2026, 12 seeds, Qwen2.5-7B) found that **no** published selection or mixing
 policy beat uniform sampling with a significant paired interval. So the claim here is deliberately
@@ -169,22 +217,26 @@ Pre-registered hypotheses H1–H7, with the plan for negative results, are in
 | Area | State |
 |---|---|
 | Spec, config, seeding, atomic I/O, run metadata, CLI | ✅ |
-| Environments: GSM8K, Countdown, noisy, **MATH35, MBPP** (hash splits, sealed tests, manifests) | ✅ |
+| Environments: GSM8K, Countdown, noisy, **MATH35, MBPP** (hash splits, sealed tests, manifests); `hackable` stress arm (D-102) | ✅ |
 | Simulator with oracles (DP, static, myopic), scenarios S-A … S-J | ✅ |
 | Signal engine (pass rate, LP-B, richness, proxy, S1–S5 status) | ✅ |
-| Scheduler (D-UCB + mixture + status) and baselines (Uniform, Static, LP, Std UCB, SEC-style, DUMP-style) | ✅ |
+| Scheduler (D-UCB + mixture + status) and baselines (Uniform, Static, LP, Std UCB, SEC-style, DUMP-style; `pilot_uniform` and `clean_uniform` static mixes) | ✅ (`dirichlet` is the system-identification design, not a competing method) |
 | Fair tuning of every adaptive method (8 configs each, one-SE rule) | ✅ |
-| Calibration (paired items, claim-targeted, own-slice credit, S5) | ✅ built; spurious-arm detection 78–86% after D-95 (Gate 6-sim ❌ as originally defined) |
+| Calibration (paired items, claim-targeted, joint `transfer` credit, S5) | ✅ built. Simulator detection 78–86% after D-95, but **not at the GPU shape**: 10–28% after the audit fixes (D-96), 0.07 with a shared noisy slice (D-104). On GPU it raised no flag; the reward audit flagged the noisy arm |
+| Reward audit (label-free dispersion test, D-98) | ✅ built; on GPU it flagged the noisy arm in every Curator run and never a real arm |
+| Pre-flight verifier check (D-102) | ✅ built; flags noisy (0.30) and hackable (1.00), passes the 4 real arms (0.00) |
+| Question filtering, `_q` methods (D-102) | ✅ built; run on GPU for 1 seed (`curator_q`, `uniform_q`) |
+| Drift-triggered discounting, α/β fit, weight cap, smoothing (B2, B4, B7) | ✅ built and tested, **off**: no measurable benefit in the simulator (D-98) |
 | Calibrated Reward Engine (CRE) | ✅ built, ❌ **not adopted** (two pre-registered nulls) |
 | Kaggle pilot: pass rates and costs, all 5 environments, 0.5B and 1.5B | ✅ (HF timing) |
 | GRPO step time with vLLM on T4 | ✅ 42.2 s per step (16 prompts × 8, 512 tokens) |
-| Per-environment cost under vLLM | ✅ spread 2.67x (MATH35 is the expensive arm), `reports/pilot/phase_e_cost_probe.md` |
+| Per-environment cost under vLLM | ✅ generation-only spread 2.67x (MATH35 is the expensive arm), `reports/pilot/phase_e_cost_probe.md`; full GRPO steps measured later by the sysid runs: only 1.2–1.6x (section 5) |
 | TRL GRPO smoke test; HF vs vLLM step time | ✅ passes; 83.5 s (HF) vs 42.2 s (vLLM) per step, so vLLM is the training backend |
-| Phase F runner: TRL adapter, prompt stream, reward router, calibration on GPU, cost attribution + ledger, crash-safe checkpoints, sysid | ✅ built and tested on CPU (real TRL path with a tiny model; fake backend end to end) — not yet run on a GPU |
+| Phase F runner: TRL adapter, prompt stream, reward router, calibration on GPU, cost attribution + ledger, crash-safe checkpoints, sysid | ✅ built, tested on CPU, and **run on Kaggle T4** (Qwen2.5-0.5B, 1.5 charged GPU-h per run; OLMo-2-1B pair, D-103) |
 | Kaggle GPU package (`kaggle/run.py`: setup, smoke, compare, sysid) | ✅ built; P100 supported via a PyTorch log-prob path (TRL's Triton kernel needs compute capability >= 7.0) |
-| ROI leaderboard, LOO, visualisation | ⬜ empty packages |
+| ROI leaderboard, LOO, visualisation | ✅ built (D-100); on GPU the in-run ROI is descriptive only (3 calibration evaluations give intervals that include zero); leave-one-out not yet run on GPU |
 | S-I / S-J refit from measured data, pre-registered re-evaluation (seeds 400–449) | ✅ primary criteria pass; Curator ranks 3rd behind LP and Standard UCB (D-88, D-89) |
-| Tests / lint | ✅ 404 passed, 1 skipped (POSIX-only; 23 contract tests need the datasets downloaded) / ruff clean |
+| Tests / lint | ✅ 521 passed, 1 skipped (POSIX-only) with the datasets downloaded, 2026-11-01; without the datasets the contract tests skip / ruff clean |
 
 ### Gates (`docs/GATES.md`)
 
@@ -197,13 +249,68 @@ Pre-registered hypotheses H1–H7, with the plan for negative results, are in
 | 2'' | Beats SEC/DUMP-style bandits | ❌ on the placeholder S-I (passes on S-C and S-J) |
 | 2''-R | Gate 2'' on scenarios refit from measured data | ✅ passes in both cost brackets; caveats in D-89 |
 | H-γ1 | Curator without discounting | ❌ not adopted: large gains on the refit scenarios, but the no-regression check fails narrowly on S-A and S-D (D-92) |
-| H-claim | Calibration targets by proxy claim + staleness, 2 slices | ✅ adopted: spurious-arm detection 78–86% vs 25–32%, false flags ≤ 2.5%, cost 3.4% (D-95) |
+| H-claim | Calibration targets by proxy claim + staleness, 2 slices | ✅ adopted: spurious-arm detection 78–86% vs 25–32%, false flags ≤ 2.5%, cost 3.4% (D-95); does not hold at the GPU shape (D-96) |
 | 2''-CRE, 2''-κ | Calibrated reward engine variants | ❌ both pre-registered evaluations fail; line stopped |
 | 3–5 | Static GRPO works; Curator does not alter GRPO; cost verified | ⬜ need Phase F |
 | 6 | Calibration works | ❌ simulator part not met |
 | 7–10 | ROI, baselines, LOO, experiment freeze | ⬜ |
 
 ## 5. Results so far
+
+### Real-GPU results (Kaggle T4, Qwen2.5-0.5B-Instruct, 1.5 charged GPU-h per run)
+
+Source: `../curator_results_new/comparison.md` (and `../curator_results/`, `../curator_results_olmo/`).
+Primary measure is evaluation protocol 2 (D-101): sampled accuracy, mean of 4 samples per item,
+macro-average over gsm8k, math35, mbpp, countdown on the same dev items for every method. The sealed
+test is not used. Greedy accuracy is reported alongside.
+
+| method | seeds | sampled macro | greedy macro | ever S5 |
+|---|---|---|---|---|
+| base (untrained) | - | 0.1785 | 0.3000 | - |
+| **curator** | 3 | 0.2326 | 0.3086 | noisy |
+| curator_nocal (Curator-lite) | 1 | 0.2354 | 0.3142 | noisy |
+| curator_q | 1 | 0.2408 | 0.3050 | noisy |
+| uniform | 3 | 0.2339 | 0.3061 | - |
+| uniform_q | 1 | 0.2225 | 0.3017 | - |
+| lp | 3 | 0.2354 | 0.3069 | - |
+| dirichlet (sysid design, not a method) | 2 | 0.2277 | 0.3096 | - |
+| dump | 1 | 0.2285 | 0.3183 | - |
+| sec | 1 | 0.2202 | 0.3117 | - |
+
+- **Training works.** Every method gains +4.2 to +6.8 points of sampled accuracy over the untrained
+  model, mostly on GSM8K (about +13 to +16 points). Countdown stays at 0 for all methods.
+- **Curator ties Uniform.** Over 3 seeds the paired difference is -0.0013, 95% t-interval
+  [-0.012, +0.010], sign-flip p 0.75. LP is the same (+0.0015, p 0.75). The claim "Curator beats
+  Uniform" is dropped (D-103).
+- **The random-reward arm is caught, by the reward audit.** Every S5 in every Curator run came from
+  the label-free audit, and no real arm was ever flagged. First flag: rounds 8, 23 and 8 (Curator
+  seeds 0–2), 9 (Curator-lite, which has no calibration), 1 (`curator_q`, pre-flight gate) and 7
+  (OLMo). The first calibration runs at round 10, so calibration did not catch it. The pre-flight
+  verifier check flags it too (junk reward rate 0.30; the other four arms 0.00, limit 0.05).
+- **Why the thesis is robustness.** On seed 0, SEC and DUMP lose to Uniform by 2.3 and 1.5 points
+  (SE 0.6 and 0.7) and put 34% and 31% of questions into the random-reward arm (Uniform 20%; Curator
+  6% on seed 0, and 6–16% over seeds 0–2, the 16% in the seed whose audit flagged late).
+  Greedy scores disagree in direction, and seeds 1-2 for these methods are still to be run (D-103).
+- **Budget moves off the useless arms, but accuracy does not follow.** Mean delivered share under
+  Curator: Countdown (no learning signal at 0.5B) 5% against Uniform's 20%, noisy 6–16% against 20%.
+  The freed budget goes to GSM8K, MATH35 and MBPP, but the mix differs a lot between seeds (MBPP 53% on
+  seed 0, 9–10% on seeds 1–2) and the score stays level with Uniform.
+- **Measured training cost per arm (sysid runs, non-negative least squares over 62–66 steps).** A
+  fixed 56–66 s per step dominates, so full GRPO steps differ far less across arms than generation
+  alone: MATH35 1.22x and 1.58x GSM8K, MBPP 0.84–0.89x, fit R² 0.45–0.54. The 2.67x spread of the
+  generation-only probe overstates the cost lever in real training at this scale.
+- **Spurious reward on this model.** Training on the noisy arm moved GSM8K by +0.150 (SD 0.415) and
+  +0.053 (SD 0.486) in the two sysid runs: no measurable effect either way. Group polarisation during
+  training: κ 1.5–2.6 for the real arms, about 50 for the noisy arm.
+- **Compute to reach Uniform's final level** is mixed on Qwen (Curator +3% on seed 0, not reached on
+  seeds 1-2). The ROI leaderboard has too few calibration evaluations to rank arms.
+- **OLMo-2-1B (1 seed each, descriptive):** base 0.1765, Curator 0.1781, Uniform 0.1758 sampled macro;
+  Curator reached Uniform's final level with 23% less GPU time. About 14-15 rounds fit in 1.5 GPU-h.
+  Noisy arm flagged S5 again.
+- **Caveats.** 1-3 seeds per method, so intervals are wide. The simulator gain of +11-12% over Uniform
+  did not transfer to the GPU: at 0.5B scale the data mix barely moves accuracy (`../self_critic.md`),
+  and 35-50% of GRPO groups carry no reward signal in every method. Not run on GPU yet:
+  leave-one-out, the hackable-checker stress test (D-102 H-C) and `clean_uniform`.
 
 ### Simulator (mean final score, 50 evaluation seeds 100–149, tuned configs)
 
@@ -303,6 +410,11 @@ only the discount.
 
 ### Calibration targeting fix (D-93 … D-95)
 
+> **Superseded at the GPU shape (D-96, D-104).** The rates below were measured before the audit
+> fixes, with own-slice credit and the noisy arm on its own slice. At the GPU batch shape, detection
+> by calibration is 0% before the fixes and 10–28% after; with the noisy arm sharing GSM8K's slice it
+> falls to 0.07. Spurious-arm detection is now the reward audit's job (section 2).
+
 **Cause.** Targeted calibration evaluated the *most-funded* arm, usually GSM8K, so the noisy arm
 (high richness, flat learning progress) was re-checked under once per run.
 
@@ -356,7 +468,8 @@ samples, each environment at its own token cap, verifier through 4 threads
 - **GRPO step time** (16 prompts × 8, 512 tokens): **42.2 s with vLLM colocate vs 83.5 s with
   HF**, so vLLM is the training backend. In a vLLM step the policy update and weight sync take about
   34 of the 42 s, so per-environment *training* cost is bracketed at MATH35 1.7–2.0× and MBPP
-  0.6–0.8× of GSM8K until the cost meter measures it (Gate 5).
+  0.6–0.8× of GSM8K until the cost meter measures it (Gate 5). The sysid runs later measured
+  full-step costs of MATH35 1.22–1.58× and MBPP 0.84–0.89× (section 5).
 - **Run cost.** About 1.4–2.8 GPU-hours per run (60 rounds, R = 2), depending on how much
   MATH35 a method buys.
 - **TRL GRPO smoke test passes.** The reward function receives `completion_ids` and every dataset
@@ -371,6 +484,7 @@ samples, each environment at its own token cap, verifier through 4 threads
 | `mbpp` | Python code | google-research-datasets/mbpp | 314 / 90 (official val.) / 60 | MBPP test (500) | sandboxed execution of **all** assertions (one shown in the prompt) | learnable, cheap to generate, verifier-bound |
 | `countdown` | arithmetic puzzle | procedural | seed ranges | seed range | expression check | zero-signal (too hard) arm for 0.5B |
 | `noisy` | GSM8K prompts | GSM8K train | train only | — | Bernoulli(0.35) reward, independent of the answer | spurious-reward probe |
+| `hackable` | GSM8K prompts | the noisy arm's GSM8K partition | train only | — | pays when the reference number appears anywhere in the response (a deliberate false-positive bug) | stress test for the pre-flight check; never used with `noisy`; not run on GPU yet |
 
 - **Gold and garbage checks.** Gold answers verify 100% and garbage answers 0%, on both MATH35
   (5,582 rows) and MBPP (464 rows).
@@ -395,13 +509,18 @@ curator-rl/
 │   └── sim/scenario_s{a..j}.yaml  simulator scenarios S-A … S-J
 ├── src/curator_rl/
 │   ├── core/          config (pydantic), types, seeding, atomic I/O, JSONL, quotas, advantage, run metadata
-│   ├── envs/          base interface, gsm8k, countdown, noisy, math35, mbpp, sandbox, splits, registry
-│   ├── signals/       pass rate, LP estimators, richness, proxy reward, status machine, engine
-│   ├── scheduler/     D-UCB, mixture map, curator; baselines/ (static, lp, ucb, sec, dump)
+│   ├── envs/          base interface, gsm8k, countdown, noisy, hackable, math35, mbpp, finite, sandbox, splits, registry
+│   ├── signals/       pass rate, LP estimators, richness, proxy reward, status machine, engine,
+│   │                  reward audit, pre-flight verifier check, drift detector
+│   ├── scheduler/     D-UCB, mixture map, curator; baselines/ (uniform, static, lp, ucb, sec, dump, random)
 │   ├── calibration/   credit (C1/C2), calibrator (targeting, S5 flags), cre (not adopted)
 │   ├── simulator/     world, scenarios, oracles, harness, replay
-│   ├── evaluation/    sealed-test guard
-│   ├── cost/ trainer/ roi/ viz/   empty: Phase F onward
+│   ├── evaluation/    sealed-test guard, item-paired comparisons, leave-one-out
+│   ├── cost/          per-arm step attribution, NNLS cost model, matched-budget ledger
+│   ├── trainer/       TRL adapter, round controller, prompt stream, reward router, question filter,
+│   │                  calibration and report evaluation, checkpoints, sysid, results
+│   ├── roi/           ROI leaderboard
+│   ├── viz/           mixture and learning-curve plots
 │   └── cli.py         `curator init-run | show-config | env-info`
 ├── experiments/
 │   ├── run_sim.py, gate2_check.py, gate2b_check.py, cre_gate.py, cre_kappa_gate.py
@@ -410,7 +529,10 @@ curator-rl/
 ├── scripts/
 │   ├── download_data*.py, build_splits*.py, env_profile*.py      data pipeline
 │   ├── kaggle_pilot.py, kaggle_trl_probe.py, kaggle_step_probe.py, kaggle_cost_probe.py
-│   └── make_kaggle_bundle.py   builds dist/curator-rl-bundle.zip (refuses sealed/raw data)
+│   ├── make_kaggle_bundle.py   builds dist/curator-rl-bundle.zip (refuses sealed/raw data)
+│   └── make_kaggle_gpu_bundle.py  builds dist/curator-gpu-kaggle.zip for the GPU runs
+├── kaggle/            run.py (setup, smoke, compare, sysid, loo; presets gpu_tuned / gpu_tuned_v1),
+│                      README_KAGGLE.md, LOCAL_GPU_INSTRUCTIONS.md
 ├── notebooks/         kaggle_pilot, kaggle_step_probe, kaggle_cost_probe (.ipynb)
 ├── reports/           sim/, gate2/, sweeps/, analysis/, env_profiles/, pilot/
 ├── tests/             unit/, contract/, integration/, architecture/ (import-layer rules)
@@ -428,7 +550,7 @@ Requires Python ≥ 3.11.
 ```bash
 pip install -e ".[dev]"      # or: make install
 make lint                    # ruff check .
-make test                    # pytest (404 pass with data, 1 POSIX-only skip on Windows)
+make test                    # pytest (521 pass with data, 1 POSIX-only skip on Windows)
 make smoke                   # init-run on configs/experiment/smoke.yaml
 ```
 
@@ -488,13 +610,15 @@ Everything scientific lives in `configs/base.yaml`. Key frozen values:
 
 | Group | Values |
 |---|---|
-| Scheduler | γ 0.95, κ 0.5, τ 0.3, ε 0.10, warm-up 6 rounds, `score_norm: zscore`, `cost_exponent: 1.0`, `status_control: hard`, S1 quota 0.30 |
+| Scheduler | γ 0.95, κ 0.5, τ 0.3, ε 0.10, warm-up 6 rounds, `score_norm: zscore`, `cost_exponent: 1.0`, `status_control: hard`, S1 quota 0.30, `pull_unit: delivered`, `s5_cap: none`; drift, weight cap and smoothing off |
+| **GPU preset `gpu_tuned` (D-98)** | Curator: γ 1.0, κ 0.25, τ 1.0, reward audit on, `s5_cap: floor`, 3 mismatch windows; `curator_q` adds `preflight_gate`. DUMP on GPU: window 10. Runs: LoRA r 16, learning rate 1e-5, completion cap 1024, 1.5 charged GPU-h, R 2 · P 16 · G 8 |
 | Baselines (tuned, D-68) | UCB κ 0.5 / τ 0.3 · LP τ 0.75 · SEC α 0.1 / τ 0.4 · DUMP c 2.0 / τ 0.4 |
 | Signals | λ 0.9, LP-B with W = 10, richness `mixed`, Beta(1,1) prior, status n_min 64, p_sat 0.7, p_hard 0.05, z_up 1.5, h 4, dwell 3 |
-| Proxy | α 0.5, β 0.5, LP clip ±3 |
-| Calibration | enabled, K 10, k_min 2, z_mis 2.0, `targeting: claim_stale` (D-95), 2 targets, 100 paired items per slice |
+| Proxy | α 0.5, β 0.5, LP clip ±3; α/β fit built, off |
+| Reward audit | off in `base.yaml`, on in the GPU preset: `d_max` 1.5, z 2.33, `min_df` 40 |
+| Calibration | enabled, K 10, k_min 2, z_mis 2.0, 2 mismatch windows, `credit: transfer`, `flag_scope: evaluated`, `targeting: claim_stale` (D-95), 2 targets, 100 paired items per slice |
 | CRE | `enabled: false` (not adopted) |
-| Batch shape | R (steps/round) 5 in the simulator, 2 planned on GPU · P 16 · G 8 |
+| Batch shape | R (steps/round) 5 in the simulator, 2 on GPU (`n_min` rescaled, audit E-28) · P 16 · G 8 |
 
 Use `curator show-config` to print the resolved config. Configs are hashed into every run's
 metadata.
@@ -502,7 +626,7 @@ metadata.
 ## 11. Research rules
 
 These rules are the reviewer in a one-person project. Every change is logged in
-`docs/DECISIONS.md` (D-1 … D-95).
+`docs/DECISIONS.md` (D-1 … D-107).
 
 - **Sealed test sets** (`data/test_sealed/`) are used exactly once, at the end. They are never
   bundled, uploaded or opened by any script; `evaluation/guard.py` and the bundle builder enforce
@@ -524,14 +648,15 @@ These rules are the reviewer in a one-person project. Every change is logged in
 | ✅ | Refit S-I / S-J from measured data; pre-registered re-evaluation on seeds 400–449 (D-88, D-89) | Gate 2''-R passes; Curator 3rd behind LP and Std UCB |
 | ✅ | Diagnosis on tuning seeds (D-90); pre-registered γ = 1 test on seeds 500–549 (D-91) | not adopted (D-92); γ stays 0.95 |
 | ✅ | Calibration targeting by proxy claim + staleness (D-93 … D-95) | adopted |
-| 1 | Optional, new pre-registrations on fresh seeds (≥ 700): re-test γ = 1 with a powered non-inferiority design; a harder S5 response than halving the weight; or let the GPU runs decide both | Optional |
-| 2 | **Phase F**: TRL trainer adapter, reward wrapper with parallel verifier pool, span-based cost meter, checkpoint and resume across Kaggle sessions | CURATOR driving real GRPO; Gates 3–5 |
-| 3 | Calibration on GPU, ROI leaderboard, leave-one-out | Gates 6, 7, 9 |
-| 4 | Tier-1 matrix: 5 paired seeds × methods at matched budget (≈ 125 GPU-h); then one sealed-test evaluation | Tests of H1–H6 |
+| ✅ | Phase F runner built and run on Kaggle T4 (Qwen2.5-0.5B, 1.5 GPU-h per run); evaluation protocol 2 (D-101); pilots (D-102) | Curator ties Uniform; every method +4-7 points over the untrained model |
+| ✅ | Thesis changed to robustness; Curator-lite and confirmation runs pre-registered (D-103) | claim "Curator beats Uniform" dropped |
+| 1 | **D-103 confirmation runs** (ready): notebook session A `["confirm", "lite"]` (sec, dump, uniform_q, curator_q, curator_nocal on seeds 1-2), session B `["clean", "sec_tau1"]` (clean_uniform seeds 0-1; the declared check of SEC at the authors' default temperature). Analysis fixed before the runs: `experiments/analysis/d103_confirm.py` -> `../Curator-Nov-results/` | tests R1-R4; story decided on the analysis day |
+| 2 | **Roadmap v4** (proposed, D-107): fault zoo and key-consistency audit, health-gated question allocation, gradient-sketch transfer and TAC-lite baseline, seed count from measured SD, second model, multi-turn tool-call arm, `curator-health` command | each phase gets its own pre-registration first |
+| 3 | Optional, fresh simulator seeds (>= 700): re-test gamma = 1 with a powered non-inferiority design; a harder S5 response than halving the weight | optional |
 
 Owner actions still open:
-- Confirm the proposed decisions D-52 … D-62 and sign off Gate 0 (tag `spec-v1`).
-- Commit the current work when ready.
+- Confirm the proposed decisions D-52 … D-62 and D-107 (roadmap v4), and sign off Gate 0 (tag `spec-v1`).
+- Run the D-103 confirmation runs; commit results and the `Diagram_&_Documentation/` folder when ready.
 
 ## 13. Known limitations and open issues
 
@@ -543,17 +668,32 @@ Owner actions still open:
   underpowered no-regression test (D-92).
 - **Calibration and the noisy arm.** Calibration does not yet improve allocation. Targeting
   rarely re-checks the noisy arm, S5 catches it in only 20–34% of seeds, and the richness term
-  rewards the noisy arm's always-mixed groups (D-89, D-90).
-- **α/β refit.** Refitting the proxy weights from calibration (with a trust region) is designed but
-  not wired in. α = β = 0.5.
+  rewards the noisy arm's always-mixed groups (D-89, D-90). At the GPU shape the reward audit
+  replaced calibration as the detector (D-96, D-98).
+- **α/β fit, drift detection, weight cap, smoothing.** Built and tested (B2, B4, B7) but off: no
+  measurable benefit in the simulator (D-98). α = β = 0.5.
+- **Reward audit blind spot.** It cannot see a reward that depends on the prompt but rewards the
+  wrong thing (a wrong answer key, a checker that pays for the reference number anywhere). The
+  pre-flight check covers known junk patterns; calibration is weak at this budget.
 - **Cost.**
-  - The share of the policy update in each environment's training cost is unmeasured (generation
-    and verification are measured). The cost meter in Phase F measures it (Gate 5).
+  - Verification time is measured per arm; generation and update are split by token share. The
+    sysid check of that split fits only R² 0.45–0.54 with a large fixed overhead per step, so
+    per-arm training cost is approximate, and the real spread (1.2–1.6x) is much smaller than the
+    generation-only 2.67x.
   - The pilot's batch-to-batch CV (0.11–0.18 on some environments) mixes prompt content with
     noise. Repeatability must be checked on identical batches.
 - **Kaggle quota.** The weekly quota and whether 2 × T4 counts double are unverified.
-- **Noisy arm.** Spurious-reward effects are Qwen-specific in the literature, so the noisy-arm
-  result needs a second model family (Llama-3.2-1B planned).
+- **Noisy arm.** Spurious-reward effects are Qwen-specific in the literature. The noisy arm was
+  flagged S5 on Qwen2.5-0.5B (3 seeds) and on one OLMo-2-1B run; Llama-3.2-1B is still planned.
+- **Real-GPU evidence is thin.** 1-3 seeds per method, so every interval is wide. Curator ties
+  Uniform, and the simulator gain did not transfer (D-103). SEC and DUMP below Uniform rests on seed 0
+  until the confirmation runs finish.
+- **No reward signal in many groups.** 35-50% of GRPO groups have all-equal rewards in every method
+  (D-102), so the mixture has little to steer at 0.5B and 62-72 optimizer steps per run (31-36
+  rounds of R = 2; OLMo 14-15 rounds).
+- **Calibration on GPU.** With 3 calibration evaluations per run, ROI intervals include zero, so the
+  leaderboard is descriptive only; calibration cost 2-3 rounds without a measurable score gain
+  (Curator-lite, D-103).
 - **Countdown.** Its pass@16 was not measured directly, and its samples have not been audited by
   hand.
 
@@ -562,10 +702,15 @@ Owner actions still open:
 | Document | Content |
 |---|---|
 | `docs/SPEC.md` | frozen contract: objective, splits, budget rule, notation, required hyperparameters, interfaces |
-| `docs/DECISIONS.md` | decision log D-1 … D-95 (plus proposed D-52 … D-62) |
+| `docs/DECISIONS.md` | decision log D-1 … D-107 (plus proposed D-52 … D-62) |
 | `docs/GATES.md` | every gate, its criteria, evidence and state |
 | `docs/EXPERIMENT_PROTOCOL.md` | seeds, margins (δ_S = 0.01), statistics |
 | `docs/COST_MODEL.md` | cost accounting and measured values |
+| `docs/ROADMAP_v4.md` | proposed plan (D-107): closing the gaps without changing the core; phases 0-6, each pre-registered |
+| `../curator_results*/` | real-GPU outputs: `comparison.md`, `status.md`, per-run logs and plots (Qwen runs, D-102 pilots, OLMo pair) |
+| `reports/analysis/sec_dump_fidelity.md` | our SEC and DUMP against the authors' code; simulator check of their default settings |
+| `../Curator-Nov-results/` | the D-103 confirmation runs: steps, raw downloads, and the analysis (`experiments/analysis/d103_confirm.py`) |
+| `../Diagram_&_Documentation/` | presentation diagrams: overview, system design, one scheduling round, status lifecycle, reward-health checks, a real run round by round (seed 0); `figures/` (all report figures, regenerated by `experiments/analysis/report_figures.py`), `reports/` (frozen copies of the analyses the report cites), `analysis/` (D-103 pre-run snapshot); index in its `README.md` |
 | `docs/ROADMAP_v3.md` | forward plan: claims, hypotheses, portfolio, phases, ladder L1–L3, risks, sources |
 | `docs/CURATOR_Implementation_Roadmap.md` | v2 technical reference (contracts, maths, ledger, LOO design) |
 | `docs/KAGGLE.md`, `docs/TRL_SPIKE.md` | platform plan; TRL facts and pinned versions |
@@ -588,4 +733,6 @@ Owner actions still open:
 | E | MATH35, MBPP, sandbox; second pilot; vLLM cost probe | portfolio accepted on 0.5B, spread 2.67x, vLLM backend (D-85 … D-87) |
 | E+ | S-I/S-J refit from measured data; pre-registered re-evaluation | Gate 2''-R passes; Curator 3rd behind LP and Std UCB; κ = 2.14 polarisation (D-88, D-89) |
 | E++ | factorial diagnosis; pre-registered γ = 1 test | discounting is the main cost; γ = 1 not adopted (power) (D-90 … D-92) |
-| E+++ | calibration targeting by proxy claim; pre-registered confirmation | adopted: spurious-arm detection 25–32% → 78–86% (D-93 … D-95) |
+| E+++ | calibration targeting by proxy claim; pre-registered confirmation | adopted: spurious-arm detection 25–32% → 78–86% (D-93 … D-95); not at the GPU shape (D-96) |
+| F | GRPO runner, cost ledger, crash-safe checkpoints, Kaggle package; audit fixes (30+ errors); reward audit; ROI leaderboard | runs on Kaggle T4; every method +4-7 points over the untrained model; Curator ties Uniform (D-96 … D-102) |
+| G | evaluation protocol 2, pilots, robustness thesis, Curator-lite, OLMo pair, scheduler checkpoint fix, roadmap v4 | claim "beats Uniform" dropped; confirmation runs pending (D-103 … D-107) |

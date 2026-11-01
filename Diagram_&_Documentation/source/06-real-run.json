@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "CURATOR in a Real Run, Round by Round (Qwen2.5-0.5B, seed 0)",
+    "output": "Diagram_&_Documentation/06-real-run-walkthrough.html",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    {
+      "id": "trainer",
+      "type": "messagebus",
+      "label": "GRPO trainer",
+      "sublabel": "Qwen2.5-0.5B, unmodified"
+    },
+    {
+      "id": "signals",
+      "type": "backend",
+      "label": "Signal engine",
+      "sublabel": "pass rate, progress, status"
+    },
+    {
+      "id": "audit",
+      "type": "security",
+      "label": "Reward audit",
+      "sublabel": "label-free, every round"
+    },
+    {
+      "id": "sched",
+      "type": "backend",
+      "label": "Curator scheduler",
+      "sublabel": "sets the mix each round"
+    },
+    {
+      "id": "calib",
+      "type": "database",
+      "label": "Calibrator",
+      "sublabel": "held-out, every 10 rounds"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 342,
+      "label": "Rounds 1-6: warm-up, equal mix"
+    },
+    {
+      "from": 356,
+      "to": 442,
+      "label": "Round 7: first adaptive decision"
+    },
+    {
+      "from": 456,
+      "to": 558,
+      "label": "Round 8: broken reward caught"
+    },
+    {
+      "from": 574,
+      "to": 676,
+      "label": "Rounds 10, 20, 30: calibration"
+    },
+    {
+      "from": 690,
+      "to": 762,
+      "label": "Round 33: budget spent"
+    }
+  ],
+  "messages": [
+    {
+      "id": "warmup-mix",
+      "from": "sched",
+      "to": "trainer",
+      "y": 172,
+      "label": "equal mix, about 20% each",
+      "variant": "emphasis",
+      "note": "32 questions per round, 8 answers each"
+    },
+    {
+      "id": "round-results",
+      "from": "trainer",
+      "to": "signals",
+      "y": 232,
+      "label": "pass rates, mixed groups, tokens, seconds"
+    },
+    {
+      "id": "group-spread",
+      "from": "signals",
+      "to": "audit",
+      "y": 262,
+      "label": "spread of group pass rates",
+      "variant": "dashed",
+      "note": "noisy arm D 0.3-0.7, GSM8K D 1.9-4.2"
+    },
+    {
+      "id": "countdown-s4",
+      "from": "signals",
+      "to": "sched",
+      "y": 322,
+      "label": "round 5: Countdown is S4, pass rate 0",
+      "variant": "security"
+    },
+    {
+      "id": "first-mix",
+      "from": "sched",
+      "to": "trainer",
+      "y": 376,
+      "label": "Countdown 0%, MBPP 62%, GSM8K 12%, MATH 9%, noisy 16%",
+      "variant": "emphasis",
+      "note": "MBPP is cheapest per question, so it ranks top per GPU-dollar"
+    },
+    {
+      "id": "audit-flag",
+      "from": "audit",
+      "to": "sched",
+      "y": 478,
+      "label": "noisy: D 0.71, below 1.5, flag",
+      "variant": "security",
+      "note": "the audit waits for 40 degrees of freedom, about 8 rounds"
+    },
+    {
+      "id": "s5-cap",
+      "from": "sched",
+      "to": "trainer",
+      "y": 538,
+      "label": "noisy to S5: capped at the floor, 0-3% from round 9",
+      "variant": "security"
+    },
+    {
+      "id": "calib-request",
+      "from": "sched",
+      "to": "calib",
+      "y": 596,
+      "label": "check slices: all 4, then MBPP + GSM8K"
+    },
+    {
+      "id": "calib-result",
+      "from": "calib",
+      "to": "sched",
+      "y": 626,
+      "label": "GSM8K 0.60 to 0.63, MBPP 0.32 to 0.34, no flag",
+      "variant": "return",
+      "note": "about 1.5% of budget; added nothing measurable"
+    },
+    {
+      "id": "stop",
+      "from": "sched",
+      "to": "trainer",
+      "y": 712,
+      "label": "stop at 1.54 GPU-hours, final evaluation",
+      "variant": "emphasis"
+    },
+    {
+      "id": "final",
+      "from": "trainer",
+      "to": "sched",
+      "y": 740,
+      "label": "final accuracy: +0.3 points vs Uniform (a tie)",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "What Curator changed",
+      "items": [
+        "Countdown (never solved) fell from about 20% of questions to 0-3%",
+        "The random-reward arm fell from about 20% to 0-3% after round 8"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Without Curator (same seed)",
+      "items": [
+        "Uniform kept the random-reward arm at 19-22% all run",
+        "SEC raised it from 19% to 44% by round 32"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Honest limits",
+      "items": [
+        "Curator put 50-75% of questions on MBPP; that did not raise the final score",
+        "Final accuracy tied with Uniform; in seed 1 the audit flagged only at round 23"
+      ]
+    }
+  ]
+}
