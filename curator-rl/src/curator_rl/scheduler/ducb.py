@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from dataclasses import asdict
 from typing import Any, NotRequired, TypedDict
 
 from curator_rl.calibration.calibrator import CalibrationReport, Calibrator, CalibratorState
@@ -24,6 +25,7 @@ from curator_rl.calibration.regression import FitRow, ProxyFit, ProxyWeightFitte
 from curator_rl.core.config import CalibCfg, CreCfg, ProxyCfg, SchedulerCfg, SignalsCfg
 from curator_rl.core.types import (
     CalibrationObservation,
+    EnvStatus,
     MixtureDecision,
     RoundObservation,
     SignalVector,
@@ -53,6 +55,7 @@ class DUCBState(TypedDict):
     fit_w: NotRequired[dict[str, float]]
     drift: NotRequired[dict[str, dict[str, float]] | None]
     prev_pass: NotRequired[dict[str, float]]
+    latest_vectors: NotRequired[dict[str, dict[str, Any]]]
 
 
 class DiscountedUCB(BaseScheduler):
@@ -336,6 +339,10 @@ class DiscountedUCB(BaseScheduler):
             "fit_lp": dict(self._fit_lp), "fit_sr": dict(self._fit_sr), "fit_w": dict(self._fit_w),
             "drift": None if self._drift is None else {e: d.get_state() for e, d in self._drift.items()},
             "prev_pass": dict(self._prev_pass),
+            # the status layer reads these at the next decision; without them a restored scheduler
+            # skips its status constraints for one round (replay test: test_scheduler_checkpoint.py)
+            "latest_vectors": {e: {**asdict(sv), "status": sv.status.value}
+                               for e, sv in self._latest_vectors.items()},
         }
 
     def load_checkpoint(self, state: DUCBState) -> None:  # type: ignore[override]  (narrower than Mapping)
@@ -364,6 +371,10 @@ class DiscountedUCB(BaseScheduler):
             self._fit_lp = {e: float(v) for e, v in state.get("fit_lp", {}).items()}
             self._fit_sr = {e: float(v) for e, v in state.get("fit_sr", {}).items()}
             self._fit_w = {e: float(v) for e, v in state.get("fit_w", {}).items()}
+        self._latest_vectors = {
+            e: SignalVector(**{**v, "status": EnvStatus(v["status"])})
+            for e, v in state.get("latest_vectors", {}).items()
+        }
 
     def state_hash(self) -> str:
         payload = json.dumps(
