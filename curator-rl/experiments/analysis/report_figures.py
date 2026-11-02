@@ -53,7 +53,8 @@ from experiments.analysis.d103_confirm import (  # noqa: E402
 ENVS = ("gsm8k", "math35", "mbpp", "countdown", "noisy")
 REAL = ("gsm8k", "math35", "mbpp", "countdown")
 METHOD_ORDER = ["curator", "curator_nocal", "curator_q", "lp", "uniform", "uniform_q", "clean_uniform", "dump", "sec"]
-MIXTURES = ["curator_s0", "curator_s1", "curator_s2", "sec_s0", "dump_s0", "uniform_s0", "lp_s0", "curator_q_s0"]
+MIXTURES = ["curator_s0", "curator_s1", "curator_s2", "sec_s0", "sec_s1", "sec_s2", "dump_s0", "dump_s1", "dump_s2",
+            "uniform_s0", "lp_s0", "curator_q_s0", "curator_nocal_s0"]
 
 
 def ordered(labels) -> list[str]:

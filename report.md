@@ -1,6 +1,8 @@
 # CURATOR: full project report, from day 1 to 22 October 2026
 
 Branch `audit-fixes-and-gpu-run` (PR #1), latest commit `4d64b1e`.
+
+> Updated 2 November 2026: summary items 5 and 7 reflect the D-103 confirmation (session A).
 Companion documents:
 - `self_critic.md`: why the original claim could not win, and what went wrong;
 - `curator-rl/docs/DECISIONS.md`: every decision, including pre-registrations D-101, D-102 and D-103;
@@ -26,13 +28,16 @@ Companion documents:
      rewards by about 20×.
    - A pre-flight probe catches broken checkers before training: 2 of 2 broken flagged, 0 of 4 real.
    - Curator gives useful data about 45% more compute than Uniform.
-5. **The most promising finding (1 seed, being confirmed).** Published curricula (SEC, DUMP) and
-   reward-variance filtering are **pulled into the broken source** and lose 1.5–2.3 points. Curator is
-   not. With filtering, Curator's reward check is worth **+1.8 points** (2.9 SE).
+5. **The robustness finding, confirmed in part (D-103, 3 seeds, 2 Nov).** Published curricula (SEC,
+   DUMP) are **pulled into the broken source in every seed** (34% and 31% of questions against Uniform's
+   20%; Curator 6–10%). Their accuracy loss shrank from 1.5–2.3 points on seed 0 to −1.0 and −0.8 on
+   average: every seed negative, but below the pre-registered 2-SE bar, so R2 fails. Curator + filter
+   against Uniform + filter: +0.65 (R1 fails). By D-103's rule the story is the fallback: the negative
+   result, its mechanism and the reward checks (`Curator-Nov-results/analysis/d103_report.md`).
 6. **The second model family (OLMo-2-1B) is inconclusive.** It is about 3× slower per step, so it got
    only 14–15 training rounds, and neither method moved it measurably.
-7. **Next:** the D-103 confirmation runs (seeds 1–2), then the story decision on analysis day. About
-   12 GPU-hours, inside next week's 30.
+7. **Next:** D-103 session B (`clean`, `sec_tau1`, about 3.5 GPU-hours), then the write-up of the
+   fallback story.
 
 ---
 

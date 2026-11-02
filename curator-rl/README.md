@@ -6,21 +6,23 @@ reinforcement learning on several task environments (math, code, puzzles), it de
 round which share of the GPU budget each environment gets. The aim is the highest held-out score
 when the budget runs out.
 
-> **Status (2026-11-01, branch `audit-fixes-and-gpu-run`):** the Level-1 GPU runs are done and
+> **Status (2026-11-02, branch `audit-fixes-and-gpu-run`):** the Level-1 GPU runs are done and
 > analysed (Qwen2.5-0.5B on Kaggle T4, plus one OLMo-2-1B pair). Design, simulator, scheduler,
 > baselines, calibration, the ROI leaderboard and all five environments are built and tested; a full
 > audit found and fixed 30+ errors (`../errors_found.md`), and D-106 fixed a scheduler-checkpoint bug
 > found after a merge. Runs **survive a lost Kaggle session** (every round checkpointed, mirrored to a
 > Hugging Face dataset, resumed by rerunning the same command).
 >
-> **Real-GPU result (see [section 5](#5-results-so-far)):** every method gains 4-7 points of sampled
-> accuracy over the untrained model, and **Curator ties Uniform** (-0.1 points, 95% interval
-> [-1.2, +1.0], 3 seeds). The claim "Curator beats Uniform" was dropped (D-103). The project thesis is
-> now **robustness**: selectors that steer on learning signals (SEC, DUMP) are pulled into a
-> random-reward environment and lose accuracy (34% / 31% of questions on that arm vs 20% for Uniform
-> and 6% for Curator), while Curator's audit flags that arm (S5) and is not pulled in.
-> **Next:** the D-103 confirmation runs (SEC, DUMP, uniform_q, curator_q, curator-lite, seeds 1-2) and
-> the phases of `docs/ROADMAP_v4.md` (proposed, D-107).
+> **Real-GPU result (see [section 5](#5-results-so-far)):** every method gains 4.6-5.7 points of
+> sampled accuracy over the untrained model, and **no method beats Uniform** (Curator -0.1 points, 95%
+> interval [-1.2, +1.0], 3 seeds). The pre-registered **D-103 confirmation** (3 seeds per method,
+> analysed 2026-11-02) decided the story: R1 and R2 fail (SEC -1.0 and DUMP -0.8 points against
+> Uniform, every seed negative but below the 2-SE bar), R3 and R4 hold. The result is therefore a
+> rigorous negative result on accuracy with its mechanism: learning-signal curricula (SEC, DUMP) put 34%
+> and 31% of their questions into a random-reward environment in every seed (Uniform 20%), while
+> Curator's label-free reward audit flags it in all 10 Curator runs (never a real environment) and keeps
+> it to 6-10%. Calibration can be dropped (R4).
+> **Next:** D-103 session B (`clean`, `sec_tau1`), then the phases of `docs/ROADMAP_v4.md` (proposed, D-107).
 > Tests: 521 passed, 1 skipped (POSIX-only) with the datasets downloaded (run 2026-11-01); CI rebuilds
 > the datasets and enforces 85% coverage.
 
@@ -259,7 +261,8 @@ Pre-registered hypotheses H1–H7, with the plan for negative results, are in
 
 ### Real-GPU results (Kaggle T4, Qwen2.5-0.5B-Instruct, 1.5 charged GPU-h per run)
 
-Source: `../curator_results_new/comparison.md` (and `../curator_results/`, `../curator_results_olmo/`).
+Source: `../curator_results_november/comparison.md` (every seed; earlier downloads in `../curator_results_new/`,
+`../curator_results/`, `../curator_results_olmo/`).
 Primary measure is evaluation protocol 2 (D-101): sampled accuracy, mean of 4 samples per item,
 macro-average over gsm8k, math35, mbpp, countdown on the same dev items for every method. The sealed
 test is not used. Greedy accuracy is reported alongside.
@@ -268,14 +271,14 @@ test is not used. Greedy accuracy is reported alongside.
 |---|---|---|---|---|
 | base (untrained) | - | 0.1785 | 0.3000 | - |
 | **curator** | 3 | 0.2326 | 0.3086 | noisy |
-| curator_nocal (Curator-lite) | 1 | 0.2354 | 0.3142 | noisy |
-| curator_q | 1 | 0.2408 | 0.3050 | noisy |
+| curator_nocal (Curator-lite) | 3 | 0.2341 | 0.3125 | noisy |
+| curator_q | 3 | 0.2324 | 0.3100 | noisy |
 | uniform | 3 | 0.2339 | 0.3061 | - |
-| uniform_q | 1 | 0.2225 | 0.3017 | - |
+| uniform_q | 3 | 0.2260 | 0.3078 | - |
 | lp | 3 | 0.2354 | 0.3069 | - |
 | dirichlet (sysid design, not a method) | 2 | 0.2277 | 0.3096 | - |
-| dump | 1 | 0.2285 | 0.3183 | - |
-| sec | 1 | 0.2202 | 0.3117 | - |
+| dump | 3 | 0.2264 | 0.3106 | - |
+| sec | 3 | 0.2243 | 0.3131 | - |
 
 - **Training works.** Every method gains +4.2 to +6.8 points of sampled accuracy over the untrained
   model, mostly on GSM8K (about +13 to +16 points). Countdown stays at 0 for all methods.
@@ -284,13 +287,18 @@ test is not used. Greedy accuracy is reported alongside.
   Uniform" is dropped (D-103).
 - **The random-reward arm is caught, by the reward audit.** Every S5 in every Curator run came from
   the label-free audit, and no real arm was ever flagged. First flag: rounds 8, 23 and 8 (Curator
-  seeds 0–2), 9 (Curator-lite, which has no calibration), 1 (`curator_q`, pre-flight gate) and 7
-  (OLMo). The first calibration runs at round 10, so calibration did not catch it. The pre-flight
+  seeds 0–2), 9, 14 and 8 (Curator-lite, which has no calibration), 1, 1 and 1 (`curator_q`, pre-flight
+  gate) and 7 (OLMo). The first calibration runs at round 10, so calibration did not catch it. The pre-flight
   verifier check flags it too (junk reward rate 0.30; the other four arms 0.00, limit 0.05).
-- **Why the thesis is robustness.** On seed 0, SEC and DUMP lose to Uniform by 2.3 and 1.5 points
-  (SE 0.6 and 0.7) and put 34% and 31% of questions into the random-reward arm (Uniform 20%; Curator
-  6% on seed 0, and 6–16% over seeds 0–2, the 16% in the seed whose audit flagged late).
-  Greedy scores disagree in direction, and seeds 1-2 for these methods are still to be run (D-103).
+- **D-103 confirmation (3 seeds each; `../Curator-Nov-results/analysis/d103_report.md`).** SEC and
+  DUMP score below Uniform in every seed (SEC -2.3, -0.3, -0.2; DUMP -1.5, -0.6, -0.2 points; means
+  -1.0 and -0.8) but neither clears the pre-registered 2-SE bar (1.4 and 1.9 SE): **R2 fails**. Curator
+  + question filter against Uniform + filter: +1.8, -0.2, +0.3, **R1 fails**. The mechanism holds in every
+  seed (**R3**): SEC 33-34% and DUMP 31% of questions on the random-reward arm against Uniform's 20%;
+  Curator variants 6-10% on average (single seeds up to 16% when the audit flags late). Curator-lite
+  matches Curator (+0.15 points, **R4 holds**). By D-103's own rule the story is the fallback: a rigorous
+  negative result with its mechanism, and the pre-flight check and in-run audit as the contribution.
+  Greedy accuracy points the other way for SEC and DUMP (+0.7 and +0.4).
 - **Budget moves off the useless arms, but accuracy does not follow.** Mean delivered share under
   Curator: Countdown (no learning signal at 0.5B) 5% against Uniform's 20%, noisy 6–16% against 20%.
   The freed budget goes to GSM8K, MATH35 and MBPP, but the mix differs a lot between seeds (MBPP 53% on
@@ -650,7 +658,8 @@ These rules are the reviewer in a one-person project. Every change is logged in
 | ✅ | Calibration targeting by proxy claim + staleness (D-93 … D-95) | adopted |
 | ✅ | Phase F runner built and run on Kaggle T4 (Qwen2.5-0.5B, 1.5 GPU-h per run); evaluation protocol 2 (D-101); pilots (D-102) | Curator ties Uniform; every method +4-7 points over the untrained model |
 | ✅ | Thesis changed to robustness; Curator-lite and confirmation runs pre-registered (D-103) | claim "Curator beats Uniform" dropped |
-| 1 | **D-103 confirmation runs** (ready): notebook session A `["confirm", "lite"]` (sec, dump, uniform_q, curator_q, curator_nocal on seeds 1-2), session B `["clean", "sec_tau1"]` (clean_uniform seeds 0-1; the declared check of SEC at the authors' default temperature). Analysis fixed before the runs: `experiments/analysis/d103_confirm.py` -> `../Curator-Nov-results/` | tests R1-R4; story decided on the analysis day |
+| ✅ | **D-103 session A** (`confirm`, `lite`: sec, dump, uniform_q, curator_q, curator_nocal on seeds 1-2), analysed 2026-11-02 with the analysis fixed before the runs (`experiments/analysis/d103_confirm.py`) | R1, R2 fail; R3, R4 hold; fallback story by the pre-registered rule |
+| 1 | **D-103 session B**: `clean` (clean_uniform seeds 0-1, the ceiling of a perfect junk detector) and the declared `sec_tau1` check | descriptive; then regenerate `../Diagram_&_Documentation/` |
 | 2 | **Roadmap v4** (proposed, D-107): fault zoo and key-consistency audit, health-gated question allocation, gradient-sketch transfer and TAC-lite baseline, seed count from measured SD, second model, multi-turn tool-call arm, `curator-health` command | each phase gets its own pre-registration first |
 | 3 | Optional, fresh simulator seeds (>= 700): re-test gamma = 1 with a powered non-inferiority design; a harder S5 response than halving the weight | optional |
 
@@ -686,8 +695,8 @@ Owner actions still open:
 - **Noisy arm.** Spurious-reward effects are Qwen-specific in the literature. The noisy arm was
   flagged S5 on Qwen2.5-0.5B (3 seeds) and on one OLMo-2-1B run; Llama-3.2-1B is still planned.
 - **Real-GPU evidence is thin.** 1-3 seeds per method, so every interval is wide. Curator ties
-  Uniform, and the simulator gain did not transfer (D-103). SEC and DUMP below Uniform rests on seed 0
-  until the confirmation runs finish.
+  Uniform, and the simulator gain did not transfer (D-103). SEC and DUMP below Uniform holds in every seed
+  but not at the pre-registered 2-SE bar (D-103 R2).
 - **No reward signal in many groups.** 35-50% of GRPO groups have all-equal rewards in every method
   (D-102), so the mixture has little to steer at 0.5B and 62-72 optimizer steps per run (31-36
   rounds of R = 2; OLMo 14-15 rounds).

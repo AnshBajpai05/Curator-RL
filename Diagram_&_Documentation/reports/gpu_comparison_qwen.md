@@ -6,15 +6,15 @@ Sampled accuracy = mean over 4 samples per item at the training temperature (eva
 |---|---|---|---|---|---|---|---|---|
 | base (untrained) | - | 0.1785 | 0.3508 | 0.3000 | 0 | 0 | - | - |
 | curator | 3 | 0.2326 | 0.3881 | 0.3086 | 1.523 | 32.0 | noisy | 1 |
-| curator_nocal | 1 | 0.2354 | 0.3983 | 0.3142 | 1.522 | 35.0 | noisy | 1 |
-| curator_q | 1 | 0.2408 | 0.3975 | 0.3050 | 1.529 | 27.0 | noisy | 1 |
+| curator_nocal | 3 | 0.2341 | 0.3964 | 0.3125 | 1.530 | 34.0 | noisy | 1 |
+| curator_q | 3 | 0.2324 | 0.3869 | 0.3100 | 1.531 | 27.3 | noisy | 2 |
 | dirichlet | 2 | 0.2277 | 0.3821 | 0.3096 | 1.524 | 32.0 | - | 0 |
-| dump | 1 | 0.2285 | 0.3767 | 0.3183 | 1.522 | 34.0 | - | 1 |
+| dump | 3 | 0.2264 | 0.3739 | 0.3106 | 1.522 | 34.0 | - | 1 |
 | lp | 3 | 0.2354 | 0.3906 | 0.3069 | 1.512 | 35.0 | - | 2 |
 | pilot_uniform | 1 | 0.2377 | 0.3875 | 0.3067 | 1.537 | 33.0 | - | 1 |
-| sec | 1 | 0.2202 | 0.3733 | 0.3117 | 1.508 | 32.0 | - | 0 |
+| sec | 3 | 0.2243 | 0.3847 | 0.3131 | 1.511 | 33.3 | - | 1 |
 | uniform | 3 | 0.2339 | 0.3858 | 0.3061 | 1.523 | 34.0 | - | 2 |
-| uniform_q | 1 | 0.2225 | 0.3750 | 0.3017 | 1.502 | 26.0 | - | 1 |
+| uniform_q | 3 | 0.2260 | 0.3781 | 0.3078 | 1.518 | 26.3 | - | 6 |
 
 ## Per domain (sampled accuracy; greedy in brackets; mean over seeds)
 
@@ -22,15 +22,15 @@ Sampled accuracy = mean over 4 samples per item at the training temperature (eva
 |---|---|---|---|---|
 | base (untrained) | 0.343 (0.567) | 0.133 (0.260) | 0.237 (0.367) | 0.000 (0.007) |
 | curator | 0.487 (0.601) | 0.167 (0.273) | 0.276 (0.356) | 0.000 (0.004) |
-| curator_nocal | 0.475 (0.613) | 0.166 (0.260) | 0.300 (0.383) | 0.001 (0.000) |
-| curator_q | 0.495 (0.603) | 0.168 (0.257) | 0.300 (0.350) | 0.000 (0.010) |
+| curator_nocal | 0.484 (0.612) | 0.167 (0.260) | 0.285 (0.372) | 0.001 (0.006) |
+| curator_q | 0.493 (0.617) | 0.170 (0.276) | 0.267 (0.344) | 0.000 (0.003) |
 | dirichlet | 0.458 (0.590) | 0.201 (0.315) | 0.252 (0.333) | 0.000 (0.000) |
-| dump | 0.473 (0.637) | 0.152 (0.267) | 0.287 (0.367) | 0.001 (0.003) |
+| dump | 0.479 (0.612) | 0.159 (0.263) | 0.267 (0.361) | 0.001 (0.006) |
 | lp | 0.496 (0.618) | 0.166 (0.261) | 0.279 (0.339) | 0.001 (0.010) |
 | pilot_uniform | 0.489 (0.620) | 0.172 (0.287) | 0.287 (0.317) | 0.002 (0.003) |
-| sec | 0.465 (0.627) | 0.161 (0.277) | 0.254 (0.333) | 0.001 (0.010) |
+| sec | 0.472 (0.626) | 0.162 (0.269) | 0.263 (0.350) | 0.001 (0.008) |
 | uniform | 0.492 (0.604) | 0.170 (0.260) | 0.274 (0.356) | 0.000 (0.004) |
-| uniform_q | 0.460 (0.610) | 0.146 (0.260) | 0.283 (0.333) | 0.001 (0.003) |
+| uniform_q | 0.475 (0.613) | 0.157 (0.253) | 0.271 (0.361) | 0.001 (0.003) |
 
 ## Pre-flight verifier check (D-102)
 
@@ -54,22 +54,42 @@ Paired over items: the SE is the evaluation's, for one seed. Whether a differenc
 | curator | 1 | -0.0015 (0.0060) | -0.0200 (0.0095) | gsm8k +0.001, math35 +0.006, mbpp -0.013, countdown +0.000 |
 | curator | 2 | -0.0056 (0.0086) | +0.0217 (0.0125) | gsm8k -0.015, math35 -0.012, mbpp +0.004, countdown +0.000 |
 | curator_nocal | 0 | -0.0079 (0.0080) | +0.0158 (0.0147) | gsm8k -0.028, math35 -0.005, mbpp +0.000, countdown +0.001 |
+| curator_nocal | 1 | +0.0112 (0.0061) | -0.0050 (0.0136) | gsm8k +0.001, math35 +0.014, mbpp +0.029, countdown +0.001 |
+| curator_nocal | 2 | -0.0027 (0.0100) | +0.0083 (0.0138) | gsm8k +0.001, math35 -0.016, mbpp +0.004, countdown +0.000 |
 | curator_q | 0 | -0.0025 (0.0058) | +0.0067 (0.0083) | gsm8k -0.007, math35 -0.003, mbpp +0.000, countdown +0.000 |
+| curator_q | 1 | +0.0050 (0.0063) | -0.0075 (0.0140) | gsm8k +0.010, math35 +0.010, mbpp +0.000, countdown +0.000 |
+| curator_q | 2 | -0.0069 (0.0091) | +0.0125 (0.0156) | gsm8k +0.001, math35 -0.007, mbpp -0.021, countdown +0.000 |
 | dirichlet | 0 | -0.0148 (0.0107) | -0.0008 (0.0186) | gsm8k -0.045, math35 +0.015, mbpp -0.029, countdown +0.000 |
 | dirichlet | 1 | +0.0075 (0.0100) | -0.0017 (0.0199) | gsm8k +0.037, math35 +0.018, mbpp -0.025, countdown +0.000 |
 | dump | 0 | -0.0148 (0.0071) | +0.0200 (0.0095) | gsm8k -0.029, math35 -0.018, mbpp -0.013, countdown +0.001 |
+| dump | 1 | -0.0062 (0.0062) | -0.0133 (0.0131) | gsm8k -0.009, math35 +0.004, mbpp -0.021, countdown +0.001 |
+| dump | 2 | -0.0015 (0.0056) | +0.0067 (0.0065) | gsm8k -0.003, math35 -0.017, mbpp +0.013, countdown +0.001 |
 | lp | 0 | -0.0069 (0.0074) | +0.0000 (0.0139) | gsm8k -0.003, math35 +0.000, mbpp -0.025, countdown +0.000 |
 | lp | 1 | +0.0038 (0.0060) | -0.0108 (0.0094) | gsm8k +0.005, math35 -0.003, mbpp +0.013, countdown +0.000 |
 | lp | 2 | +0.0077 (0.0051) | +0.0133 (0.0082) | gsm8k +0.008, math35 -0.008, mbpp +0.029, countdown +0.002 |
 | pilot_uniform | 0 | -0.0056 (0.0064) | +0.0083 (0.0121) | gsm8k -0.013, math35 +0.002, mbpp -0.013, countdown +0.002 |
 | sec | 0 | -0.0231 (0.0064) | +0.0133 (0.0096) | gsm8k -0.037, math35 -0.010, mbpp -0.046, countdown +0.001 |
+| sec | 1 | -0.0033 (0.0060) | -0.0158 (0.0103) | gsm8k -0.008, math35 -0.001, mbpp -0.004, countdown +0.000 |
+| sec | 2 | -0.0023 (0.0079) | +0.0233 (0.0090) | gsm8k -0.014, math35 -0.013, mbpp +0.017, countdown +0.001 |
 | uniform_q | 0 | -0.0208 (0.0063) | +0.0033 (0.0127) | gsm8k -0.043, math35 -0.025, mbpp -0.017, countdown +0.001 |
+| uniform_q | 1 | +0.0065 (0.0062) | -0.0142 (0.0123) | gsm8k +0.006, math35 +0.002, mbpp +0.017, countdown +0.002 |
+| uniform_q | 2 | -0.0094 (0.0088) | +0.0158 (0.0126) | gsm8k -0.015, math35 -0.016, mbpp -0.008, countdown +0.002 |
 
 curator vs uniform, sampled macro over 3 seeds: -0.0013, 95% t-interval [-0.0122, +0.0096], sign-flip p 0.750
 
+curator_nocal vs uniform, sampled macro over 3 seeds: +0.0002, 95% t-interval [-0.0244, +0.0248], sign-flip p 1.000
+
+curator_q vs uniform, sampled macro over 3 seeds: -0.0015, 95% t-interval [-0.0164, +0.0135], sign-flip p 0.750
+
 dirichlet vs uniform, sampled macro over 2 seeds: -0.0036, 95% t-interval [-0.1453, +0.1380], sign-flip p 1.000
 
+dump vs uniform, sampled macro over 3 seeds: -0.0075, 95% t-interval [-0.0243, +0.0093], sign-flip p 0.250
+
 lp vs uniform, sampled macro over 3 seeds: +0.0015, 95% t-interval [-0.0172, +0.0203], sign-flip p 0.750
+
+sec vs uniform, sampled macro over 3 seeds: -0.0096, 95% t-interval [-0.0387, +0.0196], sign-flip p 0.250
+
+uniform_q vs uniform, sampled macro over 3 seeds: -0.0079, 95% t-interval [-0.0420, +0.0261], sign-flip p 0.500
 
 ## Gain over the untrained model (item by item, sampled)
 
@@ -79,19 +99,29 @@ lp vs uniform, sampled macro over 3 seeds: +0.0015, 95% t-interval [-0.0172, +0.
 | curator | 1 | +0.0467 (0.0079) | gsm8k +0.142, math35 +0.036, mbpp +0.008, countdown +0.000 |
 | curator | 2 | +0.0475 (0.0080) | gsm8k +0.131, math35 +0.030, mbpp +0.029, countdown +0.000 |
 | curator_nocal | 0 | +0.0569 (0.0088) | gsm8k +0.132, math35 +0.033, mbpp +0.062, countdown +0.001 |
+| curator_nocal | 1 | +0.0594 (0.0092) | gsm8k +0.142, math35 +0.044, mbpp +0.050, countdown +0.001 |
+| curator_nocal | 2 | +0.0504 (0.0078) | gsm8k +0.147, math35 +0.026, mbpp +0.029, countdown +0.000 |
 | curator_q | 0 | +0.0623 (0.0098) | gsm8k +0.152, math35 +0.035, mbpp +0.062, countdown +0.000 |
+| curator_q | 1 | +0.0531 (0.0085) | gsm8k +0.152, math35 +0.040, mbpp +0.021, countdown +0.000 |
+| curator_q | 2 | +0.0462 (0.0077) | gsm8k +0.147, math35 +0.034, mbpp +0.004, countdown +0.000 |
 | dirichlet | 0 | +0.0483 (0.0111) | gsm8k +0.105, math35 +0.055, mbpp +0.033, countdown +0.000 |
 | dirichlet | 1 | +0.0471 (0.0099) | gsm8k +0.145, math35 +0.048, mbpp -0.004, countdown +0.000 |
 | dump | 0 | +0.0500 (0.0083) | gsm8k +0.130, math35 +0.019, mbpp +0.050, countdown +0.001 |
+| dump | 1 | +0.0419 (0.0083) | gsm8k +0.133, math35 +0.034, mbpp +0.000, countdown +0.001 |
+| dump | 2 | +0.0517 (0.0092) | gsm8k +0.143, math35 +0.025, mbpp +0.037, countdown +0.001 |
 | lp | 0 | +0.0579 (0.0096) | gsm8k +0.157, math35 +0.037, mbpp +0.037, countdown +0.000 |
 | lp | 1 | +0.0519 (0.0091) | gsm8k +0.147, math35 +0.028, mbpp +0.033, countdown +0.000 |
 | lp | 2 | +0.0608 (0.0100) | gsm8k +0.154, math35 +0.033, mbpp +0.054, countdown +0.002 |
 | pilot_uniform | 0 | +0.0592 (0.0094) | gsm8k +0.146, math35 +0.039, mbpp +0.050, countdown +0.002 |
 | sec | 0 | +0.0417 (0.0091) | gsm8k +0.122, math35 +0.028, mbpp +0.017, countdown +0.001 |
+| sec | 1 | +0.0448 (0.0088) | gsm8k +0.133, math35 +0.029, mbpp +0.017, countdown +0.000 |
+| sec | 2 | +0.0508 (0.0087) | gsm8k +0.132, math35 +0.029, mbpp +0.042, countdown +0.001 |
 | uniform | 0 | +0.0648 (0.0096) | gsm8k +0.159, math35 +0.037, mbpp +0.062, countdown +0.000 |
 | uniform | 1 | +0.0481 (0.0087) | gsm8k +0.142, math35 +0.030, mbpp +0.021, countdown +0.000 |
 | uniform | 2 | +0.0531 (0.0098) | gsm8k +0.146, math35 +0.042, mbpp +0.025, countdown +0.000 |
 | uniform_q | 0 | +0.0440 (0.0095) | gsm8k +0.117, math35 +0.013, mbpp +0.046, countdown +0.001 |
+| uniform_q | 1 | +0.0546 (0.0082) | gsm8k +0.147, math35 +0.032, mbpp +0.037, countdown +0.002 |
+| uniform_q | 2 | +0.0437 (0.0082) | gsm8k +0.131, math35 +0.026, mbpp +0.017, countdown +0.002 |
 
 ## GPU-hours to reach uniform's final level (sampled, the same 100 items per domain)
 
@@ -109,24 +139,34 @@ Learning curves start at the untrained model (0 GPU-h). Fewer GPU-hours = the sa
 | sec | 0 | 0.2313 at 1.50 | not reached (best 0.2092) | - |
 | uniform_q | 0 | 0.2313 at 1.50 | not reached (best 0.2152) | - |
 | curator | 1 | 0.2215 at 1.54 | not reached (best 0.2169) | - |
+| curator_nocal | 1 | 0.2215 at 1.54 | 1.28 | +17% |
+| curator_q | 1 | 0.2215 at 1.54 | 1.14 | +26% |
 | dirichlet | 1 | 0.2215 at 1.54 | 1.34 | +13% |
+| dump | 1 | 0.2215 at 1.54 | not reached (best 0.2133) | - |
 | lp | 1 | 0.2215 at 1.54 | not reached (best 0.2190) | - |
+| sec | 1 | 0.2215 at 1.54 | not reached (best 0.2160) | - |
+| uniform_q | 1 | 0.2215 at 1.54 | 1.05 | +32% |
 | curator | 2 | 0.2219 at 1.52 | not reached (best 0.2167) | - |
+| curator_nocal | 2 | 0.2219 at 1.52 | 1.19 | +22% |
+| curator_q | 2 | 0.2219 at 1.52 | not reached (best 0.2185) | - |
+| dump | 2 | 0.2219 at 1.52 | not reached (best 0.2181) | - |
 | lp | 2 | 0.2219 at 1.52 | 1.08 | +29% |
+| sec | 2 | 0.2219 at 1.52 | not reached (best 0.2217) | - |
+| uniform_q | 2 | 0.2219 at 1.52 | not reached (best 0.2142) | - |
 
 ## Greedy, paired by seed against uniform (protocol 1)
 
 | method | n | mean diff | 95% t-interval | sign-flip p |
 |---|---|---|---|---|
 | curator | 3 | +0.0025 | [-0.0497, +0.0547] | 0.750 |
-| curator_nocal | 1 | +0.0158 | one seed: no interval | - |
-| curator_q | 1 | +0.0067 | one seed: no interval | - |
+| curator_nocal | 3 | +0.0064 | [-0.0198, +0.0326] | 0.500 |
+| curator_q | 3 | +0.0039 | [-0.0217, +0.0294] | 0.750 |
 | dirichlet | 2 | -0.0004 | [-0.0057, +0.0049] | 1.000 |
-| dump | 1 | +0.0200 | one seed: no interval | - |
+| dump | 3 | +0.0044 | [-0.0372, +0.0461] | 0.750 |
 | lp | 3 | +0.0008 | [-0.0292, +0.0309] | 1.000 |
 | pilot_uniform | 1 | +0.0083 | one seed: no interval | - |
-| sec | 1 | +0.0133 | one seed: no interval | - |
-| uniform_q | 1 | +0.0033 | one seed: no interval | - |
+| sec | 3 | +0.0069 | [-0.0436, +0.0575] | 0.750 |
+| uniform_q | 3 | +0.0017 | [-0.0358, +0.0391] | 0.750 |
 
 With n < 20 seeds the interval is a Student-t interval (a percentile bootstrap undercovers badly at this size: 75% at n = 3, 83% at n = 5; audit E-11). One seed is descriptive only.
 
@@ -196,6 +236,40 @@ Flagged S5 (rewards that do not depend on the prompt): noisy. Their ROI is not m
 | 3 | countdown | +0.0000 (0.0000) | 1.35e-03 | +0.00 | [+0.00, +0.00] |
 | 4 | math35 | +0.0000 (0.0000) | 2.04e-03 | +0.00 | [+0.00, +0.00] |
 | 5 | mbpp | +0.0000 (0.0520) | 4.77e-04 | +0.00 | [-38.20, +38.20] |
+
+
+## ROI leaderboard: curator_q, seed 1 (2 calibration evaluations)
+
+Benchmark gain per GPU-hour spent on each arm, credited on the slice the arm is scored on (roi/leaderboard.py, `members`). From one run this is descriptive: in the simulator one run ranks arms like leave-one-out with median tau 0.3-0.5 (reports/analysis/roi_loo_sim.md). Gains are fitted non-negative: 0.0000 means no positive evidence, not a measured zero.
+
+Flagged S5 (rewards that do not depend on the prompt): noisy. Their ROI is not meaningful, whatever its rank.
+
+**Not a ranking:** with 2 calibration evaluations no (unflagged) arm's interval excludes zero, so the order below is noise.
+
+| rank | arm | benchmark gain per window of full share (SD) | GPU-h / prompt | ROI (benchmark points per GPU-hour) | 95% interval |
+|---|---|---|---|---|---|
+| 1 | math35 | +0.1081 (0.0620) | 1.71e-03 | +11.26 | [-1.39, +23.91] |
+| 2 | gsm8k | +0.0197 (0.0378) | 8.39e-04 | +4.20 | [-11.55, +19.96] |
+| 3 | noisy | +0.0008 (0.4995) | 8.59e-04 | +0.17 | [-203.36, +203.71] |
+| 4 | countdown | +0.0000 (0.0000) | 1.28e-03 | +0.00 | [+0.00, +0.00] |
+| 5 | mbpp | +0.0000 (0.0000) | 4.47e-04 | +0.00 | [+0.00, +0.00] |
+
+
+## ROI leaderboard: curator_q, seed 2 (2 calibration evaluations)
+
+Benchmark gain per GPU-hour spent on each arm, credited on the slice the arm is scored on (roi/leaderboard.py, `members`). From one run this is descriptive: in the simulator one run ranks arms like leave-one-out with median tau 0.3-0.5 (reports/analysis/roi_loo_sim.md). Gains are fitted non-negative: 0.0000 means no positive evidence, not a measured zero.
+
+Flagged S5 (rewards that do not depend on the prompt): noisy. Their ROI is not meaningful, whatever its rank.
+
+**Not a ranking:** with 2 calibration evaluations no (unflagged) arm's interval excludes zero, so the order below is noise.
+
+| rank | arm | benchmark gain per window of full share (SD) | GPU-h / prompt | ROI (benchmark points per GPU-hour) | 95% interval |
+|---|---|---|---|---|---|
+| 1 | gsm8k | +0.0292 (0.0271) | 7.93e-04 | +6.58 | [-5.37, +18.53] |
+| 2 | math35 | +0.0446 (0.0711) | 1.60e-03 | +4.97 | [-10.56, +20.51] |
+| 3 | noisy | +0.0008 (0.4998) | 8.12e-04 | +0.19 | [-215.23, +215.60] |
+| 4 | countdown | +0.0000 (0.0000) | 1.32e-03 | +0.00 | [+0.00, +0.00] |
+| 5 | mbpp | +0.0000 (0.0000) | 4.61e-04 | +0.00 | [+0.00, +0.00] |
 
 
 ## ROI leaderboard: dirichlet, seed 0 (6 calibration evaluations)

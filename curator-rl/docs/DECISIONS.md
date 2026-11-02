@@ -703,6 +703,19 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
   - The analysis is fixed now, before the runs: `experiments/analysis/d103_confirm.py` applies R1-R4 exactly
     as written above (same-sign 3 seeds and |mean| >= 2 SE; R4 on the mean paired difference, the t-interval
     reported next to it) and writes `Curator-Nov-results/analysis/` (report, tables, figures).
+- Record (2 Nov): **outcome of session A** (`confirm`, `lite`; all 10 runs finished on budget, settings identical
+  to their seed-0 runs; data `../curator_results_november/`, report `../Curator-Nov-results/analysis/d103_report.md`).
+  - R1 fails: curator_q - uniform_q +1.83, -0.15, +0.25 (mean +0.65, 1.1 SE; seeds disagree in sign).
+  - R2 fails: SEC -2.31, -0.33, -0.23 (mean -0.96, 1.4 SE); DUMP -1.48, -0.62, -0.15 (mean -0.75, 1.9 SE).
+    Every seed has the predicted sign; neither clears 2 SE.
+  - R3 holds: SEC 33.4-33.9% and DUMP 30.6-31.1% of questions on the random-reward arm in every seed
+    (Uniform 20%); Curator 9.5%, Curator-lite 8.6%, Curator-Q 6.0% on average (applied to the per-method
+    mean; single seeds: Curator 15.8% and Curator-lite 13.7% in seed 1).
+  - R4 holds: curator_nocal - curator +0.15 (t-interval [-2.81, +3.12], not inside +-1).
+  - **Story (by the rule above, not chosen after the fact): the fallback.** A rigorous negative result on
+    accuracy with its mechanism (learning-signal curricula are drawn into a broken reward), plus the
+    deterministic pre-flight check and the in-run audit as the contribution. Session B (`clean`, `sec_tau1`)
+    is descriptive and cannot change this.
 
 ## D-104 — This branch adopted as the base; parallel local work archived (L-96 … L-101)
 

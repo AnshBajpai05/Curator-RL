@@ -1,62 +1,50 @@
 # Curator-Nov-results: the D-103 confirmation runs
 
-This folder holds everything from the November confirmation runs: the downloaded raw results and the
-analysis built from them. The rules being tested were fixed on 21 October 2026, before any of these runs
-existed (`curator-rl/docs/DECISIONS.md`, D-103 and its record of 1 November).
+The rules tested here were fixed on 21 October 2026, before any of these runs existed
+(`curator-rl/docs/DECISIONS.md`, D-103 and its records of 1 and 2 November).
 
-## What is being tested
+## Status (2 November 2026)
 
-| Rule | Question | Holds if |
+| Session | Steps | State | Data |
+|---|---|---|---|
+| A | `confirm`, `lite` | **done, analysed** | `../curator_results_november/` (every run, old and new) |
+| B | `clean`, `sec_tau1` | to run (about 3.5 GPU-hours) | - |
+
+**Outcome of session A** (`analysis/d103_report.md`):
+
+| Rule | Question | Verdict |
 |---|---|---|
-| R1 (primary) | Does Curator + question filter beat Uniform + question filter? | all 3 seeds positive and mean >= 2 SE |
-| R2 | Do SEC (COLM 2026) and DUMP lose to Uniform when a broken reward is present? | for each: all 3 seeds negative and mean >= 2 SE |
-| R3 | Do SEC and DUMP over-fund the broken reward, and Curator not? | SEC, DUMP above 20% of questions; Curator variants under 13% |
-| R4 | Is Curator without calibration as good as full Curator? | mean difference within +-1 point |
+| R1 (primary) | Curator + question filter beats Uniform + filter? | **fails** (+0.65 points, 1.1 SE) |
+| R2 | SEC and DUMP lose to Uniform? | **fails** (SEC -1.0, DUMP -0.8; every seed negative, below 2 SE) |
+| R3 | SEC and DUMP over-fund the broken reward, Curator not? | **holds** (SEC 34%, DUMP 31%, Uniform 20%, Curator 6-10%) |
+| R4 | Curator without calibration as good as Curator? | **holds** (+0.15 points) |
 
-Also reported, not part of the rules: `clean_uniform` (Uniform without the two junk environments, the best
-a perfect junk detector could reach) and the declared check `sec_tau1` (SEC at the authors' default
-temperature 1.0; see `curator-rl/reports/analysis/sec_dump_fidelity.md`).
+By D-103's own rule the story is the fallback: a rigorous negative result on accuracy with its
+mechanism, plus the pre-flight check and the in-run reward audit as the contribution. Session B is
+descriptive and cannot change this.
 
-Story decision (D-103): if R1 and R2 hold, the robustness result leads; if not, the project reports a
-rigorous negative result with its mechanism. No change of story after the analysis day.
+## Session B steps
 
-## Steps
-
-1. **Build the Kaggle package** (on your PC, from `curator-rl/`):
-   `.venv/Scripts/python scripts/make_kaggle_gpu_bundle.py`. Upload `dist/curator-gpu-kaggle.zip` as a new
-   version of your Kaggle dataset. In the Kaggle notebook, use the updated `curator_gpu.ipynb` from the zip
-   (File -> Import notebook), or add this line to the `COMMANDS` of cell 6 by hand:
-   `"sec_tau1":  "compare --methods sec --seeds 0 --set baselines.sec.tau=1.0 --namespace sec_tau1 --no-base",`
-2. **Session A** (about 10 h): accelerator **GPU T4 x2**, Internet on, `HF_TOKEN` secret ticked.
-   In cell 1 set `STEPS = ["confirm", "lite"]`, then Save Version -> Save & Run All.
-   If it stops early (exit code 75), run the same `STEPS` again: every run resumes from its checkpoint.
-3. **Session B** (about 3.5 h): `STEPS = ["clean", "sec_tau1"]`.
-4. **Download** from the notebook's Output panel (or the Hugging Face backup):
-   - `results/curator_results.zip` -> unzip into `Curator-Nov-results/raw/main/`
-   - `results_sec_tau1/curator_results.zip` -> unzip into `Curator-Nov-results/raw/sec_tau1/`
-
-   Each should end up with a `runs/` folder inside (for example `raw/main/runs/sec_s1/summary.json`).
-   The main zip contains every run, old and new, because each session restores the earlier runs from the
-   backup first.
-5. **Analyse** (from `curator-rl/`):
+1. Kaggle notebook, accelerator **GPU T4 x2**, Internet on, `HF_TOKEN` ticked, latest
+   `curator-gpu-kaggle` dataset. Cell 1: `STEPS = ["clean", "sec_tau1"]`, then Save Version -> Save & Run All.
+2. Download from the Output panel:
+   - `results/curator_results.zip` -> unzip its `curator_results/` contents over `../curator_results_november/`
+     (it contains every run, so it replaces the session A copy);
+   - `results_sec_tau1/curator_results.zip` -> unzip into `raw/sec_tau1/`.
+3. From `curator-rl/`:
 
    ```
-   .venv/Scripts/python experiments/analysis/d103_confirm.py --raw ../Curator-Nov-results/raw --out ../Curator-Nov-results/analysis
+   .venv/Scripts/python experiments/analysis/d103_confirm.py --runs ../curator_results_november/runs --runs sec_tau1=../Curator-Nov-results/raw/sec_tau1/curator_results/runs --out ../Curator-Nov-results/analysis
+   .venv/Scripts/python experiments/analysis/report_figures.py --runs ../curator_results_november/runs --olmo-runs ../curator_results_olmo/runs --out "../Diagram_&_Documentation/figures"
    ```
 
-## What you get
+   Then copy `analysis/` over `../Diagram_&_Documentation/analysis/d103_results/`.
+
+## What is here
 
 | Path | Content |
 |---|---|
-| `analysis/d103_report.md` | verdict for R1-R4 with every number, all methods against Uniform, the declared checks |
-| `analysis/figures/accuracy_vs_uniform.png` | every method against Uniform (filled = 3-seed interval) |
-| `analysis/figures/noisy_arm_share.png` | budget on the broken reward, with seed dots |
-| `analysis/figures/noisy_share_by_round.png` | the same over training rounds: who gets pulled in, and when |
-| `analysis/figures/rules_per_seed.png` | R1 and R2 seed by seed |
+| `analysis/d103_report.md` | verdict for R1-R4 with every number, all methods against Uniform |
+| `analysis/figures/` | accuracy against Uniform, budget on the broken reward, the same by round, R1/R2 seed by seed |
 | `analysis/tables/*.csv` | per-seed paired differences, rule verdicts, budget shares |
-| `raw/main/comparison.md`, `raw/main/plots/` | the runner's own comparison and per-run mixture plots |
-
-## Budget
-
-About 13.5 GPU-hours of session time in total (Kaggle's weekly quota is 30 h; whether a T4 x2 session
-counts double is unverified, so check the quota page before session B).
+| `raw/` | where the session B `sec_tau1` download goes |

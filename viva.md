@@ -3,7 +3,7 @@
 Cost-aware, calibrated environment scheduling for RL training of LLMs.
 Repository: `curator-rl/`. Every number below comes from the code, `configs/base.yaml`, or a committed report. Decision numbers (D-xx) refer to `curator-rl/docs/DECISIONS.md`.
 
-> ## Read first: updates as of 2026-11-01
+> ## Read first: updates as of 2026-11-02
 >
 > These notes were written before the GPU runs. Where a later section disagrees with this block,
 > this block is current. Sources: `curator_results*/comparison.md`, the run configs and logs, and
@@ -14,6 +14,12 @@ Repository: `curator-rl/`. Every number below comes from the code, `configs/base
 >   Every method gains +4.2 to +6.8 points of sampled accuracy over the untrained model.
 >   **Curator ties Uniform:** −0.0013, 95% t-interval [−0.012, +0.010], 3 seeds (D-101). The claim
 >   "Curator beats Uniform" is dropped; the thesis is now robustness (D-103).
+> - **D-103 confirmation outcome (2 Nov, 3 seeds per method).** R1 fails (Curator + filter vs Uniform
+>   + filter +0.65, 1.1 SE). R2 fails: SEC −1.0 and DUMP −0.8 points against Uniform, every seed negative
+>   but below the pre-registered 2-SE bar. R3 holds: SEC and DUMP put 34% and 31% of their questions into
+>   the random-reward arm in every seed, Curator variants 6–10%. R4 holds: Curator without calibration
+>   scores the same. By the rule fixed in advance the story is the fallback: a rigorous negative result
+>   with its mechanism, plus the pre-flight check and the in-run audit as the contribution.
 > - **The GPU used a different preset from the defaults below** (`kaggle/run.py --preset gpu_tuned`,
 >   D-98): γ = 1 (no forgetting), κ = 0.25, τ = 1.0, reward audit on, S5 capped at the floor ε/N
 >   (2% per arm), 3 mismatch windows for a calibration flag. The γ = 0.95 / κ = 0.5 / τ = 0.3 values
@@ -30,7 +36,7 @@ Repository: `curator-rl/`. Every number below comes from the code, `configs/base
 >   (`dirichlet`) runs fitted full-step cost per arm: MATH35 1.22–1.58× GSM8K, MBPP 0.84–0.89×, with a
 >   fixed 56–66 s per step dominating (R² 0.45–0.54). The 2.67× in section 8.3 is generation only.
 > - **What Curator does to the mix on GPU:** Countdown about 5% of prompts against Uniform's 20%; the
->   noisy arm 6–16% against 20%; SEC and DUMP put 34% and 31% into the noisy arm (seed 0).
+>   noisy arm 6–16% against 20%; SEC and DUMP put 33–34% and 31% into the noisy arm in every seed.
 > - **Built since these notes:** cost attribution and ledger, the TRL runner with crash-safe
 >   checkpoints, ROI leaderboard and leave-one-out (LOO not yet run on GPU), plots, the pre-flight
 >   verifier check (`signals/verifier_fuzz.py`), question filtering (`_q` methods,
@@ -595,7 +601,7 @@ A 2⁵ design switched discounting, cost normalisation, status layer, calibratio
 | ID | Hypothesis | Status |
 |---|---|---|
 | H1 | Curator > Uniform, heterogeneous costs | supported in sim (+0.028 to +0.030); **not supported on GPU** (ties Uniform, 3 seeds; D-101) |
-| H2 | Curator > SEC/DUMP-style | supported in refit sim (+0.027 to +0.033); on GPU SEC and DUMP are below Uniform on seed 0, confirmation runs pending (D-103) |
+| H2 | Curator > SEC/DUMP-style | supported in refit sim (+0.027 to +0.033); on GPU not confirmed: SEC and DUMP are below Uniform in all 3 seeds (−1.0, −0.8 points) but under the pre-registered 2-SE bar (D-103 R2 fails) |
 | H3 | cost normalisation drives H1/H2 | **not supported** on refit scenarios (same gain at equal cost); strongly supported in S-C |
 | H4 | calibration detects the noisy arm and cuts its share | 78–86% in the pre-audit simulator, **not at the GPU shape** (10–28%, D-96); on GPU the reward audit detects it instead |
 | H5 | ROI ranking agrees with leave-one-out | built (D-100); one-run GPU ROI is descriptive only; LOO not yet run on GPU |

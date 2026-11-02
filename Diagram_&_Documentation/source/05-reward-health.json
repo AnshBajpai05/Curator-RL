@@ -38,8 +38,9 @@
       "title": "Measured on Kaggle",
       "items": [
         "Pre-flight: noisy arm paid 0.30 for junk, the 4 real arms 0.00",
-        "Audit flagged the noisy arm in every Curator run, never a real arm",
-        "First flag at round 7-9 in 5 runs, round 23 in one seed"
+        "Audit flagged the noisy arm in all 10 Curator runs (9 Qwen, 1 OLMo), never a real arm",
+        "First flag: round 1 with the pre-flight gate (3 runs), rounds 7-9 (5 runs), 14 and 23 (2 runs)",
+        "Budget on the broken reward: Curator 6-10%, SEC 34%, DUMP 31%, Uniform 20% (3 seeds each)"
       ]
     },
     {
@@ -47,7 +48,7 @@
       "title": "Calibration",
       "items": [
         "Raised no flag on GPU and added nothing measurable at this budget",
-        "Curator without calibration caught the noisy arm just as fast"
+        "Curator without calibration scored the same: +0.15 points over 3 seeds (D-103 R4)"
       ]
     },
     {

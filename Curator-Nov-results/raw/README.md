@@ -1,4 +1,3 @@
-Unzip the downloaded results here (see ../README.md, step 4):
+Session B only: unzip `results_sec_tau1/curator_results.zip` into `sec_tau1/` here.
 
-- `main/`      <- results/curator_results.zip
-- `sec_tau1/`  <- results_sec_tau1/curator_results.zip
+The main results zip goes over `../../curator_results_november/` (see ../README.md).
