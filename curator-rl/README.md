@@ -659,7 +659,8 @@ These rules are the reviewer in a one-person project. Every change is logged in
 | ✅ | Phase F runner built and run on Kaggle T4 (Qwen2.5-0.5B, 1.5 GPU-h per run); evaluation protocol 2 (D-101); pilots (D-102) | Curator ties Uniform; every method +4-7 points over the untrained model |
 | ✅ | Thesis changed to robustness; Curator-lite and confirmation runs pre-registered (D-103) | claim "Curator beats Uniform" dropped |
 | ✅ | **D-103 session A** (`confirm`, `lite`: sec, dump, uniform_q, curator_q, curator_nocal on seeds 1-2), analysed 2026-11-02 with the analysis fixed before the runs (`experiments/analysis/d103_confirm.py`) | R1, R2 fail; R3, R4 hold; fallback story by the pre-registered rule |
-| 1 | **D-103 session B**: `clean` (clean_uniform seeds 0-1, the ceiling of a perfect junk detector) and the declared `sec_tau1` check | descriptive; then regenerate `../Diagram_&_Documentation/` |
+| 1 | **D-103 session B**: `clean` (clean_uniform seeds 0-1, the ceiling of a perfect junk detector), the declared `sec_tau1` check and `stress` (hackable checker, D-102 H-C) | descriptive; then regenerate `../Diagram_&_Documentation/` |
+| 2 | **D-108 compute test** (pre-registered 2 Nov): Uniform, Curator-Q, Curator-lite, SEC, DUMP on fresh seeds 3-5, evaluated every 3 rounds; does a method reach accuracy with less GPU (`experiments/analysis/compute_efficiency.py`) | primary: Curator-Q ahead of Uniform at matched compute |
 | 2 | **Roadmap v4** (proposed, D-107): fault zoo and key-consistency audit, health-gated question allocation, gradient-sketch transfer and TAC-lite baseline, seed count from measured SD, second model, multi-turn tool-call arm, `curator-health` command | each phase gets its own pre-registration first |
 | 3 | Optional, fresh simulator seeds (>= 700): re-test gamma = 1 with a powered non-inferiority design; a harder S5 response than halving the weight | optional |
 

@@ -742,6 +742,39 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
 - Phases, each with its own pre-registration written before its first run: 0 finish D-103 (plus the clean-ceiling decision rule); 1 fault zoo F1-F6 and a key-consistency audit, measured first on a frozen completion bank (D-108, sim seeds 800-899; GPU D-109); 2 health-gated sequential question allocation (D-110); 3 per-arm gradient-sketch transfer feature and a TAC-lite baseline (D-111, sim seeds 900-999); 4 seed count from the measured across-seed SD, second model, budget dependence (D-112); 5 multi-turn tool-call arm for the cost lever (D-113); 6 `curator-health` command and adapters.
 - Exploratory input (tuning-free, from the measured 0.5B mixed-group rates; Monte Carlo, not a GPU result): the D-102 filter lifts the random-reward arm from ~18% of drawn questions to ~30% of trained groups under Uniform. To be checked against `uniform_q_s0` logs in Phase 0.
 
+## D-108 — Pre-registration: compute efficiency at matched GPU-hours, all methods, fresh seeds 3-5
+
+- Date: 2026-11-02, written before any run of this design exists. Owner choices: compare Uniform, both Curator
+  variants, SEC and DUMP; 3 seeds. (Roadmap v4's provisional numbers D-108 … D-113 move up by one.)
+- **Question.** Does a method reach accuracy with less GPU than Uniform? The runner's "GPU-hours to reach
+  Uniform's final level" cannot answer it: when methods tie, another method crosses Uniform's final value
+  before the end about half the time by chance. The test compares whole learning curves at matched compute.
+- **Runs** (notebook step `compute`, namespace `compute`, so seeds 3-5 never mix with other runs):
+  `compare --methods uniform,curator_q,curator_nocal,sec,dump --seeds 3,4,5 --report-every 3 --no-base`.
+  Everything else as the D-103 runs (Qwen2.5-0.5B, preset `gpu_tuned`, 1.5 charged GPU-hours, same evaluation).
+  Periodic reports every 3 rounds on the fixed random 100 items per domain (uncharged; they never change a
+  run, D-101); the untrained-model point is `base_s0` of the main namespace. Seeds 3-5 are fresh on GPU.
+  15 runs, about 22.5 GPU-hours of training plus evaluation time.
+- **Measure** (`experiments/analysis/compute_efficiency.py`, fixed now): per seed, `delta` = mean over the
+  grid 0.25, 0.5, 0.75, 1.0, 1.25, 1.5 GPU-hours of (method - Uniform) sampled macro accuracy on the
+  periodic items, each curve linearly interpolated between evaluations, in points. Across seeds: mean, SE
+  (sd / sqrt(3)), t-interval (df 2), sign-flip p.
+- **Primary (H-C1):** curator_q ahead of Uniform: holds if all 3 seeds are positive and the mean is >= 2 SE.
+- **Secondary, same rule, reported without a family-wise claim:** curator_nocal ahead of Uniform; SEC behind
+  Uniform; DUMP behind Uniform (`--expect-negative sec,dump`).
+- **Descriptive:** the isotonic compute saving (share of Uniform's GPU-hours saved to reach Uniform's final
+  smoothed accuracy); final accuracy on seeds 3-5, reported separately and never added to D-103's rules.
+- **Exploratory input (seeds 0-2, not a test):** delta curator_q +0.45, +0.48, +0.26; curator_nocal -0.26,
+  +0.85, +0.05; SEC -0.53, +0.27, -0.30; DUMP -0.31, -0.26, -0.23. Caveat: the seed-0 curves of Uniform,
+  Curator, Curator-lite and LP have only two points (they were evaluated before D-101's periodic subset).
+- **Interpretation fixed now:** H-C1 holds -> "Curator-Q reaches a given accuracy with less GPU than Uniform
+  (3 fresh seeds, pre-registered) although the final accuracy ties". H-C1 fails -> reported as a null. Either
+  way the D-103 story (fallback) stands; nothing here changes D-103's verdicts.
+- Analysis command, fixed now (from `curator-rl/`):
+  `python experiments/analysis/compute_efficiency.py --runs ../Curator-Nov-results/raw/compute/curator_results/runs
+  --base-runs ../curator_results_november/runs --methods curator_q,curator_nocal,sec,dump --expect-negative sec,dump
+  --seeds-needed 3 --out ../Curator-Nov-results/compute_analysis`
+
 ---
 
 # Roadmap v3 decisions (PROPOSED — pending owner confirmation; see `docs/ROADMAP_v3.md` §11)
