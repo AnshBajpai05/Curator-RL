@@ -13,6 +13,7 @@ Figures (Qwen2.5-0.5B unless named otherwise):
 - noisy_share_by_round.png     the same over training rounds
 - no_signal_groups.png         share of answer groups with no learning signal (real environments)
 - cost_per_environment.png     generation-only cost (probe) against full GRPO-step cost (sysid fit)
+- gpu_split_by_environment.png where each method's GPU-hours went: broken reward, Countdown, useful environments
 - mixtures/*.png               the runner's per-run mixture plots (copied), Qwen and OLMo
 """
 
@@ -123,6 +124,36 @@ def probe_costs(md: Path) -> dict[str, float]:
     return out
 
 
+def fig_gpu_split(rows: list[tuple[str, list[dict[str, float]]]], path: Path) -> None:
+    """Stacked GPU-hours per method (mean over seeds): useful environments, Countdown, broken reward."""
+    useful_c, countdown_c, noisy_c = "#2a78d6", "#c3c2b7", "#eb6834"
+    plt, fig, ax = _axes(8, 0.6 * len(rows) + 1.9)
+    y = list(range(len(rows)))[::-1]
+    for i, (yi, (_label, per_seed)) in enumerate(zip(y, rows)):
+        tot = [sum(r.values()) for r in per_seed]
+        noisy = statistics.fmean(r.get("noisy", 0.0) for r in per_seed)
+        cd = statistics.fmean(r.get("countdown", 0.0) for r in per_seed)
+        useful = statistics.fmean(tot) - noisy - cd
+        left = 0.0
+        for val, color, name in ((useful, useful_c, "useful environments"), (cd, countdown_c, "Countdown (never solved)"),
+                                 (noisy, noisy_c, "broken reward (noisy)")):
+            ax.barh(yi, val, left=left, height=0.46, color=color, edgecolor=SURFACE, linewidth=1.5, zorder=2,
+                    label=name if i == 0 else None)
+            left += val
+        ax.text(left + 0.02, yi, f"useful {useful:.2f} of {left:.2f} GPU-h", va="center", ha="left", color=INK, fontsize=9.5)
+    ax.set_yticks(y, [f"{lbl}  ({len(ps)} seed{'s' if len(ps) != 1 else ''})" for lbl, ps in rows])
+    ax.set_xlim(0, 2.45)
+    ax.set_xlabel("GPU-hours charged to each kind of environment (mean over seeds)")
+    ax.grid(axis="x", color=GRID, linewidth=0.8, zorder=0)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3, frameon=False, fontsize=9)
+    ax.set_title("Where the GPU went", loc="left", color=INK, fontsize=13, fontweight="bold", pad=10)
+    fig.text(0.01, 0.01, "Generation + scoring + update per environment (cost/attribution.py). Same 1.5 GPU-h budget for "
+             "every method.", color=MUTED, fontsize=8.5)
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.savefig(path, facecolor=SURFACE)
+    plt.close(fig)
+
+
 def fig_cost(probe: dict[str, float], fitted: list[dict[str, float]], path: Path) -> None:
     plt, fig, ax = _axes(8, 4.0)
     envs = [e for e in ENVS if e in probe]
@@ -217,6 +248,18 @@ def main(argv: list[str] | None = None) -> int:
                  "got the same reward (%)", out / "no_signal_groups.png",
                  "GSM8K, MATH35, MBPP and Countdown only; dots = seeds.")
         made.append("no_signal_groups.png")
+
+    # where the GPU-hours went, per method
+    from experiments.analysis.compute_efficiency import gpu_hours_by_env
+
+    split_rows = []
+    for lbl in ["uniform", "sec", "dump", "lp", "curator", "curator_nocal", "curator_q"]:
+        per_seed = [x for x in (gpu_hours_by_env(s) for s in runs.get(lbl, {}).values()) if x]
+        if per_seed:
+            split_rows.append((lbl, per_seed))
+    if split_rows:
+        fig_gpu_split(split_rows, out / "gpu_split_by_environment.png")
+        made.append("gpu_split_by_environment.png")
 
     # cost: generation-only probe against the full-step fit of the sysid runs
     fitted = []

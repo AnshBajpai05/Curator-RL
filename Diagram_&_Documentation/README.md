@@ -1,8 +1,8 @@
 # Diagram & Documentation: everything the final report needs
 
 State of 2 November 2026: the D-103 confirmation session A (`confirm`, `lite`) is in, so every main
-comparison now has 3 seeds. Session B (`clean`, `sec_tau1`) is still to run; items marked
-**update after session B** gain a row then. Every number here comes from the run files or a committed
+comparison now has 3 seeds. Session B and the D-108 compute test are running (see "In progress");
+items marked **update after session B** gain a row then. Every number here comes from the run files or a committed
 report; nothing is typed by hand.
 
 ## Headline (D-103, decided by rules written before the runs)
@@ -39,6 +39,7 @@ pre-flight check and in-run reward audit as the contribution. Full report: `anal
 | `noisy_share_by_round.png` | SEC climbs to about 42% by round 32, DUMP holds near 31-34%, Curator falls once the audit flags the arm | final |
 | `no_signal_groups.png` | answer groups that teach nothing on the real environments: Curator 44-48%, LP 49%, SEC 53%, DUMP 54%, Uniform 59% | final |
 | `cost_per_environment.png` | MATH35 costs 2.67x GSM8K to generate but only 1.22-1.58x per full training step | final |
+| `gpu_split_by_environment.png` | where the 1.5 GPU-hours went: useful environments get 1.27-1.31 under the Curator variants, 1.17 under LP, 0.85-0.89 under Uniform, SEC and DUMP | final (fresh seeds add a check after D-108) |
 | `mixtures/*.png` | per-run mixture over rounds; `sec_s0`-`sec_s2` and `dump_s0`-`dump_s2` show the over-funding repeating in every seed, `curator_s0` the cut at round 8 | final |
 | `mixtures/olmo_*.png` | OLMo-2-1B pair (1 seed, descriptive) | final |
 
@@ -68,8 +69,9 @@ pre-flight check and in-run reward audit as the contribution. Full report: `anal
 - **Claim (3 seeds):** training works for every method (+4.6 to +5.7 points); Curator matches Uniform;
   SEC and DUMP over-fund a broken reward in every seed (34% and 31% against 20%) while Curator keeps it to
   6-10%; the label-free audit flagged that reward in all 10 Curator runs and never a real environment;
-  calibration can be dropped (R4); of about 1.5 GPU-hours, Curator spends 1.31 on environments that can
-  teach against 0.85-0.89 for Uniform, SEC and DUMP (descriptive, `compute_efficiency.py`, seeds 0-2).
+  calibration can be dropped (R4); of about 1.5 GPU-hours, the Curator variants spend 1.27-1.31 on
+  environments that can teach, LP 1.17, Uniform, SEC and DUMP 0.85-0.89 (descriptive,
+  `figures/gpu_split_by_environment.png`, seeds 0-2).
 - **Claim as a trend, not a result:** SEC and DUMP scored below Uniform in every seed (about -1 point),
   below the pre-registered 2-SE bar; Curator is about 0.6-0.9 points ahead of both, untested by any rule.
 - **Claim as simulation only:** Curator +11.6% over Uniform against +1.2% for SEC and DUMP (tuning seeds);
@@ -78,6 +80,24 @@ pre-flight check and in-run reward audit as the contribution. Full report: `anal
   get longer (test with the `hackable` checker, OLMo, longer runs).
 - **Do not claim:** Curator beats Uniform, SEC or DUMP on accuracy; compute savings; gains from
   cost-awareness on GPU; detection by calibration; leave-one-out or sealed-test results (not run).
+
+## Papers we compared against (`../papers/`)
+
+DataFlex-RL (2026, the "nothing beats Uniform" evaluation), SEC (COLM 2026), DUMP (2025), Graves et al.
+(ICML 2017) and TSCL (the LP baseline). Full citations, arXiv links and how each is used:
+`../papers/README.md`. The PDFs are kept locally, not in git (authors' licences); fetch them from the links.
+Quote to use for DataFlex-RL: "None of the eight selection or reweighting methods has a paired 95%
+confidence interval excluding zero relative to uniform sampling."
+
+## In progress (do not put these numbers in the report yet)
+
+- **D-108 compute test** (pre-registered 2 Nov): Uniform, Curator-Q, Curator-lite, SEC and DUMP on fresh
+  seeds 3-5, evaluated every 3 rounds, one team account per seed. Question: does a method reach accuracy
+  with less GPU than Uniform? Analysis: `curator-rl/experiments/analysis/compute_efficiency.py`.
+- **D-103 session B:** `clean` (perfect junk removal), `sec_tau1` (SEC at the authors' default) and
+  `stress` (a realistic buggy checker, D-102 H-C).
+
+When both are in, the figures, `analysis/` and this index are regenerated (commands below).
 
 ## Living documents (linked, not copied)
 
