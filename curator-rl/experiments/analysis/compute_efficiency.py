@@ -63,6 +63,19 @@ def curve(s: dict, base_final: dict | None) -> list[tuple[float, float]]:
     return learning_curve(rows_of(s), n_subset=n_subset, base_final=base_final)
 
 
+def gpu_hours_by_env(s: dict) -> dict[str, float]:
+    """GPU-hours charged to each environment over the run (per-round `gpu_seconds`, cost/attribution.py)."""
+    path = Path(s["_dir"]) / "rounds.jsonl"
+    out: dict[str, float] = {}
+    if not path.exists():
+        return out
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            for e, a in (json.loads(line).get("arms") or {}).items():
+                out[e] = out.get(e, 0.0) + float(a.get("gpu_seconds") or 0.0) / 3600.0
+    return out
+
+
 def isotonic(ys: list[float]) -> list[float]:
     """Pool-adjacent-violators: the closest non-decreasing sequence (least squares)."""
     blocks = [[y, 1] for y in ys]
@@ -160,6 +173,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seeds-needed", type=int, default=3)
     ap.add_argument("--min-positive", type=int, default=None, help="seeds that must be positive (default: all)")
     ap.add_argument("--expect-negative", default="", help="comma-separated methods hypothesised to be BEHIND Uniform")
+    ap.add_argument("--usd-per-gpu-hour", type=float, default=None,
+                    help="price of one GPU-hour; when given, GPU-hours are also reported in dollars")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args(argv)
 
@@ -181,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
 
     table, per_method = [], {}
     for m in methods:
-        d_vals, s_vals, s_raw = [], [], []
+        d_vals, s_vals, s_raw, h_vals = [], [], [], []
         for seed in sorted(set(runs.get(m, {})) & set(runs.get(ref, {}))):
             cm, cu = curve(runs[m][seed], base_final), curve(runs[ref][seed], base_final)
             if len(cm) < 2 or len(cu) < 2:
@@ -192,7 +207,8 @@ def main(argv: list[str] | None = None) -> int:
                 d_vals.append(100 * d)
             s_raw.append(sv)
             s_vals.append(0.0 if sv is None else 100 * sv)
-        per_method[m] = (d_vals, s_vals, s_raw)
+            h_vals.append(0.0 if sv is None else sv * cu[-1][0])
+        per_method[m] = (d_vals, s_vals, s_raw, h_vals)
 
     with (out / "compute_efficiency.csv").open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
@@ -208,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
              "| Method | Expected | Seeds | delta per seed | delta mean (SE) | 95% t-interval | p | Verdict (delta) | saving per seed | saving mean |",
              "|---|---|---|---|---|---|---|---|---|---|"]
     for m in methods:
-        d_vals, s_vals, s_raw = per_method[m]
+        d_vals, s_vals, s_raw, h_vals = per_method[m]
         if not d_vals:
             continue
         s = summarise(d_vals)
@@ -221,6 +237,44 @@ def main(argv: list[str] | None = None) -> int:
                      f"{verdict([sign * v for v in d_vals], args.seeds_needed, args.min_positive)} | {sav} | {statistics.fmean(s_vals):+.0f}% |")
     pts = sorted({r[2] for r in table} | {r[3] for r in table})
     lines += ["", f"Points per learning curve (incl. the untrained model): {pts}."]
+
+    # descriptive (D-108 record of 2 Nov): estimated GPU-hours saved, and where the GPU-hours went
+    usd = args.usd_per_gpu_hour
+
+    def money(h: float) -> str:
+        return f" (${h * usd:.2f})" if usd is not None else ""
+
+    lines += ["", "## Estimated GPU-hours saved (descriptive)", "",
+              "Every run spends its full budget, so nothing is actually returned: this is the GPU Uniform needed "
+              "minus the GPU the method needed to reach Uniform's final smoothed accuracy (not reached = 0).", "",
+              "| Method | Saved per seed (GPU-h) | Mean saved |", "|---|---|---|"]
+    for m in methods:
+        _, _, s_raw, h_vals = per_method[m]
+        if h_vals:
+            lines.append(f"| {m} | {', '.join(f'{h:.2f}' for h in h_vals)} | {statistics.fmean(h_vals):.2f} GPU-h"
+                         f"{money(statistics.fmean(h_vals))} |")
+    lines += ["", "## Where the GPU went (descriptive)", "",
+              "GPU-hours charged to each environment (generation + scoring + update, `cost/attribution.py`), "
+              "mean over seeds; the share is of the run's environment GPU-hours.", "",
+              "| Method | Seeds | Broken reward (noisy) | Countdown (never solved) | Useful environments | Total |",
+              "|---|---|---|---|---|---|"]
+    for m in [ref] + methods:
+        per_seed = [gpu_hours_by_env(x) for x in runs.get(m, {}).values()]
+        per_seed = [x for x in per_seed if x]
+        if not per_seed:
+            continue
+
+        def mean_of(keys, rows=per_seed):
+            return statistics.fmean(sum(r.get(k, 0.0) for k in keys) for r in rows)
+
+        total = statistics.fmean(sum(r.values()) for r in per_seed)
+        noisy, cd = mean_of(["noisy"]), mean_of(["countdown"])
+        useful = total - noisy - cd
+        lines.append(f"| {m} | {len(per_seed)} | {noisy:.2f} GPU-h, {100 * noisy / total:.0f}%{money(noisy)} | "
+                     f"{cd:.2f} GPU-h, {100 * cd / total:.0f}%{money(cd)} | {useful:.2f} GPU-h{money(useful)} | "
+                     f"{total:.2f} GPU-h{money(total)} |")
+    if usd is None:
+        lines += ["", "Dollar figures appear with `--usd-per-gpu-hour <price>` (the Kaggle runs themselves were free)."]
     (out / "compute_efficiency.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     primary = methods[0]

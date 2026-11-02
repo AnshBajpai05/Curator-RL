@@ -68,7 +68,8 @@ pre-flight check and in-run reward audit as the contribution. Full report: `anal
 - **Claim (3 seeds):** training works for every method (+4.6 to +5.7 points); Curator matches Uniform;
   SEC and DUMP over-fund a broken reward in every seed (34% and 31% against 20%) while Curator keeps it to
   6-10%; the label-free audit flagged that reward in all 10 Curator runs and never a real environment;
-  calibration can be dropped (R4).
+  calibration can be dropped (R4); of about 1.5 GPU-hours, Curator spends 1.31 on environments that can
+  teach against 0.85-0.89 for Uniform, SEC and DUMP (descriptive, `compute_efficiency.py`, seeds 0-2).
 - **Claim as a trend, not a result:** SEC and DUMP scored below Uniform in every seed (about -1 point),
   below the pre-registered 2-SE bar; Curator is about 0.6-0.9 points ahead of both, untested by any rule.
 - **Claim as simulation only:** Curator +11.6% over Uniform against +1.2% for SEC and DUMP (tuning seeds);

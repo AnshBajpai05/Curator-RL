@@ -774,6 +774,13 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
   `python experiments/analysis/compute_efficiency.py --runs ../Curator-Nov-results/raw/compute/curator_results/runs
   --base-runs ../curator_results_november/runs --methods curator_q,curator_nocal,sec,dump --expect-negative sec,dump
   --seeds-needed 3 --out ../Curator-Nov-results/compute_analysis`
+- Record (2 Nov, before any `compute` run): three **descriptive** measures added to the same script, not
+  tested and not part of H-C1: (a) estimated GPU-hours saved = Uniform's final GPU-hours x the isotonic
+  saving (nothing is actually returned: every run spends its budget); (b) GPU-hours charged to each
+  environment from the per-round logs (broken reward, Countdown, useful environments); (c) the same in
+  dollars when `--usd-per-gpu-hour` is given (the Kaggle runs are free, so no price is assumed). On seeds
+  0-2 (exploratory): useful-environment GPU-hours Uniform 0.89, SEC 0.85, DUMP 0.86, Curator-Q 1.31,
+  Curator-lite 1.31 of about 1.5.
 
 ---
 
