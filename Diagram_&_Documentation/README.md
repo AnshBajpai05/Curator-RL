@@ -1,8 +1,7 @@
 # Diagram & Documentation: everything the final report needs
 
-State of 2 November 2026: the D-103 confirmation session A (`confirm`, `lite`) is in, so every main
-comparison now has 3 seeds. Session B and the D-108 compute test are running (see "In progress");
-items marked **update after session B** gain a row then. Every number here comes from the run files or a committed
+State of 2 November 2026: D-103 sessions A and B are in (every main comparison has 3 seeds; `clean`,
+`sec_tau1` and `stress` are analysed). The D-108 compute test is running (see "In progress"). Every number here comes from the run files or a committed
 report; nothing is typed by hand.
 
 ## Headline (D-103, decided by rules written before the runs)
@@ -17,6 +16,8 @@ report; nothing is typed by hand.
 By D-103's own rule (R1 and R2 did not both hold) the story is the fallback: a rigorous negative result
 on accuracy, the mechanism (learning-signal curricula are drawn into a broken reward), and the
 pre-flight check and in-run reward audit as the contribution. Full report: `analysis/d103_results/`.
+
+**Session B** (descriptive, plus the pre-registered D-102 H-C): SEC at the authors' default temperature still over-funds the broken reward (25%, simulator predicted 26%; tuned SEC 34%, Uniform 20%) and scores -1.1 against Uniform (1 seed); perfect junk removal (`clean_uniform`) ties Uniform (-0.00, 2 seeds); with a realistic buggy checker the pre-flight check flags it before training (junk reward 0.20) and Curator-Q caps it at 5.7% from round 1 against Uniform's 20%, but accuracy is +0.65 points (0.86 SE): D-102 H-C fails.
 
 ## Diagrams (open in a browser; the sources are in `source/`)
 
@@ -34,8 +35,8 @@ pre-flight check and in-run reward audit as the contribution. Full report: `anal
 | File | Finding | Status |
 |---|---|---|
 | `gain_over_untrained.png` | training works for every method: +4.6 to +5.7 points of sampled accuracy over the untrained model | final |
-| `accuracy_vs_uniform.png` | no method beats Uniform: Curator -0.1 [-1.2, +1.0], LP +0.2, Curator-lite 0.0, DUMP -0.8, SEC -1.0 (95% intervals all cross 0) | update after session B |
-| `noisy_arm_share.png` | budget on the broken reward: SEC 34%, DUMP 31%, Uniform 20%, LP 13%, Curator 10%, Curator-lite 9%, Curator-Q 6% | update after session B |
+| `accuracy_vs_uniform.png` | no method beats Uniform: Curator -0.1 [-1.2, +1.0], LP +0.2, Curator-lite 0.0, DUMP -0.8, SEC -1.0 (95% intervals all cross 0) | final |
+| `noisy_arm_share.png` | budget on the broken reward: SEC 34%, DUMP 31%, Uniform 20%, LP 13%, Curator 10%, Curator-lite 9%, Curator-Q 6%, clean Uniform 0% | final |
 | `noisy_share_by_round.png` | SEC climbs to about 42% by round 32, DUMP holds near 31-34%, Curator falls once the audit flags the arm | final |
 | `no_signal_groups.png` | answer groups that teach nothing on the real environments: Curator 44-48%, LP 49%, SEC 53%, DUMP 54%, Uniform 59% | final |
 | `cost_per_environment.png` | MATH35 costs 2.67x GSM8K to generate but only 1.22-1.58x per full training step | final |
@@ -55,6 +56,7 @@ pre-flight check and in-run reward audit as the contribution. Full report: `anal
 |---|---|---|
 | `gpu_comparison_qwen.md` | `curator_results_november/comparison.md` (2 Nov) | every GPU number for Qwen2.5-0.5B, all seeds |
 | `gpu_comparison_olmo.md` | `curator_results_olmo/comparison.md` | the OLMo-2-1B pair |
+| `gpu_stress_hackable_checker.md` | `Curator-Nov-results/raw/stress/curator_results/comparison.md` | the realistic buggy checker (D-102 H-C) |
 | `sysid_seed0.md`, `sysid_seed1.md` | `curator_results_new/runs/dirichlet_s*/sysid_report.md` | measured training cost per environment, group polarisation, transfer |
 | `cost_probe_generation.md` | `curator-rl/reports/pilot/phase_e_cost_probe.md` | generation-only cost spread (2.67x) |
 | `fair_tuning_gpu2.md` | `curator-rl/reports/sweeps/tune_gpu2.md` | every method got 8 configurations under the same rule |
@@ -72,12 +74,16 @@ pre-flight check and in-run reward audit as the contribution. Full report: `anal
   calibration can be dropped (R4); of about 1.5 GPU-hours, the Curator variants spend 1.27-1.31 on
   environments that can teach, LP 1.17, Uniform, SEC and DUMP 0.85-0.89 (descriptive,
   `figures/gpu_split_by_environment.png`, seeds 0-2).
+- **Claim (session B):** SEC still over-funds the broken reward at the authors' own setting (25%,
+  simulator predicted 26%); perfect junk removal ties Uniform; the pre-flight check catches a realistic
+  buggy checker before training and Curator keeps it at 5.7% of questions against 20%.
 - **Claim as a trend, not a result:** SEC and DUMP scored below Uniform in every seed (about -1 point),
   below the pre-registered 2-SE bar; Curator is about 0.6-0.9 points ahead of both, untested by any rule.
 - **Claim as simulation only:** Curator +11.6% over Uniform against +1.2% for SEC and DUMP (tuning seeds);
   the budget behaviour transferred to GPU, the accuracy gain did not.
 - **Hypothesis, not a claim:** the budget gap matters once a broken reward actually harms training or runs
-  get longer (test with the `hackable` checker, OLMo, longer runs).
+  get longer. The `hackable` checker did not harm accuracy here either (D-102 H-C fails); OLMo and longer
+  runs remain untested.
 - **Do not claim:** Curator beats Uniform, SEC or DUMP on accuracy; compute savings; gains from
   cost-awareness on GPU; detection by calibration; leave-one-out or sealed-test results (not run).
 
@@ -94,10 +100,7 @@ confidence interval excluding zero relative to uniform sampling."
 - **D-108 compute test** (pre-registered 2 Nov): Uniform, Curator-Q, Curator-lite, SEC and DUMP on fresh
   seeds 3-5, evaluated every 3 rounds, one team account per seed. Question: does a method reach accuracy
   with less GPU than Uniform? Analysis: `curator-rl/experiments/analysis/compute_efficiency.py`.
-- **D-103 session B:** `clean` (perfect junk removal), `sec_tau1` (SEC at the authors' default) and
-  `stress` (a realistic buggy checker, D-102 H-C).
-
-When both are in, the figures, `analysis/` and this index are regenerated (commands below).
+When it is in, the figures, `analysis/` and this index are regenerated (commands below).
 
 ## Living documents (linked, not copied)
 

@@ -1,0 +1,2 @@
+[curator] uniform seed 0: backend=vllm, resuming from round-0035, syncing to hf://AnshBajpai05/curator-runs/stress
+[curator] uniform seed 0: already finished; keeping /kaggle/working/curator_runs_stress/uniform_s0/summary.json

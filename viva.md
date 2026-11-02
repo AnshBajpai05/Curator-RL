@@ -20,6 +20,10 @@ Repository: `curator-rl/`. Every number below comes from the code, `configs/base
 >   the random-reward arm in every seed, Curator variants 6–10%. R4 holds: Curator without calibration
 >   scores the same. By the rule fixed in advance the story is the fallback: a rigorous negative result
 >   with its mechanism, plus the pre-flight check and the in-run audit as the contribution.
+> - **Session B (2 Nov).** SEC at the authors' own temperature still over-funds the broken reward (25%,
+>   simulator predicted 26%). Perfect junk removal ties Uniform. With a realistic buggy checker the
+>   pre-flight check flags it before training and Curator keeps it at 5.7% against 20%, but accuracy
+>   gains only +0.65 points (0.86 SE): D-102 H-C fails.
 > - **The GPU used a different preset from the defaults below** (`kaggle/run.py --preset gpu_tuned`,
 >   D-98): γ = 1 (no forgetting), κ = 0.25, τ = 1.0, reward audit on, S5 capped at the floor ε/N
 >   (2% per arm), 3 mismatch windows for a calibration flag. The γ = 0.95 / κ = 0.5 / τ = 0.3 values

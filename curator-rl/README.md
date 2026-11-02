@@ -299,6 +299,7 @@ test is not used. Greedy accuracy is reported alongside.
   matches Curator (+0.15 points, **R4 holds**). By D-103's own rule the story is the fallback: a rigorous
   negative result with its mechanism, and the pre-flight check and in-run audit as the contribution.
   Greedy accuracy points the other way for SEC and DUMP (+0.7 and +0.4).
+- **D-103 session B (2 Nov).** SEC at the authors' default temperature still over-funds the broken reward (25%, simulator predicted 26%; tuned SEC 34%, Uniform 20%) and scores -1.1 against Uniform (1 seed); perfect junk removal (`clean_uniform`) ties Uniform (-0.00, 2 seeds); with a realistic buggy checker the pre-flight check flags it before training (junk reward 0.20) and Curator-Q caps it at 5.7% from round 1 against Uniform's 20%, but accuracy is +0.65 points (0.86 SE): D-102 H-C fails.
 - **Budget moves off the useless arms, but accuracy does not follow.** Mean delivered share under
   Curator: Countdown (no learning signal at 0.5B) 5% against Uniform's 20%, noisy 6–16% against 20%.
   The freed budget goes to GSM8K, MATH35 and MBPP, but the mix differs a lot between seeds (MBPP 53% on
@@ -659,7 +660,7 @@ These rules are the reviewer in a one-person project. Every change is logged in
 | ✅ | Phase F runner built and run on Kaggle T4 (Qwen2.5-0.5B, 1.5 GPU-h per run); evaluation protocol 2 (D-101); pilots (D-102) | Curator ties Uniform; every method +4-7 points over the untrained model |
 | ✅ | Thesis changed to robustness; Curator-lite and confirmation runs pre-registered (D-103) | claim "Curator beats Uniform" dropped |
 | ✅ | **D-103 session A** (`confirm`, `lite`: sec, dump, uniform_q, curator_q, curator_nocal on seeds 1-2), analysed 2026-11-02 with the analysis fixed before the runs (`experiments/analysis/d103_confirm.py`) | R1, R2 fail; R3, R4 hold; fallback story by the pre-registered rule |
-| 1 | **D-103 session B**: `clean` (clean_uniform seeds 0-1, the ceiling of a perfect junk detector), the declared `sec_tau1` check and `stress` (hackable checker, D-102 H-C) | descriptive; then regenerate `../Diagram_&_Documentation/` |
+| ✅ | **D-103 session B**: `clean`, the declared `sec_tau1` check and `stress` (D-102 H-C) | clean ties Uniform; SEC at the authors' default 25% on the broken reward; H-C fails (pre-flight catches the bug, accuracy +0.65, 0.86 SE) |
 | 2 | **D-108 compute test** (pre-registered 2 Nov): Uniform, Curator-Q, Curator-lite, SEC, DUMP on fresh seeds 3-5, evaluated every 3 rounds; does a method reach accuracy with less GPU (`experiments/analysis/compute_efficiency.py`) | primary: Curator-Q ahead of Uniform at matched compute |
 | 2 | **Roadmap v4** (proposed, D-107): fault zoo and key-consistency audit, health-gated question allocation, gradient-sketch transfer and TAC-lite baseline, seed count from measured SD, second model, multi-turn tool-call arm, `curator-health` command | each phase gets its own pre-registration first |
 | 3 | Optional, fresh simulator seeds (>= 700): re-test gamma = 1 with a powered non-inferiority design; a harder S5 response than halving the weight | optional |

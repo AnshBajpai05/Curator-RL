@@ -1,0 +1,2 @@
+[curator] curator_q seed 0: backend=vllm, resuming from round-0029, syncing to hf://AnshBajpai05/curator-runs/stress
+[curator] curator_q seed 0: already finished; keeping /kaggle/working/curator_runs_stress/curator_q_s0/summary.json

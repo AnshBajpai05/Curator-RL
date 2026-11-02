@@ -1,6 +1,6 @@
 # D-103 confirmation: results
 
-Generated 2026-11-02 06:47 UTC by `experiments/analysis/d103_confirm.py` (written before the runs). Model: Qwen2.5-0.5B-Instruct. Primary measure: sampled macro accuracy, item-paired, in percentage points. Sources: `..\curator_results_november\runs`.
+Generated 2026-11-02 17:36 UTC by `experiments/analysis/d103_confirm.py` (written before the runs). Model: Qwen2.5-0.5B-Instruct. Primary measure: sampled macro accuracy, item-paired, in percentage points. Sources: `..\curator_results_november\runs`, `..\Curator-Nov-results\raw\sec_tau1\curator_results\runs` [sec_tau1].
 
 ## Pre-registered rules
 
@@ -18,6 +18,7 @@ Generated 2026-11-02 06:47 UTC by `experiments/analysis/d103_confirm.py` (writte
 | Method | Seeds | Per seed | Mean |
 |---|---|---|---|
 | sec | 3 | s0 33.9%, s1 33.4%, s2 33.6% | 33.6% |
+| sec[sec_tau1] | 1 | s0 25.1% | 25.1% |
 | dump | 3 | s0 30.6%, s1 31.1%, s2 30.8% | 30.8% |
 | uniform | 3 | s0 20.0%, s1 19.9%, s2 20.0% | 20.0% |
 | uniform_q | 3 | s0 20.0%, s1 20.0%, s2 20.0% | 20.0% |
@@ -25,6 +26,7 @@ Generated 2026-11-02 06:47 UTC by `experiments/analysis/d103_confirm.py` (writte
 | curator | 3 | s0 6.1%, s1 15.8%, s2 6.7% | 9.5% |
 | curator_nocal | 3 | s0 5.9%, s1 13.7%, s2 6.2% | 8.6% |
 | curator_q | 3 | s0 6.0%, s1 6.0%, s2 5.9% | 6.0% |
+| clean_uniform | 2 | s0 0.0%, s1 0.0% | 0.0% |
 | dirichlet | 2 | s0 17.0%, s1 16.1% | 16.6% |
 | pilot_uniform | 1 | s0 25.0% | 25.0% |
 
@@ -34,6 +36,7 @@ With 3 seeds, "mean >= 2 SE" is evidence at roughly one-sided p 0.1, not proof (
 
 | Method | Seeds | Sampled diff (mean) | 95% t-interval | Greedy diff (mean) | Random-reward share | Gain over untrained (sampled) | pass@k |
 |---|---|---|---|---|---|---|---|
+| clean_uniform | 2 | -0.00 | [-8.74, +8.74] | +0.96 | 0.0% | +5.65 | 0.383 |
 | curator | 3 | -0.13 | [-1.22, +0.96] | +0.25 | 9.5% | +5.40 | 0.388 |
 | curator_nocal | 3 | +0.02 | [-2.44, +2.48] | +0.64 | 8.6% | +5.56 | 0.396 |
 | curator_q | 3 | -0.15 | [-1.64, +1.35] | +0.39 | 6.0% | +5.39 | 0.387 |
@@ -42,7 +45,21 @@ With 3 seeds, "mean >= 2 SE" is evidence at roughly one-sided p 0.1, not proof (
 | lp | 3 | +0.15 | [-1.72, +2.03] | +0.08 | 13.3% | +5.69 | 0.391 |
 | pilot_uniform | 1 | -0.56 | one seed (eval SE 0.64) | +0.83 | 25.0% | +5.92 | 0.388 |
 | sec | 3 | -0.96 | [-3.87, +1.96] | +0.69 | 33.6% | +4.58 | 0.385 |
+| sec[sec_tau1] | 1 | -1.12 | one seed (eval SE 0.65) | +0.58 | 25.1% | +5.35 | 0.388 |
 | uniform_q | 3 | -0.79 | [-4.20, +2.61] | +0.17 | 20.0% | +4.74 | 0.378 |
+
+## Declared check: SEC at the authors' default temperature (descriptive)
+
+SEC with Boltzmann temperature 1.0 (ServiceNow/sec default) instead of the tuned 0.4, seed 0 (`reports/analysis/sec_dump_fidelity.md`). Not part of R1-R4.
+
+- temperature the run used (last override, by seed): {0: '1.0'}
+- tau 1.0 minus tau 0.4, same seed and items: +1.19 points (eval SE 0.56).
+- tau 1.0 minus Uniform: -1.12 points.
+- random-reward share: 25.1% (tuned SEC 33.6%, Uniform 20%).
+
+## Clean ceiling (descriptive)
+
+clean_uniform (equal mix without Countdown and the random-reward arm: what a perfect junk detector could reach) minus Uniform: -0.00 points over seeds [0, 1].
 
 ## Figures
 

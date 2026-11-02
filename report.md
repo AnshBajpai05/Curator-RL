@@ -36,8 +36,9 @@ Companion documents:
    result, its mechanism and the reward checks (`Curator-Nov-results/analysis/d103_report.md`).
 6. **The second model family (OLMo-2-1B) is inconclusive.** It is about 3× slower per step, so it got
    only 14–15 training rounds, and neither method moved it measurably.
-7. **Next:** D-103 session B (`clean`, `sec_tau1`, about 3.5 GPU-hours), then the write-up of the
-   fallback story.
+7. **Session B (2 Nov):** perfect junk removal ties Uniform; SEC at the authors' default temperature still
+   over-funds the broken reward (25%); the pre-flight check catches a realistic buggy checker, but accuracy
+   gains only +0.65 points (D-102 H-C fails). **Next:** the D-108 compute test, then the write-up.
 
 ---
 

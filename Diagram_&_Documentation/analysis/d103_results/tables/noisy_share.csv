@@ -1,4 +1,6 @@
 method,seed,noisy_share
+clean_uniform,0,0.0000
+clean_uniform,1,0.0000
 curator,0,0.0606
 curator,1,0.1583
 curator,2,0.0674
@@ -20,6 +22,7 @@ pilot_uniform,0,0.2500
 sec,0,0.3389
 sec,1,0.3336
 sec,2,0.3364
+sec[sec_tau1],0,0.2509
 uniform,0,0.2000
 uniform,1,0.1994
 uniform,2,0.1998

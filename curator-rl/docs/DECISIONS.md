@@ -716,6 +716,19 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
     accuracy with its mechanism (learning-signal curricula are drawn into a broken reward), plus the
     deterministic pre-flight check and the in-run audit as the contribution. Session B (`clean`, `sec_tau1`)
     is descriptive and cannot change this.
+- Record (2 Nov): **outcome of session B** (`clean`, `sec_tau1`, `stress`; all runs finished on budget; data
+  `../curator_results_november/` and `../Curator-Nov-results/raw/{sec_tau1,stress}/`).
+  - `sec_tau1` (declared check): SEC at the authors' default temperature 1.0 put 25.1% of its questions on the
+    random-reward arm (tuned SEC 33.6%, Uniform 20%; the simulator predicted 26%) and scored -1.12 points
+    against Uniform, +1.19 against tuned SEC (seed 0). The over-funding is not an artefact of our temperature,
+    though the tuned point strengthens it.
+  - `clean` (descriptive): clean_uniform minus Uniform -0.00 points (seeds 0, 1): removing both junk
+    environments perfectly does not raise accuracy at this scale.
+  - `stress` (**D-102 H-C**, pre-registered): the pre-flight check flagged the hackable checker before training
+    (junk reward rate 0.20); Curator-Q put it in S5 from round 1 (5.7% of questions vs Uniform's 20%).
+    Curator-Q minus Uniform +0.65 points (eval SE 0.76, 0.86 SE; greedy -1.0). The rule (>= 2 paired SE)
+    is not met: **H-C fails**. One seed, as pre-registered.
+  - None of this changes D-103's verdicts or story.
 
 ## D-104 — This branch adopted as the base; parallel local work archived (L-96 … L-101)
 

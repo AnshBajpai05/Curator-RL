@@ -8,7 +8,7 @@ The rules tested here were fixed on 21 October 2026, before any of these runs ex
 | Session | Steps | State | Data |
 |---|---|---|---|
 | A | `confirm`, `lite` | **done, analysed** | `../curator_results_november/` (every run, old and new) |
-| B | `clean`, `sec_tau1`, `stress` | to run (about 5.5 GPU-hours) | - |
+| B | `clean`, `sec_tau1`, `stress` | **done, analysed**: clean ties Uniform; SEC at the authors' default 25% on the broken reward; D-102 H-C fails | `../curator_results_november/`, `raw/sec_tau1/`, `raw/stress/` |
 | C (D-108) | `compute_s3`, `compute_s4`, `compute_s5` (one account each): uniform, curator_q, curator_nocal, sec, dump on fresh seeds 3-5, evaluated every 3 rounds | to run (about 7.5 h in parallel) | - |
 
 **Outcome of session A** (`analysis/d103_report.md`):

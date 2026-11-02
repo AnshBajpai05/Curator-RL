@@ -5,6 +5,7 @@ Sampled accuracy = mean over 4 samples per item at the training temperature (eva
 | method | seeds | sampled macro (mean) | pass@k macro | greedy macro (mean) | charged GPU-h | rounds | ever S5 | sandbox rejections |
 |---|---|---|---|---|---|---|---|---|
 | base (untrained) | - | 0.1785 | 0.3508 | 0.3000 | 0 | 0 | - | - |
+| clean_uniform | 2 | 0.2350 | 0.3829 | 0.3196 | 1.513 | 32.5 | - | 1 |
 | curator | 3 | 0.2326 | 0.3881 | 0.3086 | 1.523 | 32.0 | noisy | 1 |
 | curator_nocal | 3 | 0.2341 | 0.3964 | 0.3125 | 1.530 | 34.0 | noisy | 1 |
 | curator_q | 3 | 0.2324 | 0.3869 | 0.3100 | 1.531 | 27.3 | noisy | 2 |
@@ -21,6 +22,7 @@ Sampled accuracy = mean over 4 samples per item at the training temperature (eva
 | method | gsm8k | math35 | mbpp | countdown |
 |---|---|---|---|---|
 | base (untrained) | 0.343 (0.567) | 0.133 (0.260) | 0.237 (0.367) | 0.000 (0.007) |
+| clean_uniform | 0.490 (0.613) | 0.160 (0.262) | 0.290 (0.392) | 0.000 (0.012) |
 | curator | 0.487 (0.601) | 0.167 (0.273) | 0.276 (0.356) | 0.000 (0.004) |
 | curator_nocal | 0.484 (0.612) | 0.167 (0.260) | 0.285 (0.372) | 0.001 (0.006) |
 | curator_q | 0.493 (0.617) | 0.170 (0.276) | 0.267 (0.344) | 0.000 (0.003) |
@@ -50,6 +52,8 @@ Paired over items: the SE is the evaluation's, for one seed. Whether a differenc
 
 | method | seed | sampled macro diff (SE) | greedy macro diff (SE) | sampled diff per domain |
 |---|---|---|---|---|
+| clean_uniform | 0 | -0.0069 (0.0078) | +0.0258 (0.0119) | gsm8k -0.016, math35 -0.012, mbpp +0.000, countdown +0.000 |
+| clean_uniform | 1 | +0.0069 (0.0055) | -0.0067 (0.0104) | gsm8k +0.009, math35 -0.003, mbpp +0.021, countdown +0.000 |
 | curator | 0 | +0.0031 (0.0077) | +0.0058 (0.0110) | gsm8k -0.002, math35 -0.003, mbpp +0.017, countdown +0.000 |
 | curator | 1 | -0.0015 (0.0060) | -0.0200 (0.0095) | gsm8k +0.001, math35 +0.006, mbpp -0.013, countdown +0.000 |
 | curator | 2 | -0.0056 (0.0086) | +0.0217 (0.0125) | gsm8k -0.015, math35 -0.012, mbpp +0.004, countdown +0.000 |
@@ -75,6 +79,8 @@ Paired over items: the SE is the evaluation's, for one seed. Whether a differenc
 | uniform_q | 1 | +0.0065 (0.0062) | -0.0142 (0.0123) | gsm8k +0.006, math35 +0.002, mbpp +0.017, countdown +0.002 |
 | uniform_q | 2 | -0.0094 (0.0088) | +0.0158 (0.0126) | gsm8k -0.015, math35 -0.016, mbpp -0.008, countdown +0.002 |
 
+clean_uniform vs uniform, sampled macro over 2 seeds: -0.0000, 95% t-interval [-0.0874, +0.0874], sign-flip p 1.000
+
 curator vs uniform, sampled macro over 3 seeds: -0.0013, 95% t-interval [-0.0122, +0.0096], sign-flip p 0.750
 
 curator_nocal vs uniform, sampled macro over 3 seeds: +0.0002, 95% t-interval [-0.0244, +0.0248], sign-flip p 1.000
@@ -95,6 +101,8 @@ uniform_q vs uniform, sampled macro over 3 seeds: -0.0079, 95% t-interval [-0.04
 
 | method | seed | sampled macro gain (SE) | per domain |
 |---|---|---|---|
+| clean_uniform | 0 | +0.0579 (0.0089) | gsm8k +0.143, math35 +0.026, mbpp +0.062, countdown +0.000 |
+| clean_uniform | 1 | +0.0550 (0.0093) | gsm8k +0.151, math35 +0.028, mbpp +0.042, countdown +0.000 |
 | curator | 0 | +0.0679 (0.0090) | gsm8k +0.158, math35 +0.035, mbpp +0.079, countdown +0.000 |
 | curator | 1 | +0.0467 (0.0079) | gsm8k +0.142, math35 +0.036, mbpp +0.008, countdown +0.000 |
 | curator | 2 | +0.0475 (0.0080) | gsm8k +0.131, math35 +0.030, mbpp +0.029, countdown +0.000 |
@@ -129,6 +137,7 @@ Learning curves start at the untrained model (0 GPU-h). Fewer GPU-hours = the sa
 
 | method | seed | uniform final (at GPU-h) | GPU-h to reach it | compute saved |
 |---|---|---|---|---|
+| clean_uniform | 0 | 0.2313 at 1.50 | not reached (best 0.2250) | - |
 | curator | 0 | 0.2313 at 1.50 | 1.46 | +3% |
 | curator_nocal | 0 | 0.2313 at 1.50 | not reached (best 0.2275) | - |
 | curator_q | 0 | 0.2313 at 1.50 | 1.38 | +8% |
@@ -138,6 +147,7 @@ Learning curves start at the untrained model (0 GPU-h). Fewer GPU-hours = the sa
 | pilot_uniform | 0 | 0.2313 at 1.50 | 1.48 | +1% |
 | sec | 0 | 0.2313 at 1.50 | not reached (best 0.2092) | - |
 | uniform_q | 0 | 0.2313 at 1.50 | not reached (best 0.2152) | - |
+| clean_uniform | 1 | 0.2215 at 1.54 | 0.87 | +43% |
 | curator | 1 | 0.2215 at 1.54 | not reached (best 0.2169) | - |
 | curator_nocal | 1 | 0.2215 at 1.54 | 1.28 | +17% |
 | curator_q | 1 | 0.2215 at 1.54 | 1.14 | +26% |
@@ -158,6 +168,7 @@ Learning curves start at the untrained model (0 GPU-h). Fewer GPU-hours = the sa
 
 | method | n | mean diff | 95% t-interval | sign-flip p |
 |---|---|---|---|---|
+| clean_uniform | 2 | +0.0096 | [-0.1969, +0.2161] | 1.000 |
 | curator | 3 | +0.0025 | [-0.0497, +0.0547] | 0.750 |
 | curator_nocal | 3 | +0.0064 | [-0.0198, +0.0326] | 0.500 |
 | curator_q | 3 | +0.0039 | [-0.0217, +0.0294] | 0.750 |
