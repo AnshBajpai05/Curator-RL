@@ -1,7 +1,9 @@
 Unzip here, one folder each:
 
-- `sec_tau1/` <- results_sec_tau1/curator_results.zip (session B)
-- `stress/`   <- results_stress/curator_results.zip (session B)
-- `compute/`  <- results_compute/curator_results.zip (session C, D-108)
+- `sec_tau1/`   <- results_sec_tau1/curator_results.zip (session B)
+- `stress/`     <- results_stress/curator_results.zip (session B)
+- `compute_s3/` <- results_compute/curator_results.zip from the seed-3 account (session C, D-108)
+- `compute_s4/` <- the same from the seed-4 account
+- `compute_s5/` <- the same from the seed-5 account
 
 The main results zip goes over `../../curator_results_november/` (see ../README.md).

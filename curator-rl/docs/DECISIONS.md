@@ -781,6 +781,11 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
   dollars when `--usd-per-gpu-hour` is given (the Kaggle runs are free, so no price is assumed). On seeds
   0-2 (exploratory): useful-environment GPU-hours Uniform 0.89, SEC 0.85, DUMP 0.86, Curator-Q 1.31,
   Curator-lite 1.31 of about 1.5.
+- Record (2 Nov, before any `compute` run): **execution split by seed across team accounts** to save time
+  (owner decision). Steps `compute_s3`, `compute_s4`, `compute_s5` run the same command with one seed each, so the
+  five methods of a seed share one session and machine. Every account uses the same dataset version (same
+  commit), GPU T4 x2 only. The design, measures and rules above are unchanged; the analysis takes the three
+  run folders together (`--runs` once per folder).
 
 ---
 

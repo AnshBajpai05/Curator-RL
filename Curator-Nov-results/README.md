@@ -9,7 +9,7 @@ The rules tested here were fixed on 21 October 2026, before any of these runs ex
 |---|---|---|---|
 | A | `confirm`, `lite` | **done, analysed** | `../curator_results_november/` (every run, old and new) |
 | B | `clean`, `sec_tau1`, `stress` | to run (about 5.5 GPU-hours) | - |
-| C (D-108) | `compute`: uniform, curator_q, curator_nocal, sec, dump on fresh seeds 3-5, evaluated every 3 rounds | to run (about 2 sessions) | - |
+| C (D-108) | `compute_s3`, `compute_s4`, `compute_s5` (one account each): uniform, curator_q, curator_nocal, sec, dump on fresh seeds 3-5, evaluated every 3 rounds | to run (about 7.5 h in parallel) | - |
 
 **Outcome of session A** (`analysis/d103_report.md`):
 
@@ -47,16 +47,25 @@ descriptive and cannot change this.
 Question: does a method reach accuracy with less GPU than Uniform? Primary: Curator-Q ahead of Uniform at
 matched GPU-hours (all 3 seeds positive and mean >= 2 SE); secondary: Curator-lite ahead, SEC and DUMP behind.
 
-1. Cell 1: `STEPS = ["compute"]`. It needs about two Kaggle sessions: when the first stops (exit 75), run the
-   same `STEPS` again and it resumes.
-2. Download `results_compute/curator_results.zip` -> unzip into `raw/compute/`.
-3. From `curator-rl/` (the command is fixed in D-108):
+Split by seed, one team account each (about 7.5 h, all in parallel):
 
-   ```
-   .venv/Scripts/python experiments/analysis/compute_efficiency.py --runs ../Curator-Nov-results/raw/compute/curator_results/runs --base-runs ../curator_results_november/runs --methods curator_q,curator_nocal,sec,dump --expect-negative sec,dump --seeds-needed 3 --out ../Curator-Nov-results/compute_analysis
-   ```
+| Account | Cell 1 `STEPS` | Download -> unzip into |
+|---|---|---|
+| teammate 1 | `["compute_s3"]` | `results_compute/curator_results.zip` -> `raw/compute_s3/` |
+| teammate 2 | `["compute_s4"]` | `results_compute/curator_results.zip` -> `raw/compute_s4/` |
+| teammate 3 | `["compute_s5"]` | `results_compute/curator_results.zip` -> `raw/compute_s5/` |
 
-   The final-accuracy comparison on the same seeds comes from the `comparison.md` inside that zip.
+Each account: import the latest `curator_gpu.ipynb` from the `curator-gpu-kaggle` dataset (shared with them),
+GPU T4 x2 only, Internet on, their own `HF_USER` and `HF_TOKEN` (or a fine-grained token limited to
+`datasets/AnshBajpai05/curator-runs`). Never mix `compute` with `compute_s3/4/5`: seeds would run twice.
+
+Then from `curator-rl/` (the analysis fixed in D-108, given the three folders):
+
+```
+.venv/Scripts/python experiments/analysis/compute_efficiency.py --runs ../Curator-Nov-results/raw/compute_s3/curator_results/runs --runs ../Curator-Nov-results/raw/compute_s4/curator_results/runs --runs ../Curator-Nov-results/raw/compute_s5/curator_results/runs --base-runs ../curator_results_november/runs --methods curator_q,curator_nocal,sec,dump --expect-negative sec,dump --seeds-needed 3 --out ../Curator-Nov-results/compute_analysis
+```
+
+The final accuracy of the five methods on each seed is in the `comparison.md` inside each zip.
 
 ## What is here
 
