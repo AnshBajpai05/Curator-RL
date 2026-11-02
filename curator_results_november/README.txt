@@ -1,4 +1,4 @@
-CURATOR results (2026-11-02 01:07 UTC)
+CURATOR results (2026-11-02 10:15 UTC)
 
 comparison.md   sampled + greedy scores, item-by-item differences, gain over the untrained model,
                 GPU-hours to reach Uniform's level, ROI leaderboards, leave-one-out

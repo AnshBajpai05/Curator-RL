@@ -1,6 +1,8 @@
 | run | status | round | GPU-h used/budget | checkpoint | synced round (when) | stop reason | updated |
 |---|---|---|---|---|---|---|---|
 | base_s0 | finished | 0/0 | 0.0/1.5 | None | None (never) | max_rounds | 2026-10-20T14:09:17Z |
+| clean_uniform_s0 | finished | 33/60 | 1.50936/1.5 | 33 | 33 (2026-11-02T10:14:49Z) | budget | 2026-11-02T10:14:49Z |
+| clean_uniform_s1 | finished | 32/60 | 1.51578/1.5 | 32 | 32 (2026-11-02T10:15:18Z) | budget | 2026-11-02T10:15:18Z |
 | curator_nocal_s0 | finished | 35/60 | 1.522/1.5 | 35 | None (never) |  | 2026-10-20T14:30:00Z |
 | curator_nocal_s1 | finished | 34/60 | 1.52723/1.5 | 34 | 34 (2026-11-02T01:04:53Z) | budget | 2026-11-02T01:04:53Z |
 | curator_nocal_s2 | finished | 33/60 | 1.54164/1.5 | 33 | 33 (2026-11-02T01:06:48Z) | budget | 2026-11-02T01:06:48Z |
