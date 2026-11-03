@@ -24,6 +24,10 @@ Repository: `curator-rl/`. Every number below comes from the code, `configs/base
 >   simulator predicted 26%). Perfect junk removal ties Uniform. With a realistic buggy checker the
 >   pre-flight check flags it before training and Curator keeps it at 5.7% against 20%, but accuracy
 >   gains only +0.65 points (0.86 SE): D-102 H-C fails.
+> - **D-108 compute test (3 Nov).** On fresh seeds 3–4 (six runs on three machines), Curator-Q ended above
+>   Uniform in 6 of 6 runs (+1.36 points), starting behind and overtaking it at about 0.8 GPU-hours. The
+>   pre-registered primary test is still PENDING (seed 5 incomplete), and Curator-Q tied Uniform on seeds
+>   0–2, so call it a signal. The reward checks flagged the broken reward in 21 of 22 Curator runs overall.
 > - **The GPU used a different preset from the defaults below** (`kaggle/run.py --preset gpu_tuned`,
 >   D-98): γ = 1 (no forgetting), κ = 0.25, τ = 1.0, reward audit on, S5 capped at the floor ε/N
 >   (2% per arm), 3 mismatch windows for a calibration flag. The γ = 0.95 / κ = 0.5 / τ = 0.3 values

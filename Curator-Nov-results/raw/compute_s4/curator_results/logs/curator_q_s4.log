@@ -1,0 +1,526 @@
+[curator] curator_q seed 4: backend=vllm, fresh start, syncing to hf://AnshBajpai05/curator-runs/compute_s4
+[curator] pre-flight verifier check: the reward pays for junk on noisy
+[curator] noisy: S5 from the start (pre-flight gate)
+[curator] GRPO log-prob path: triton
+(MainProcess pid=159201) ERROR 11-02 16:48:22 [fa_utils.py:212] Cannot use FA version 2 is not supported due to FA2 is only supported on devices with compute capability >= 8
+Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:01<00:00,  1.15s/it]
+Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:01<00:00,  1.15s/it]
+
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/47 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   2%|▏         | 1/47 [00:00<00:04,  9.76it/s]Capturing CUDA graphs (PIECEWISE):   6%|▋         | 3/47 [00:00<00:03, 13.40it/s]Capturing CUDA graphs (PIECEWISE):  11%|█         | 5/47 [00:00<00:02, 15.36it/s]Capturing CUDA graphs (PIECEWISE):  17%|█▋        | 8/47 [00:00<00:02, 17.23it/s]Capturing CUDA graphs (PIECEWISE):  21%|██▏       | 10/47 [00:00<00:02, 17.81it/s]Capturing CUDA graphs (PIECEWISE):  28%|██▊       | 13/47 [00:00<00:01, 18.84it/s]Capturing CUDA graphs (PIECEWISE):  32%|███▏      | 15/47 [00:00<00:01, 18.50it/s]Capturing CUDA graphs (PIECEWISE):  38%|███▊      | 18/47 [00:01<00:01, 19.11it/s]Capturing CUDA graphs (PIECEWISE):  45%|████▍     | 21/47 [00:01<00:01, 19.62it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████     | 24/47 [00:01<00:01, 19.88it/s]Capturing CUDA graphs (PIECEWISE):  57%|█████▋    | 27/47 [00:01<00:00, 20.08it/s]Capturing CUDA graphs (PIECEWISE):  62%|██████▏   | 29/47 [00:01<00:00, 19.41it/s]Capturing CUDA graphs (PIECEWISE):  68%|██████▊   | 32/47 [00:01<00:00, 20.03it/s]Capturing CUDA graphs (PIECEWISE):  74%|███████▍  | 35/47 [00:01<00:00, 20.24it/s]Capturing CUDA graphs (PIECEWISE):  81%|████████  | 38/47 [00:02<00:00, 19.41it/s]Capturing CUDA graphs (PIECEWISE):  85%|████████▌ | 40/47 [00:02<00:00, 18.42it/s]Capturing CUDA graphs (PIECEWISE):  89%|████████▉ | 42/47 [00:02<00:00, 18.48it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▎| 44/47 [00:02<00:00, 18.69it/s]Capturing CUDA graphs (PIECEWISE):  98%|█████████▊| 46/47 [00:02<00:00, 18.61it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 47/47 [00:02<00:00, 18.44it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/2 [00:00<?, ?it/s]Capturing CUDA graphs (FULL): 100%|██████████| 2/2 [00:00<00:00, 25.15it/s]
+Capturing CUDA graphs (PIECEWISE):   0%|          | 0/47 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   4%|▍         | 2/47 [00:00<00:02, 15.77it/s]Capturing CUDA graphs (PIECEWISE):   9%|▊         | 4/47 [00:00<00:02, 16.66it/s]Capturing CUDA graphs (PIECEWISE):  13%|█▎        | 6/47 [00:00<00:02, 17.11it/s]Capturing CUDA graphs (PIECEWISE):  17%|█▋        | 8/47 [00:00<00:02, 17.52it/s]Capturing CUDA graphs (PIECEWISE):  21%|██▏       | 10/47 [00:00<00:02, 18.00it/s]Capturing CUDA graphs (PIECEWISE):  26%|██▌       | 12/47 [00:00<00:01, 17.72it/s]Capturing CUDA graphs (PIECEWISE):  30%|██▉       | 14/47 [00:00<00:01, 17.67it/s]Capturing CUDA graphs (PIECEWISE):  34%|███▍      | 16/47 [00:00<00:01, 17.55it/s]Capturing CUDA graphs (PIECEWISE):  38%|███▊      | 18/47 [00:01<00:01, 17.54it/s]Capturing CUDA graphs (PIECEWISE):  43%|████▎     | 20/47 [00:01<00:01, 17.60it/s]Capturing CUDA graphs (PIECEWISE):  47%|████▋     | 22/47 [00:01<00:01, 17.58it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████     | 24/47 [00:01<00:01, 17.77it/s]Capturing CUDA graphs (PIECEWISE):  55%|█████▌    | 26/47 [00:01<00:01, 18.31it/s]Capturing CUDA graphs (PIECEWISE):  60%|█████▉    | 28/47 [00:01<00:01, 17.99it/s]Capturing CUDA graphs (PIECEWISE):  64%|██████▍   | 30/47 [00:01<00:00, 18.22it/s]Capturing CUDA graphs (PIECEWISE):  68%|██████▊   | 32/47 [00:01<00:00, 18.52it/s]Capturing CUDA graphs (PIECEWISE):  72%|███████▏  | 34/47 [00:01<00:00, 18.64it/s]Capturing CUDA graphs (PIECEWISE):  77%|███████▋  | 36/47 [00:02<00:00, 18.27it/s]Capturing CUDA graphs (PIECEWISE):  81%|████████  | 38/47 [00:02<00:00, 17.87it/s]Capturing CUDA graphs (PIECEWISE):  85%|████████▌ | 40/47 [00:02<00:00, 17.12it/s]Capturing CUDA graphs (PIECEWISE):  89%|████████▉ | 42/47 [00:02<00:00, 17.60it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▎| 44/47 [00:02<00:00, 16.79it/s]Capturing CUDA graphs (PIECEWISE):  98%|█████████▊| 46/47 [00:02<00:00, 16.86it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 47/47 [00:02<00:00, 17.61it/s]
+Capturing CUDA graphs (FULL):   0%|          | 0/31 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):  10%|▉         | 3/31 [00:00<00:01, 23.01it/s]Capturing CUDA graphs (FULL):  19%|█▉        | 6/31 [00:00<00:01, 22.88it/s]Capturing CUDA graphs (FULL):  29%|██▉       | 9/31 [00:00<00:00, 22.87it/s]Capturing CUDA graphs (FULL):  39%|███▊      | 12/31 [00:00<00:00, 22.94it/s]Capturing CUDA graphs (FULL):  48%|████▊     | 15/31 [00:00<00:00, 22.93it/s]Capturing CUDA graphs (FULL):  58%|█████▊    | 18/31 [00:00<00:00, 22.94it/s]Capturing CUDA graphs (FULL):  68%|██████▊   | 21/31 [00:00<00:00, 22.79it/s]Capturing CUDA graphs (FULL):  77%|███████▋  | 24/31 [00:01<00:00, 22.29it/s]Capturing CUDA graphs (FULL):  87%|████████▋ | 27/31 [00:01<00:00, 22.03it/s]Capturing CUDA graphs (FULL):  97%|█████████▋| 30/31 [00:01<00:00, 22.29it/s]Capturing CUDA graphs (FULL): 100%|██████████| 31/31 [00:01<00:00, 22.57it/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None}.
+  0%|          | 0/120 [00:00<?, ?it/s]  1%|          | 1/120 [01:38<3:14:23, 98.01s/it]                                                   1%|          | 1/120 [01:38<3:14:23, 98.01s/it]  2%|▏         | 2/120 [03:09<3:05:34, 94.36s/it]                                                   2%|▏         | 2/120 [03:09<3:05:34, 94.36s/it]  2%|▎         | 3/120 [04:46<3:06:27, 95.62s/it]                                                   2%|▎         | 3/120 [04:46<3:06:27, 95.62s/it]  3%|▎         | 4/120 [06:29<3:09:56, 98.25s/it]                                                   3%|▎         | 4/120 [06:29<3:09:56, 98.25s/it]  4%|▍         | 5/120 [08:18<3:15:38, 102.07s/it]                                                    4%|▍         | 5/120 [08:18<3:15:38, 102.07s/it]  5%|▌         | 6/120 [12:55<5:07:00, 161.58s/it]                                                  {'loss': '0.0341', 'grad_norm': '0.1299', 'learning_rate': '1e-05', 'num_tokens': '1.095e+05', 'completions/mean_length': '399.2', 'completions/min_length': '19', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.06696', 'completions/mean_terminated_length': '354.3', 'completions/min_terminated_length': '19', 'completions/max_terminated_length': '1024', 'rewards/curator_reward/mean': '0.2634', 'rewards/curator_reward/std': '0.4415', 'reward': '0.2634', 'reward_std': '0.4415', 'frac_reward_zero_std': '0.3929', 'sampling/sampling_logp_difference/mean': '0.001763', 'sampling/sampling_logp_difference/max': '0.1472', 'sampling/importance_sampling_ratio/min': '0.763', 'sampling/importance_sampling_ratio/mean': '1.008', 'sampling/importance_sampling_ratio/max': '1.415', 'curator/signal_groups_drawn': '0.6071', 'curator/signal_groups_kept': '1', 'entropy': '0.3934', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '92.65', 'epoch': '0.008264'}
+{'loss': '0.09413', 'grad_norm': '0.1565', 'learning_rate': '1e-05', 'num_tokens': '2.117e+05', 'completions/mean_length': '351.4', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.02679', 'completions/mean_terminated_length': '332.9', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '1014', 'rewards/curator_reward/mean': '0.2455', 'rewards/curator_reward/std': '0.4314', 'reward': '0.2455', 'reward_std': '0.4314', 'frac_reward_zero_std': '0.3929', 'sampling/sampling_logp_difference/mean': '0.001891', 'sampling/sampling_logp_difference/max': '0.1513', 'sampling/importance_sampling_ratio/min': '0.7011', 'sampling/importance_sampling_ratio/mean': '0.9989', 'sampling/importance_sampling_ratio/max': '1.222', 'curator/signal_groups_drawn': '0.6071', 'curator/signal_groups_kept': '1', 'entropy': '0.3544', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '86.68', 'epoch': '0.01653'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8bfb1-685aae7415a478041a2f6ef3;c2829761-f6c0-4208-ae0f-f672ba1d4d84)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8bfb1-685aae7415a478041a2f6ef3;c2829761-f6c0-4208-ae0f-f672ba1d4d84)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.07012', 'grad_norm': '0.1274', 'learning_rate': '1e-05', 'num_tokens': '3.098e+05', 'completions/mean_length': '341.7', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04464', 'completions/mean_terminated_length': '309.8', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '1001', 'rewards/curator_reward/mean': '0.2054', 'rewards/curator_reward/std': '0.4049', 'reward': '0.2054', 'reward_std': '0.4049', 'frac_reward_zero_std': '0.4643', 'sampling/sampling_logp_difference/mean': '0.001757', 'sampling/sampling_logp_difference/max': '0.06967', 'sampling/importance_sampling_ratio/min': '0.6655', 'sampling/importance_sampling_ratio/mean': '0.9989', 'sampling/importance_sampling_ratio/max': '1.23', 'curator/signal_groups_drawn': '0.5357', 'curator/signal_groups_kept': '0.9375', 'entropy': '0.4307', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '91.83', 'epoch': '0.02479'}
+{'loss': '-0.01212', 'grad_norm': '0.1192', 'learning_rate': '1e-05', 'num_tokens': '4.188e+05', 'completions/mean_length': '386', 'completions/min_length': '12', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04911', 'completions/mean_terminated_length': '353.1', 'completions/min_terminated_length': '12', 'completions/max_terminated_length': '1024', 'rewards/curator_reward/mean': '0.2098', 'rewards/curator_reward/std': '0.4081', 'reward': '0.2098', 'reward_std': '0.4081', 'frac_reward_zero_std': '0.5357', 'sampling/sampling_logp_difference/mean': '0.001865', 'sampling/sampling_logp_difference/max': '0.0719', 'sampling/importance_sampling_ratio/min': '0.6631', 'sampling/importance_sampling_ratio/mean': '0.9989', 'sampling/importance_sampling_ratio/max': '1.475', 'curator/signal_groups_drawn': '0.4643', 'curator/signal_groups_kept': '0.8125', 'entropy': '0.4648', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '96.15', 'epoch': '0.03306'}
+{'loss': '-0.005284', 'grad_norm': '0.1223', 'learning_rate': '1e-05', 'num_tokens': '5.257e+05', 'completions/mean_length': '372.9', 'completions/min_length': '14', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05804', 'completions/mean_terminated_length': '332.8', 'completions/min_terminated_length': '14', 'completions/max_terminated_length': '1020', 'rewards/curator_reward/mean': '0.2098', 'rewards/curator_reward/std': '0.4081', 'reward': '0.2098', 'reward_std': '0.4081', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.00175', 'sampling/sampling_logp_difference/max': '0.09179', 'sampling/importance_sampling_ratio/min': '0.7155', 'sampling/importance_sampling_ratio/mean': '0.9943', 'sampling/importance_sampling_ratio/max': '1.285', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.3787', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '102.7', 'epoch': '0.04132'}
+{'loss': '0.007957', 'grad_norm': '0.1273', 'learning_rate': '1e-05', 'num_tokens': '6.238e+05', 'completions/mean_length': '338.1', 'completions/min_length': '7', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04018', 'completions/mean_terminated_length': '309.4', 'completions/min_terminated_length': '7', 'completions/max_terminated_length': '991', 'rewards/curator_reward/mean': '0.2768', 'rewards/curator_reward/std': '0.4484', 'reward': '0.2768', 'reward_std': '0.4484', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001762', 'sampling/sampling_logp_difference/max': '0.1321', 'sampling/importance_sampling_ratio/min': '0.6029', 'sampling/importance_sampling_ratio/mean': '1.005', 'sampling/importance_sampling_ratio/max': '1.392', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.3861', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '93.4', 'epoch': '0.04959'}  5%|▌         | 6/120 [12:55<5:07:00, 161.58s/it]  6%|▌         | 7/120 [14:52<4:36:47, 146.97s/it]                                                    6%|▌         | 7/120 [14:52<4:36:47, 146.97s/it]  7%|▋         | 8/120 [16:31<4:05:49, 131.69s/it]                                                    7%|▋         | 8/120 [16:31<4:05:49, 131.69s/it]  8%|▊         | 9/120 [18:27<3:54:50, 126.94s/it]                                                    8%|▊         | 9/120 [18:27<3:54:50, 126.94s/it]  8%|▊         | 10/120 [19:54<3:30:11, 114.65s/it]                                                     8%|▊         | 10/120 [19:54<3:30:11, 114.65s/it]
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8c1f7-3b1b91931a9673b103175f42;2e8b0c3e-f7bb-406f-8b0b-a35c18aab072)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8c1f7-3b1b91931a9673b103175f42;2e8b0c3e-f7bb-406f-8b0b-a35c18aab072)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.04147', 'grad_norm': '0.1472', 'learning_rate': '1e-05', 'num_tokens': '7.326e+05', 'completions/mean_length': '371.3', 'completions/min_length': '14', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05804', 'completions/mean_terminated_length': '331.1', 'completions/min_terminated_length': '14', 'completions/max_terminated_length': '939', 'rewards/curator_reward/mean': '0.2723', 'rewards/curator_reward/std': '0.4462', 'reward': '0.2723', 'reward_std': '0.4462', 'frac_reward_zero_std': '0.3929', 'sampling/sampling_logp_difference/mean': '0.001918', 'sampling/sampling_logp_difference/max': '0.1079', 'sampling/importance_sampling_ratio/min': '0.6612', 'sampling/importance_sampling_ratio/mean': '0.9845', 'sampling/importance_sampling_ratio/max': '1.206', 'curator/signal_groups_drawn': '0.6071', 'curator/signal_groups_kept': '1', 'entropy': '0.3398', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '110.4', 'epoch': '0.05785'}
+{'loss': '0.01957', 'grad_norm': '0.1329', 'learning_rate': '1e-05', 'num_tokens': '8.383e+05', 'completions/mean_length': '377.8', 'completions/min_length': '14', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05357', 'completions/mean_terminated_length': '341.2', 'completions/min_terminated_length': '14', 'completions/max_terminated_length': '1023', 'rewards/curator_reward/mean': '0.317', 'rewards/curator_reward/std': '0.4663', 'reward': '0.317', 'reward_std': '0.4663', 'frac_reward_zero_std': '0.4643', 'sampling/sampling_logp_difference/mean': '0.001733', 'sampling/sampling_logp_difference/max': '0.1083', 'sampling/importance_sampling_ratio/min': '0.7197', 'sampling/importance_sampling_ratio/mean': '1.013', 'sampling/importance_sampling_ratio/max': '1.414', 'curator/signal_groups_drawn': '0.5357', 'curator/signal_groups_kept': '0.9375', 'entropy': '0.3306', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '93.13', 'epoch': '0.06612'}
+{'loss': '-0.00699', 'grad_norm': '0.1376', 'learning_rate': '1e-05', 'num_tokens': '9.46e+05', 'completions/mean_length': '366.2', 'completions/min_length': '13', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04018', 'completions/mean_terminated_length': '338.6', 'completions/min_terminated_length': '13', 'completions/max_terminated_length': '1016', 'rewards/curator_reward/mean': '0.2589', 'rewards/curator_reward/std': '0.439', 'reward': '0.2589', 'reward_std': '0.439', 'frac_reward_zero_std': '0.4643', 'sampling/sampling_logp_difference/mean': '0.001968', 'sampling/sampling_logp_difference/max': '0.1082', 'sampling/importance_sampling_ratio/min': '0.6693', 'sampling/importance_sampling_ratio/mean': '0.9925', 'sampling/importance_sampling_ratio/max': '1.278', 'curator/signal_groups_drawn': '0.5357', 'curator/signal_groups_kept': '0.9375', 'entropy': '0.368', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '109.7', 'epoch': '0.07438'}
+{'loss': '-0.01423', 'grad_norm': '0.1458', 'learning_rate': '1e-05', 'num_tokens': '1.04e+06', 'completions/mean_length': '325.6', 'completions/min_length': '12', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.02679', 'completions/mean_terminated_length': '306.4', 'completions/min_terminated_length': '12', 'completions/max_terminated_length': '834', 'rewards/curator_reward/mean': '0.2232', 'rewards/curator_reward/std': '0.4173', 'reward': '0.2232', 'reward_std': '0.4173', 'frac_reward_zero_std': '0.3571', 'sampling/sampling_logp_difference/mean': '0.001692', 'sampling/sampling_logp_difference/max': '0.0937', 'sampling/importance_sampling_ratio/min': '0.7725', 'sampling/importance_sampling_ratio/mean': '1.005', 'sampling/importance_sampling_ratio/max': '1.276', 'curator/signal_groups_drawn': '0.6429', 'curator/signal_groups_kept': '1', 'entropy': '0.3395', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '82.17', 'epoch': '0.08264'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8c39a-60d37b206317fb2c01ca9dd4;e28fdefa-de7d-42e7-9318-7fa7a7f66e41)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8c39a-60d37b206317fb2c01ca9dd4;e28fdefa-de7d-42e7-9318-7fa7a7f66e41)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit  9%|▉         | 11/120 [21:30<3:17:53, 108.93s/it]                                                     9%|▉         | 11/120 [21:30<3:17:53, 108.93s/it] 10%|█         | 12/120 [26:20<4:55:12, 164.01s/it]                                                    10%|█         | 12/120 [26:20<4:55:12, 164.01s/it] 11%|█         | 13/120 [27:40<4:07:03, 138.54s/it]                                                    11%|█         | 13/120 [27:40<4:07:03, 138.54s/it] 12%|█▏        | 14/120 [29:17<3:42:34, 125.99s/it]                                                    12%|█▏        | 14/120 [29:17<3:42:34, 125.99s/it] 12%|█▎        | 15/120 [30:54<3:25:16, 117.30s/it]                                                    12%|█▎        | 15/120 [30:54<3:25:16, 117.30s/it] 13%|█▎        | 16/120 [32:36<3:15:09, 112.59s/it]                                                   
+{'loss': '0.03833', 'grad_norm': '0.1209', 'learning_rate': '1e-05', 'num_tokens': '1.142e+06', 'completions/mean_length': '354.3', 'completions/min_length': '5', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.07589', 'completions/mean_terminated_length': '299.3', 'completions/min_terminated_length': '5', 'completions/max_terminated_length': '997', 'rewards/curator_reward/mean': '0.2723', 'rewards/curator_reward/std': '0.4462', 'reward': '0.2723', 'reward_std': '0.4462', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001647', 'sampling/sampling_logp_difference/max': '0.0795', 'sampling/importance_sampling_ratio/min': '0.707', 'sampling/importance_sampling_ratio/mean': '1.003', 'sampling/importance_sampling_ratio/max': '1.309', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.2569', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '90.77', 'epoch': '0.09091'}
+{'loss': '0.0266', 'grad_norm': '0.1326', 'learning_rate': '1e-05', 'num_tokens': '1.245e+06', 'completions/mean_length': '354.8', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.08482', 'completions/mean_terminated_length': '292.8', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '948', 'rewards/curator_reward/mean': '0.2545', 'rewards/curator_reward/std': '0.4365', 'reward': '0.2545', 'reward_std': '0.4365', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001847', 'sampling/sampling_logp_difference/max': '0.0916', 'sampling/importance_sampling_ratio/min': '0.7722', 'sampling/importance_sampling_ratio/mean': '1.001', 'sampling/importance_sampling_ratio/max': '1.334', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.3636', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '101.8', 'epoch': '0.09917'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8c51c-0dc8baad149d786e2e94f006;530644df-559e-4205-a633-c98295a91257)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8c51c-0dc8baad149d786e2e94f006;530644df-559e-4205-a633-c98295a91257)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.06947', 'grad_norm': '0.1676', 'learning_rate': '1e-05', 'num_tokens': '1.311e+06', 'completions/mean_length': '200.7', 'completions/min_length': '12', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.01339', 'completions/mean_terminated_length': '189.5', 'completions/min_terminated_length': '12', 'completions/max_terminated_length': '887', 'rewards/curator_reward/mean': '0.25', 'rewards/curator_reward/std': '0.434', 'reward': '0.25', 'reward_std': '0.434', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001924', 'sampling/sampling_logp_difference/max': '0.09842', 'sampling/importance_sampling_ratio/min': '0.7318', 'sampling/importance_sampling_ratio/mean': '1.003', 'sampling/importance_sampling_ratio/max': '1.408', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.3748', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '76.34', 'epoch': '0.1074'}
+{'loss': '0.04903', 'grad_norm': '0.1322', 'learning_rate': '1e-05', 'num_tokens': '1.373e+06', 'completions/mean_length': '182.9', 'completions/min_length': '18', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.004464', 'completions/mean_terminated_length': '179.1', 'completions/min_terminated_length': '18', 'completions/max_terminated_length': '980', 'rewards/curator_reward/mean': '0.192', 'rewards/curator_reward/std': '0.3947', 'reward': '0.192', 'reward_std': '0.3947', 'frac_reward_zero_std': '0.5357', 'sampling/sampling_logp_difference/mean': '0.001855', 'sampling/sampling_logp_difference/max': '0.07887', 'sampling/importance_sampling_ratio/min': '0.8315', 'sampling/importance_sampling_ratio/mean': '1.001', 'sampling/importance_sampling_ratio/max': '1.282', 'curator/signal_groups_drawn': '0.4643', 'curator/signal_groups_kept': '0.8125', 'entropy': '0.4141', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '91.1', 'epoch': '0.1157'}
+{'loss': '0.04304', 'grad_norm': '0.1374', 'learning_rate': '1e-05', 'num_tokens': '1.455e+06', 'completions/mean_length': '277.4', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.02232', 'completions/mean_terminated_length': '260.3', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '975', 'rewards/curator_reward/mean': '0.183', 'rewards/curator_reward/std': '0.3876', 'reward': '0.183', 'reward_std': '0.3876', 'frac_reward_zero_std': '0.5357', 'sampling/sampling_logp_difference/mean': '0.00175', 'sampling/sampling_logp_difference/max': '0.0887', 'sampling/importance_sampling_ratio/min': '0.7695', 'sampling/importance_sampling_ratio/mean': '1.004', 'sampling/importance_sampling_ratio/max': '1.347', 'curator/signal_groups_drawn': '0.4643', 'curator/signal_groups_kept': '0.8125', 'entropy': '0.4076', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '91.88', 'epoch': '0.124'}
+{'loss': '0.06592', 'grad_norm': '0.14', 'learning_rate': '1e-05', 'num_tokens': '1.54e+06', 'completions/mean_length': '287.8', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.03125', 'completions/mean_terminated_length': '264', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '1009', 'rewards/curator_reward/mean': '0.2455', 'rewards/curator_reward/std': '0.4314', 'reward': '0.2455', 'reward_std': '0.4314', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001638', 'sampling/sampling_logp_difference/max': '0.1341', 'sampling/importance_sampling_ratio/min': '0.7947', 'sampling/importance_sampling_ratio/mean': '1.003', 'sampling/importance_sampling_ratio/max': '1.532', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.2906', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '95.75', 'epoch': '0.1322'} 13%|█▎        | 16/120 [32:36<3:15:09, 112.59s/it] 14%|█▍        | 17/120 [34:18<3:07:57, 109.49s/it]                                                    14%|█▍        | 17/120 [34:18<3:07:57, 109.49s/it] 15%|█▌        | 18/120 [38:54<4:31:04, 159.46s/it]                                                    15%|█▌        | 18/120 [38:54<4:31:04, 159.46s/it] 16%|█▌        | 19/120 [40:44<4:03:34, 144.69s/it]                                                    16%|█▌        | 19/120 [40:44<4:03:34, 144.69s/it] 17%|█▋        | 20/120 [43:18<4:05:36, 147.36s/it]                                                   
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8c695-5b9bd50175cf64e31a4c3fff;acd16b50-1e57-4f26-90a8-f22fcdaf2a8e)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8c695-5b9bd50175cf64e31a4c3fff;acd16b50-1e57-4f26-90a8-f22fcdaf2a8e)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.01451', 'grad_norm': '0.09286', 'learning_rate': '1e-05', 'num_tokens': '1.642e+06', 'completions/mean_length': '363.9', 'completions/min_length': '23', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.03125', 'completions/mean_terminated_length': '342.6', 'completions/min_terminated_length': '23', 'completions/max_terminated_length': '1006', 'rewards/curator_reward/mean': '0.1607', 'rewards/curator_reward/std': '0.3681', 'reward': '0.1607', 'reward_std': '0.3681', 'frac_reward_zero_std': '0.5357', 'sampling/sampling_logp_difference/mean': '0.001649', 'sampling/sampling_logp_difference/max': '0.1717', 'sampling/importance_sampling_ratio/min': '0.5949', 'sampling/importance_sampling_ratio/mean': '1.004', 'sampling/importance_sampling_ratio/max': '1.343', 'curator/signal_groups_drawn': '0.4643', 'curator/signal_groups_kept': '0.8125', 'entropy': '0.3748', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '96.9', 'epoch': '0.1405'}
+{'loss': '0.01586', 'grad_norm': '0.1062', 'learning_rate': '1e-05', 'num_tokens': '1.734e+06', 'completions/mean_length': '318.7', 'completions/min_length': '13', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.03125', 'completions/mean_terminated_length': '295.9', 'completions/min_terminated_length': '13', 'completions/max_terminated_length': '1010', 'rewards/curator_reward/mean': '0.3348', 'rewards/curator_reward/std': '0.473', 'reward': '0.3348', 'reward_std': '0.473', 'frac_reward_zero_std': '0.5357', 'sampling/sampling_logp_difference/mean': '0.00154', 'sampling/sampling_logp_difference/max': '0.1079', 'sampling/importance_sampling_ratio/min': '0.7988', 'sampling/importance_sampling_ratio/mean': '0.9985', 'sampling/importance_sampling_ratio/max': '1.204', 'curator/signal_groups_drawn': '0.4643', 'curator/signal_groups_kept': '0.8125', 'entropy': '0.2976', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '91.67', 'epoch': '0.1488'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8c80f-38fc805554fee17314dee8d3;812abd4a-366c-4352-8771-81ec2e9844ce)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8c80f-38fc805554fee17314dee8d3;812abd4a-366c-4352-8771-81ec2e9844ce)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.004617', 'grad_norm': '0.07593', 'learning_rate': '1e-05', 'num_tokens': '1.857e+06', 'completions/mean_length': '441.5', 'completions/min_length': '18', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.1027', 'completions/mean_terminated_length': '374.8', 'completions/min_terminated_length': '18', 'completions/max_terminated_length': '1012', 'rewards/curator_reward/mean': '0.1384', 'rewards/curator_reward/std': '0.3461', 'reward': '0.1384', 'reward_std': '0.3461', 'frac_reward_zero_std': '0.7143', 'sampling/sampling_logp_difference/mean': '0.001696', 'sampling/sampling_logp_difference/max': '0.1302', 'sampling/importance_sampling_ratio/min': '0.6664', 'sampling/importance_sampling_ratio/mean': '1.006', 'sampling/importance_sampling_ratio/max': '1.713', 'curator/signal_groups_drawn': '0.2857', 'curator/signal_groups_kept': '0.5', 'entropy': '0.4082', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '104.7', 'epoch': '0.157'}
+{'loss': '-0.01993', 'grad_norm': '0.09517', 'learning_rate': '1e-05', 'num_tokens': '1.986e+06', 'completions/mean_length': '479.4', 'completions/min_length': '22', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.09375', 'completions/mean_terminated_length': '423.1', 'completions/min_terminated_length': '22', 'completions/max_terminated_length': '1020', 'rewards/curator_reward/mean': '0.192', 'rewards/curator_reward/std': '0.3947', 'reward': '0.192', 'reward_std': '0.3947', 'frac_reward_zero_std': '0.5714', 'sampling/sampling_logp_difference/mean': '0.001568', 'sampling/sampling_logp_difference/max': '0.07722', 'sampling/importance_sampling_ratio/min': '0.7202', 'sampling/importance_sampling_ratio/mean': '1.012', 'sampling/importance_sampling_ratio/max': '1.28', 'curator/signal_groups_drawn': '0.4286', 'curator/signal_groups_kept': '0.75', 'entropy': '0.353', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '101', 'epoch': '0.1653'} 17%|█▋        | 20/120 [43:18<4:05:36, 147.36s/it] 18%|█▊        | 21/120 [45:20<3:50:51, 139.91s/it]                                                    18%|█▊        | 21/120 [45:20<3:50:51, 139.91s/it] 18%|█▊        | 22/120 [47:18<3:37:51, 133.38s/it]                                                    18%|█▊        | 22/120 [47:18<3:37:51, 133.38s/it] 19%|█▉        | 23/120 [49:16<3:27:45, 128.51s/it]                                                    19%|█▉        | 23/120 [49:16<3:27:45, 128.51s/it] 20%|██        | 24/120 [54:06<4:43:11, 177.00s/it]                                                    20%|██        | 24/120 [54:06<4:43:11, 177.00s/it]
+{'loss': '0.01071', 'grad_norm': '0.1241', 'learning_rate': '1e-05', 'num_tokens': '2.116e+06', 'completions/mean_length': '458', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.07589', 'completions/mean_terminated_length': '411.5', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '981', 'rewards/curator_reward/mean': '0.2991', 'rewards/curator_reward/std': '0.4589', 'reward': '0.2991', 'reward_std': '0.4589', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001863', 'sampling/sampling_logp_difference/max': '0.09097', 'sampling/importance_sampling_ratio/min': '0.687', 'sampling/importance_sampling_ratio/mean': '1.004', 'sampling/importance_sampling_ratio/max': '1.344', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.387', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '115.8', 'epoch': '0.1736'}
+{'loss': '0.03429', 'grad_norm': '0.1102', 'learning_rate': '1e-05', 'num_tokens': '2.245e+06', 'completions/mean_length': '459.7', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.09375', 'completions/mean_terminated_length': '401.3', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '1022', 'rewards/curator_reward/mean': '0.2277', 'rewards/curator_reward/std': '0.4203', 'reward': '0.2277', 'reward_std': '0.4203', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001649', 'sampling/sampling_logp_difference/max': '0.1974', 'sampling/importance_sampling_ratio/min': '0.4531', 'sampling/importance_sampling_ratio/mean': '0.992', 'sampling/importance_sampling_ratio/max': '1.313', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.296', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '111.2', 'epoch': '0.1818'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8ca07-11369b45451765317343a56b;0691c0b9-79fa-4749-b652-a8e09b335bd1)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8ca07-11369b45451765317343a56b;0691c0b9-79fa-4749-b652-a8e09b335bd1)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.01789', 'grad_norm': '0.1241', 'learning_rate': '1e-05', 'num_tokens': '2.368e+06', 'completions/mean_length': '447.3', 'completions/min_length': '19', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.08929', 'completions/mean_terminated_length': '390.7', 'completions/min_terminated_length': '19', 'completions/max_terminated_length': '1011', 'rewards/curator_reward/mean': '0.2589', 'rewards/curator_reward/std': '0.439', 'reward': '0.2589', 'reward_std': '0.439', 'frac_reward_zero_std': '0.3571', 'sampling/sampling_logp_difference/mean': '0.001616', 'sampling/sampling_logp_difference/max': '0.1537', 'sampling/importance_sampling_ratio/min': '0.6657', 'sampling/importance_sampling_ratio/mean': '0.9925', 'sampling/importance_sampling_ratio/max': '1.27', 'curator/signal_groups_drawn': '0.6429', 'curator/signal_groups_kept': '1', 'entropy': '0.2894', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '110.9', 'epoch': '0.1901'}
+{'loss': '0.03069', 'grad_norm': '0.1241', 'learning_rate': '1e-05', 'num_tokens': '2.498e+06', 'completions/mean_length': '475.2', 'completions/min_length': '11', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.06696', 'completions/mean_terminated_length': '435.8', 'completions/min_terminated_length': '11', 'completions/max_terminated_length': '1022', 'rewards/curator_reward/mean': '0.2455', 'rewards/curator_reward/std': '0.4314', 'reward': '0.2455', 'reward_std': '0.4314', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001741', 'sampling/sampling_logp_difference/max': '0.135', 'sampling/importance_sampling_ratio/min': '0.6909', 'sampling/importance_sampling_ratio/mean': '0.9921', 'sampling/importance_sampling_ratio/max': '1.416', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.3156', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '105.2', 'epoch': '0.1983'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8cb9f-261f4d7b72b99cd83c93f82b;a7391e64-2390-4637-b2f0-e8614185b81c)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8cb9f-261f4d7b72b99cd83c93f82b;a7391e64-2390-4637-b2f0-e8614185b81c)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit 21%|██        | 25/120 [56:07<4:13:46, 160.28s/it]                                                    21%|██        | 25/120 [56:07<4:13:46, 160.28s/it] 22%|██▏       | 26/120 [58:26<4:01:01, 153.84s/it]                                                    22%|██▏       | 26/120 [58:26<4:01:01, 153.84s/it] 22%|██▎       | 27/120 [1:00:10<3:35:29, 139.03s/it]                                                      22%|██▎       | 27/120 [1:00:10<3:35:29, 139.03s/it] 23%|██▎       | 28/120 [1:01:56<3:17:44, 128.96s/it]                                                      23%|██▎       | 28/120 [1:01:56<3:17:44, 128.96s/it] 24%|██▍       | 29/120 [1:03:45<3:06:39, 123.08s/it]                                                      24%|██▍       | 29/120 [1:03:45<3:06:39, 123.08s/it] 25%|██▌       | 30/120 [1:09:07<4:34:11, 182.80s/it]                                                     
+{'loss': '0.04393', 'grad_norm': '0.09482', 'learning_rate': '1e-05', 'num_tokens': '2.632e+06', 'completions/mean_length': '485.5', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.07589', 'completions/mean_terminated_length': '441.3', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '997', 'rewards/curator_reward/mean': '0.2634', 'rewards/curator_reward/std': '0.4415', 'reward': '0.2634', 'reward_std': '0.4415', 'frac_reward_zero_std': '0.5714', 'sampling/sampling_logp_difference/mean': '0.001855', 'sampling/sampling_logp_difference/max': '0.1258', 'sampling/importance_sampling_ratio/min': '0.6279', 'sampling/importance_sampling_ratio/mean': '0.9889', 'sampling/importance_sampling_ratio/max': '1.592', 'curator/signal_groups_drawn': '0.4286', 'curator/signal_groups_kept': '0.75', 'entropy': '0.4935', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '114.6', 'epoch': '0.2066'}
+{'loss': '0.07021', 'grad_norm': '0.1232', 'learning_rate': '1e-05', 'num_tokens': '2.776e+06', 'completions/mean_length': '515.1', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.09821', 'completions/mean_terminated_length': '459.7', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '1020', 'rewards/curator_reward/mean': '0.25', 'rewards/curator_reward/std': '0.434', 'reward': '0.25', 'reward_std': '0.434', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.00165', 'sampling/sampling_logp_difference/max': '0.1264', 'sampling/importance_sampling_ratio/min': '0.5884', 'sampling/importance_sampling_ratio/mean': '1.012', 'sampling/importance_sampling_ratio/max': '1.439', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.3245', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '130.6', 'epoch': '0.2149'}
+{'loss': '-0.01608', 'grad_norm': '0.1086', 'learning_rate': '1e-05', 'num_tokens': '2.906e+06', 'completions/mean_length': '479.1', 'completions/min_length': '4', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.1027', 'completions/mean_terminated_length': '416.8', 'completions/min_terminated_length': '4', 'completions/max_terminated_length': '1021', 'rewards/curator_reward/mean': '0.2455', 'rewards/curator_reward/std': '0.4314', 'reward': '0.2455', 'reward_std': '0.4314', 'frac_reward_zero_std': '0.6071', 'sampling/sampling_logp_difference/mean': '0.00169', 'sampling/sampling_logp_difference/max': '0.1321', 'sampling/importance_sampling_ratio/min': '0.7214', 'sampling/importance_sampling_ratio/mean': '0.9884', 'sampling/importance_sampling_ratio/max': '1.301', 'curator/signal_groups_drawn': '0.3929', 'curator/signal_groups_kept': '0.6875', 'entropy': '0.3796', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '98.99', 'epoch': '0.2231'}
+{'loss': '0.05188', 'grad_norm': '0.1081', 'learning_rate': '1e-05', 'num_tokens': '3.023e+06', 'completions/mean_length': '418.7', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.02679', 'completions/mean_terminated_length': '402.1', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '982', 'rewards/curator_reward/mean': '0.3571', 'rewards/curator_reward/std': '0.4802', 'reward': '0.3571', 'reward_std': '0.4802', 'frac_reward_zero_std': '0.3214', 'sampling/sampling_logp_difference/mean': '0.001516', 'sampling/sampling_logp_difference/max': '0.099', 'sampling/importance_sampling_ratio/min': '0.7036', 'sampling/importance_sampling_ratio/mean': '1', 'sampling/importance_sampling_ratio/max': '1.375', 'curator/signal_groups_drawn': '0.6786', 'curator/signal_groups_kept': '1', 'entropy': '0.2968', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '99.11', 'epoch': '0.2314'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8cd73-5eec46a01ffb537b40a38753;18c72f5e-2e7d-4594-9d42-357f9c6c4fb1)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8cd73-5eec46a01ffb537b40a38753;18c72f5e-2e7d-4594-9d42-357f9c6c4fb1)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.0225', 'grad_norm': '0.07627', 'learning_rate': '1e-05', 'num_tokens': '3.161e+06', 'completions/mean_length': '509.5', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.08929', 'completions/mean_terminated_length': '459.1', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '1020', 'rewards/curator_reward/mean': '0.1473', 'rewards/curator_reward/std': '0.3552', 'reward': '0.1473', 'reward_std': '0.3552', 'frac_reward_zero_std': '0.6786', 'sampling/sampling_logp_difference/mean': '0.001649', 'sampling/sampling_logp_difference/max': '0.1146', 'sampling/importance_sampling_ratio/min': '0.7044', 'sampling/importance_sampling_ratio/mean': '1.008', 'sampling/importance_sampling_ratio/max': '1.509', 'curator/signal_groups_drawn': '0.3214', 'curator/signal_groups_kept': '0.5625', 'entropy': '0.4076', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '103.7', 'epoch': '0.2397'}
+{'loss': '0.001367', 'grad_norm': '0.1083', 'learning_rate': '1e-05', 'num_tokens': '3.3e+06', 'completions/mean_length': '496', 'completions/min_length': '13', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05357', 'completions/mean_terminated_length': '466.1', 'completions/min_terminated_length': '13', 'completions/max_terminated_length': '1012', 'rewards/curator_reward/mean': '0.2946', 'rewards/curator_reward/std': '0.4569', 'reward': '0.2946', 'reward_std': '0.4569', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001628', 'sampling/sampling_logp_difference/max': '0.139', 'sampling/importance_sampling_ratio/min': '0.67', 'sampling/importance_sampling_ratio/mean': '1.003', 'sampling/importance_sampling_ratio/max': '1.302', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.3208', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '131.9', 'epoch': '0.2479'} 25%|██▌       | 30/120 [1:09:07<4:34:11, 182.80s/it] 26%|██▌       | 31/120 [1:11:07<4:03:12, 163.96s/it]                                                      26%|██▌       | 31/120 [1:11:07<4:03:12, 163.96s/it] 27%|██▋       | 32/120 [1:13:31<3:51:30, 157.85s/it]                                                      27%|██▋       | 32/120 [1:13:31<3:51:30, 157.85s/it] 28%|██▊       | 33/120 [1:15:29<3:31:32, 145.89s/it]                                                      28%|██▊       | 33/120 [1:15:29<3:31:32, 145.89s/it] 28%|██▊       | 34/120 [1:17:26<3:16:36, 137.17s/it]                                                      28%|██▊       | 34/120 [1:17:26<3:16:36, 137.17s/it]
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8cf23-27be31541da944914207bc47;f857d4de-bd2e-4df3-b7a0-da507e7de1d5)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8cf23-27be31541da944914207bc47;f857d4de-bd2e-4df3-b7a0-da507e7de1d5)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '-0.01799', 'grad_norm': '0.1295', 'learning_rate': '1e-05', 'num_tokens': '3.424e+06', 'completions/mean_length': '422.5', 'completions/min_length': '19', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04018', 'completions/mean_terminated_length': '397.4', 'completions/min_terminated_length': '19', 'completions/max_terminated_length': '1017', 'rewards/curator_reward/mean': '0.2768', 'rewards/curator_reward/std': '0.4484', 'reward': '0.2768', 'reward_std': '0.4484', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001567', 'sampling/sampling_logp_difference/max': '0.1286', 'sampling/importance_sampling_ratio/min': '0.7484', 'sampling/importance_sampling_ratio/mean': '1.001', 'sampling/importance_sampling_ratio/max': '1.313', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.2806', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '113.1', 'epoch': '0.2562'}
+{'loss': '0.09815', 'grad_norm': '0.129', 'learning_rate': '1e-05', 'num_tokens': '3.549e+06', 'completions/mean_length': '435.6', 'completions/min_length': '18', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04464', 'completions/mean_terminated_length': '408.1', 'completions/min_terminated_length': '18', 'completions/max_terminated_length': '1023', 'rewards/curator_reward/mean': '0.3616', 'rewards/curator_reward/std': '0.4815', 'reward': '0.3616', 'reward_std': '0.4815', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001658', 'sampling/sampling_logp_difference/max': '0.1171', 'sampling/importance_sampling_ratio/min': '0.7307', 'sampling/importance_sampling_ratio/mean': '0.9979', 'sampling/importance_sampling_ratio/max': '1.368', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.2748', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '134.6', 'epoch': '0.2645'}
+{'loss': '0.05927', 'grad_norm': '0.1334', 'learning_rate': '1e-05', 'num_tokens': '3.672e+06', 'completions/mean_length': '430.3', 'completions/min_length': '21', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05804', 'completions/mean_terminated_length': '393.7', 'completions/min_terminated_length': '21', 'completions/max_terminated_length': '1024', 'rewards/curator_reward/mean': '0.3393', 'rewards/curator_reward/std': '0.4745', 'reward': '0.3393', 'reward_std': '0.4745', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001564', 'sampling/sampling_logp_difference/max': '0.192', 'sampling/importance_sampling_ratio/min': '0.7231', 'sampling/importance_sampling_ratio/mean': '1.002', 'sampling/importance_sampling_ratio/max': '1.475', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.2896', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '111.2', 'epoch': '0.2727'}
+{'loss': '0.0203', 'grad_norm': '0.1342', 'learning_rate': '1e-05', 'num_tokens': '3.799e+06', 'completions/mean_length': '444.2', 'completions/min_length': '19', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.09375', 'completions/mean_terminated_length': '384.2', 'completions/min_terminated_length': '19', 'completions/max_terminated_length': '995', 'rewards/curator_reward/mean': '0.3125', 'rewards/curator_reward/std': '0.4646', 'reward': '0.3125', 'reward_std': '0.4646', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001547', 'sampling/sampling_logp_difference/max': '0.1511', 'sampling/importance_sampling_ratio/min': '0.7306', 'sampling/importance_sampling_ratio/mean': '0.9969', 'sampling/importance_sampling_ratio/max': '1.323', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.3245', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '109.8', 'epoch': '0.281'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8d115-4a4a6be432345b455661c210;5e4e3b89-0bf3-465d-bdde-4538f4ecd465)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8d115-4a4a6be432345b455661c210;5e4e3b89-0bf3-465d-bdde-4538f4ecd465)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit 29%|██▉       | 35/120 [1:19:08<2:59:23, 126.63s/it]                                                      29%|██▉       | 35/120 [1:19:08<2:59:23, 126.63s/it] 30%|███       | 36/120 [1:23:47<4:01:34, 172.56s/it]                                                      30%|███       | 36/120 [1:23:47<4:01:34, 172.56s/it] 31%|███       | 37/120 [1:25:48<3:37:20, 157.12s/it]                                                      31%|███       | 37/120 [1:25:48<3:37:20, 157.12s/it] 32%|███▏      | 38/120 [1:27:34<3:13:46, 141.78s/it]                                                      32%|███▏      | 38/120 [1:27:34<3:13:46, 141.78s/it] 32%|███▎      | 39/120 [1:29:14<2:54:11, 129.04s/it]                                                      32%|███▎      | 39/120 [1:29:14<2:54:11, 129.04s/it] 33%|███▎      | 40/120 [1:31:29<2:54:39, 130.99s/it]                                                     
+{'loss': '0.06409', 'grad_norm': '0.1517', 'learning_rate': '1e-05', 'num_tokens': '3.913e+06', 'completions/mean_length': '403.2', 'completions/min_length': '17', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.0625', 'completions/mean_terminated_length': '361.8', 'completions/min_terminated_length': '17', 'completions/max_terminated_length': '953', 'rewards/curator_reward/mean': '0.2768', 'rewards/curator_reward/std': '0.4484', 'reward': '0.2768', 'reward_std': '0.4484', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001618', 'sampling/sampling_logp_difference/max': '0.07177', 'sampling/importance_sampling_ratio/min': '0.7752', 'sampling/importance_sampling_ratio/mean': '1.008', 'sampling/importance_sampling_ratio/max': '1.479', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.2794', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '96.39', 'epoch': '0.2893'}
+{'loss': '0.02348', 'grad_norm': '0.126', 'learning_rate': '1e-05', 'num_tokens': '4.025e+06', 'completions/mean_length': '393.1', 'completions/min_length': '23', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.06696', 'completions/mean_terminated_length': '347.8', 'completions/min_terminated_length': '23', 'completions/max_terminated_length': '1003', 'rewards/curator_reward/mean': '0.4688', 'rewards/curator_reward/std': '0.5001', 'reward': '0.4688', 'reward_std': '0.5001', 'frac_reward_zero_std': '0.3214', 'sampling/sampling_logp_difference/mean': '0.001409', 'sampling/sampling_logp_difference/max': '0.17', 'sampling/importance_sampling_ratio/min': '0.76', 'sampling/importance_sampling_ratio/mean': '1.001', 'sampling/importance_sampling_ratio/max': '1.3', 'curator/signal_groups_drawn': '0.6786', 'curator/signal_groups_kept': '1', 'entropy': '0.262', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '96.15', 'epoch': '0.2975'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8d293-683e29bf2e9745b631dba702;a869c5cd-e03d-4d48-a26f-25127c8049dc)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8d293-683e29bf2e9745b631dba702;a869c5cd-e03d-4d48-a26f-25127c8049dc)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.05934', 'grad_norm': '0.1369', 'learning_rate': '1e-05', 'num_tokens': '4.142e+06', 'completions/mean_length': '406.1', 'completions/min_length': '24', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05357', 'completions/mean_terminated_length': '371.1', 'completions/min_terminated_length': '24', 'completions/max_terminated_length': '1011', 'rewards/curator_reward/mean': '0.3482', 'rewards/curator_reward/std': '0.4775', 'reward': '0.3482', 'reward_std': '0.4775', 'frac_reward_zero_std': '0.3571', 'sampling/sampling_logp_difference/mean': '0.001539', 'sampling/sampling_logp_difference/max': '0.1906', 'sampling/importance_sampling_ratio/min': '0.6898', 'sampling/importance_sampling_ratio/mean': '0.9906', 'sampling/importance_sampling_ratio/max': '1.237', 'curator/signal_groups_drawn': '0.6429', 'curator/signal_groups_kept': '1', 'entropy': '0.2434', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '114', 'epoch': '0.3058'}
+{'loss': '0.01556', 'grad_norm': '0.1146', 'learning_rate': '1e-05', 'num_tokens': '4.252e+06', 'completions/mean_length': '385.2', 'completions/min_length': '21', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.008929', 'completions/mean_terminated_length': '379.4', 'completions/min_terminated_length': '21', 'completions/max_terminated_length': '981', 'rewards/curator_reward/mean': '0.4062', 'rewards/curator_reward/std': '0.4922', 'reward': '0.4062', 'reward_std': '0.4922', 'frac_reward_zero_std': '0.3214', 'sampling/sampling_logp_difference/mean': '0.001564', 'sampling/sampling_logp_difference/max': '0.1746', 'sampling/importance_sampling_ratio/min': '0.6887', 'sampling/importance_sampling_ratio/mean': '1.003', 'sampling/importance_sampling_ratio/max': '1.294', 'curator/signal_groups_drawn': '0.6786', 'curator/signal_groups_kept': '1', 'entropy': '0.3237', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '99.44', 'epoch': '0.314'}
+{'loss': '0.0497', 'grad_norm': '0.1486', 'learning_rate': '1e-05', 'num_tokens': '4.367e+06', 'completions/mean_length': '403.2', 'completions/min_length': '17', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05804', 'completions/mean_terminated_length': '364.9', 'completions/min_terminated_length': '17', 'completions/max_terminated_length': '1009', 'rewards/curator_reward/mean': '0.3616', 'rewards/curator_reward/std': '0.4815', 'reward': '0.3616', 'reward_std': '0.4815', 'frac_reward_zero_std': '0.3929', 'sampling/sampling_logp_difference/mean': '0.001568', 'sampling/sampling_logp_difference/max': '0.1388', 'sampling/importance_sampling_ratio/min': '0.6789', 'sampling/importance_sampling_ratio/mean': '1.001', 'sampling/importance_sampling_ratio/max': '1.26', 'curator/signal_groups_drawn': '0.6071', 'curator/signal_groups_kept': '1', 'entropy': '0.2832', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '93.86', 'epoch': '0.3223'}
+{'loss': '0.04765', 'grad_norm': '0.1276', 'learning_rate': '1e-05', 'num_tokens': '4.48e+06', 'completions/mean_length': '389', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04464', 'completions/mean_terminated_length': '359.3', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '1019', 'rewards/curator_reward/mean': '0.4241', 'rewards/curator_reward/std': '0.4953', 'reward': '0.4241', 'reward_std': '0.4953', 'frac_reward_zero_std': '0.4286', 'sampling/sampling_logp_difference/mean': '0.001389', 'sampling/sampling_logp_difference/max': '0.1174', 'sampling/importance_sampling_ratio/min': '0.7623', 'sampling/importance_sampling_ratio/mean': '0.9972', 'sampling/importance_sampling_ratio/max': '1.534', 'curator/signal_groups_drawn': '0.5714', 'curator/signal_groups_kept': '1', 'entropy': '0.2279', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '101.3', 'epoch': '0.3306'} 33%|███▎      | 40/120 [1:31:29<2:54:39, 130.99s/it] 34%|███▍      | 41/120 [1:33:11<2:40:46, 122.11s/it]                                                      34%|███▍      | 41/120 [1:33:11<2:40:46, 122.11s/it] 35%|███▌      | 42/120 [1:37:25<3:30:19, 161.79s/it]                                                      35%|███▌      | 42/120 [1:37:25<3:30:19, 161.79s/it] 36%|███▌      | 43/120 [1:39:07<3:04:26, 143.72s/it]                                                      36%|███▌      | 43/120 [1:39:07<3:04:26, 143.72s/it] 37%|███▋      | 44/120 [1:40:46<2:45:00, 130.27s/it]                                                     
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8d461-47dc65977098e436487b4ff6;18c06b73-8e65-499e-8285-67d2fc863c73)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8d461-47dc65977098e436487b4ff6;18c06b73-8e65-499e-8285-67d2fc863c73)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.009065', 'grad_norm': '0.1158', 'learning_rate': '1e-05', 'num_tokens': '4.592e+06', 'completions/mean_length': '391.7', 'completions/min_length': '18', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.03571', 'completions/mean_terminated_length': '368.3', 'completions/min_terminated_length': '18', 'completions/max_terminated_length': '1016', 'rewards/curator_reward/mean': '0.3304', 'rewards/curator_reward/std': '0.4714', 'reward': '0.3304', 'reward_std': '0.4714', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001523', 'sampling/sampling_logp_difference/max': '0.1063', 'sampling/importance_sampling_ratio/min': '0.6419', 'sampling/importance_sampling_ratio/mean': '1.003', 'sampling/importance_sampling_ratio/max': '1.31', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.2612', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '95.71', 'epoch': '0.3388'}
+{'loss': '0.02228', 'grad_norm': '0.1546', 'learning_rate': '1e-05', 'num_tokens': '4.692e+06', 'completions/mean_length': '347.8', 'completions/min_length': '14', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.008929', 'completions/mean_terminated_length': '341.7', 'completions/min_terminated_length': '14', 'completions/max_terminated_length': '1017', 'rewards/curator_reward/mean': '0.317', 'rewards/curator_reward/std': '0.4663', 'reward': '0.317', 'reward_std': '0.4663', 'frac_reward_zero_std': '0.3571', 'sampling/sampling_logp_difference/mean': '0.001502', 'sampling/sampling_logp_difference/max': '0.1493', 'sampling/importance_sampling_ratio/min': '0.7239', 'sampling/importance_sampling_ratio/mean': '0.993', 'sampling/importance_sampling_ratio/max': '1.275', 'curator/signal_groups_drawn': '0.6429', 'curator/signal_groups_kept': '1', 'entropy': '0.2424', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '72.5', 'epoch': '0.3471'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8d5c5-74b2a2e07b8de5a0215b37e1;2331a0c0-7609-49b8-860e-64d5f88afd18)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8d5c5-74b2a2e07b8de5a0215b37e1;2331a0c0-7609-49b8-860e-64d5f88afd18)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.04806', 'grad_norm': '0.1196', 'learning_rate': '1e-05', 'num_tokens': '4.813e+06', 'completions/mean_length': '434.3', 'completions/min_length': '21', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.05804', 'completions/mean_terminated_length': '397.9', 'completions/min_terminated_length': '21', 'completions/max_terminated_length': '1010', 'rewards/curator_reward/mean': '0.3661', 'rewards/curator_reward/std': '0.4828', 'reward': '0.3661', 'reward_std': '0.4828', 'frac_reward_zero_std': '0.3571', 'sampling/sampling_logp_difference/mean': '0.001494', 'sampling/sampling_logp_difference/max': '0.08048', 'sampling/importance_sampling_ratio/min': '0.5956', 'sampling/importance_sampling_ratio/mean': '1.003', 'sampling/importance_sampling_ratio/max': '1.31', 'curator/signal_groups_drawn': '0.6429', 'curator/signal_groups_kept': '1', 'entropy': '0.1947', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '96.07', 'epoch': '0.3554'}
+{'loss': '0.04115', 'grad_norm': '0.1156', 'learning_rate': '1e-05', 'num_tokens': '4.921e+06', 'completions/mean_length': '377.7', 'completions/min_length': '14', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04018', 'completions/mean_terminated_length': '350.6', 'completions/min_terminated_length': '14', 'completions/max_terminated_length': '936', 'rewards/curator_reward/mean': '0.308', 'rewards/curator_reward/std': '0.4627', 'reward': '0.308', 'reward_std': '0.4627', 'frac_reward_zero_std': '0.3929', 'sampling/sampling_logp_difference/mean': '0.001462', 'sampling/sampling_logp_difference/max': '0.197', 'sampling/importance_sampling_ratio/min': '0.6275', 'sampling/importance_sampling_ratio/mean': '1', 'sampling/importance_sampling_ratio/max': '1.388', 'curator/signal_groups_drawn': '0.6071', 'curator/signal_groups_kept': '1', 'entropy': '0.2174', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '92.85', 'epoch': '0.3636'} 37%|███▋      | 44/120 [1:40:46<2:45:00, 130.27s/it] 38%|███▊      | 45/120 [1:42:29<2:32:50, 122.27s/it]                                                      38%|███▊      | 45/120 [1:42:29<2:32:50, 122.27s/it] 38%|███▊      | 46/120 [1:44:24<2:28:02, 120.04s/it]                                                      38%|███▊      | 46/120 [1:44:24<2:28:02, 120.04s/it] 39%|███▉      | 47/120 [1:46:14<2:22:33, 117.17s/it]                                                      39%|███▉      | 47/120 [1:46:14<2:22:33, 117.17s/it] 40%|████      | 48/120 [1:51:01<3:21:37, 168.02s/it]                                                      40%|████      | 48/120 [1:51:01<3:21:37, 168.02s/it]
+{'loss': '0.04212', 'grad_norm': '0.1204', 'learning_rate': '1e-05', 'num_tokens': '5.037e+06', 'completions/mean_length': '404.3', 'completions/min_length': '24', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.02232', 'completions/mean_terminated_length': '390.2', 'completions/min_terminated_length': '24', 'completions/max_terminated_length': '998', 'rewards/curator_reward/mean': '0.3795', 'rewards/curator_reward/std': '0.4863', 'reward': '0.3795', 'reward_std': '0.4863', 'frac_reward_zero_std': '0.2857', 'sampling/sampling_logp_difference/mean': '0.001555', 'sampling/sampling_logp_difference/max': '0.1141', 'sampling/importance_sampling_ratio/min': '0.678', 'sampling/importance_sampling_ratio/mean': '0.9929', 'sampling/importance_sampling_ratio/max': '1.354', 'curator/signal_groups_drawn': '0.7143', 'curator/signal_groups_kept': '1', 'entropy': '0.2761', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '97.76', 'epoch': '0.3719'}
+{'loss': '0.0474', 'grad_norm': '0.1156', 'learning_rate': '1e-05', 'num_tokens': '5.157e+06', 'completions/mean_length': '418.9', 'completions/min_length': '4', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.08036', 'completions/mean_terminated_length': '366', 'completions/min_terminated_length': '4', 'completions/max_terminated_length': '989', 'rewards/curator_reward/mean': '0.4018', 'rewards/curator_reward/std': '0.4914', 'reward': '0.4018', 'reward_std': '0.4914', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001414', 'sampling/sampling_logp_difference/max': '0.08262', 'sampling/importance_sampling_ratio/min': '0.7567', 'sampling/importance_sampling_ratio/mean': '1.009', 'sampling/importance_sampling_ratio/max': '1.387', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.251', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '107.9', 'epoch': '0.3802'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8d768-2b390bd83bb29f522bc8979e;9162319a-e0ec-48f5-9cd2-fa9f763adcf5)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8d768-2b390bd83bb29f522bc8979e;9162319a-e0ec-48f5-9cd2-fa9f763adcf5)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+{'loss': '0.02335', 'grad_norm': '0.1161', 'learning_rate': '1e-05', 'num_tokens': '5.271e+06', 'completions/mean_length': '387.1', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.03125', 'completions/mean_terminated_length': '366.6', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '992', 'rewards/curator_reward/mean': '0.4375', 'rewards/curator_reward/std': '0.4972', 'reward': '0.4375', 'reward_std': '0.4972', 'frac_reward_zero_std': '0.3571', 'sampling/sampling_logp_difference/mean': '0.001344', 'sampling/sampling_logp_difference/max': '0.08497', 'sampling/importance_sampling_ratio/min': '0.6695', 'sampling/importance_sampling_ratio/mean': '0.9874', 'sampling/importance_sampling_ratio/max': '1.37', 'curator/signal_groups_drawn': '0.6429', 'curator/signal_groups_kept': '1', 'entropy': '0.2347', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '104.1', 'epoch': '0.3884'}
+{'loss': '0.03349', 'grad_norm': '0.1322', 'learning_rate': '1e-05', 'num_tokens': '5.389e+06', 'completions/mean_length': '413.3', 'completions/min_length': '16', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.0625', 'completions/mean_terminated_length': '372.6', 'completions/min_terminated_length': '16', 'completions/max_terminated_length': '1016', 'rewards/curator_reward/mean': '0.3036', 'rewards/curator_reward/std': '0.4608', 'reward': '0.3036', 'reward_std': '0.4608', 'frac_reward_zero_std': '0.2857', 'sampling/sampling_logp_difference/mean': '0.001599', 'sampling/sampling_logp_difference/max': '0.09998', 'sampling/importance_sampling_ratio/min': '0.7766', 'sampling/importance_sampling_ratio/mean': '1.004', 'sampling/importance_sampling_ratio/max': '1.408', 'curator/signal_groups_drawn': '0.7143', 'curator/signal_groups_kept': '1', 'entropy': '0.3016', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '103', 'epoch': '0.3967'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8d8f5-28cc3e1d107d779371b4dc9f;3a04cd2c-72a6-4b19-9550-ed1c6dea0de6)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8d8f5-28cc3e1d107d779371b4dc9f;3a04cd2c-72a6-4b19-9550-ed1c6dea0de6)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit 41%|████      | 49/120 [1:52:52<2:58:32, 150.88s/it]                                                      41%|████      | 49/120 [1:52:52<2:58:32, 150.88s/it] 42%|████▏     | 50/120 [1:54:41<2:41:12, 138.18s/it]                                                      42%|████▏     | 50/120 [1:54:41<2:41:12, 138.18s/it]                                                      42%|████▏     | 50/120 [1:54:41<2:41:12, 138.18s/it] 42%|████▏     | 50/120 [1:54:41<2:40:33, 137.62s/it]
+
+{'loss': '0.02359', 'grad_norm': '0.1448', 'learning_rate': '1e-05', 'num_tokens': '5.497e+06', 'completions/mean_length': '370.5', 'completions/min_length': '46', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.04464', 'completions/mean_terminated_length': '339.9', 'completions/min_terminated_length': '46', 'completions/max_terminated_length': '1009', 'rewards/curator_reward/mean': '0.375', 'rewards/curator_reward/std': '0.4852', 'reward': '0.375', 'reward_std': '0.4852', 'frac_reward_zero_std': '0.3214', 'sampling/sampling_logp_difference/mean': '0.001477', 'sampling/sampling_logp_difference/max': '0.1249', 'sampling/importance_sampling_ratio/min': '0.7072', 'sampling/importance_sampling_ratio/mean': '0.9966', 'sampling/importance_sampling_ratio/max': '1.284', 'curator/signal_groups_drawn': '0.6786', 'curator/signal_groups_kept': '1', 'entropy': '0.2711', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '104.4', 'epoch': '0.405'}
+{'loss': '0.07866', 'grad_norm': '0.1149', 'learning_rate': '1e-05', 'num_tokens': '5.611e+06', 'completions/mean_length': '399.5', 'completions/min_length': '15', 'completions/max_length': '1024', 'completions/clipped_ratio': '0.08929', 'completions/mean_terminated_length': '338.3', 'completions/min_terminated_length': '15', 'completions/max_terminated_length': '1017', 'rewards/curator_reward/mean': '0.2857', 'rewards/curator_reward/std': '0.4528', 'reward': '0.2857', 'reward_std': '0.4528', 'frac_reward_zero_std': '0.5', 'sampling/sampling_logp_difference/mean': '0.001558', 'sampling/sampling_logp_difference/max': '0.1286', 'sampling/importance_sampling_ratio/min': '0.687', 'sampling/importance_sampling_ratio/mean': '1.002', 'sampling/importance_sampling_ratio/max': '1.566', 'curator/signal_groups_drawn': '0.5', 'curator/signal_groups_kept': '0.875', 'entropy': '0.2585', 'clip_ratio/low_mean': '0', 'clip_ratio/high_mean': '0', 'clip_ratio/region_mean': '0', 'clip_ratio/low_min': '0', 'clip_ratio/high_max': '0', 'step_time': '102.5', 'epoch': '0.4132'}
+{'train_runtime': '6881', 'train_samples_per_second': '2.232', 'train_steps_per_second': '0.017', 'train_loss': '0.03185', 'epoch': '0.4132'}
+[sync] upload failed: BadRequestError('(Request ID: Root=1-6ae8db78-583fd98b53a9e7c05303b8ee;d946b218-6297-450a-a720-ea4d8f287773)\n\nBad request for commit endpoint:\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')
+Traceback (most recent call last):
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 836, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://huggingface.co/api/datasets/AnshBajpai05/curator-runs/commit/main'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 157, in _run_upload
+    self._upload(self.stage, label)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/artifacts.py", line 205, in _upload_hf
+    api.upload_folder(repo_id=self.location, repo_type="dataset", folder_path=str(stage), path_in_repo=path,
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                      delete_patterns=["*"], commit_message=f"{self.run_dir.name}: {label or 'sync'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/venv_vllm/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+huggingface_hub.errors.BadRequestError: (Request ID: Root=1-6ae8db78-583fd98b53a9e7c05303b8ee;d946b218-6297-450a-a720-ea4d8f287773)
+
+Bad request for commit endpoint:
+Private storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit
+[curator] curator_q seed 4: final macro 0.3166666666666667 after 25 rounds, 1.510 charged GPU-h

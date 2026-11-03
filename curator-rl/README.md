@@ -6,7 +6,7 @@ reinforcement learning on several task environments (math, code, puzzles), it de
 round which share of the GPU budget each environment gets. The aim is the highest held-out score
 when the budget runs out.
 
-> **Status (2026-11-02, branch `audit-fixes-and-gpu-run`):** the Level-1 GPU runs are done and
+> **Status (2026-11-03, branch `audit-fixes-and-gpu-run`):** the Level-1 GPU runs are done and
 > analysed (Qwen2.5-0.5B on Kaggle T4, plus one OLMo-2-1B pair). Design, simulator, scheduler,
 > baselines, calibration, the ROI leaderboard and all five environments are built and tested; a full
 > audit found and fixed 30+ errors (`../errors_found.md`), and D-106 fixed a scheduler-checkpoint bug
@@ -22,7 +22,9 @@ when the budget runs out.
 > and 31% of their questions into a random-reward environment in every seed (Uniform 20%), while
 > Curator's label-free reward audit flags it in all 10 Curator runs (never a real environment) and keeps
 > it to 6-10%. Calibration can be dropped (R4).
-> **Next:** D-103 session B (`clean`, `sec_tau1`), then the phases of `docs/ROADMAP_v4.md` (proposed, D-107).
+> **D-108 compute test (2026-11-03):** on fresh seeds 3-4 (six runs on three machines; seed 5 incomplete) Curator-Q ended above Uniform in 6 of 6 runs (+1.36 points final accuracy; Curator-lite +0.86, SEC +0.15, DUMP -0.57), starting behind and overtaking Uniform at about 0.8 GPU-hours; at matched compute the averages are small (Curator-Q +0.21, Curator-lite +0.44, SEC -0.14, DUMP -0.42). The pre-registered primary test is PENDING (seed 5), and Curator-Q tied Uniform on seeds 0-2, so this is a signal, not a result.
+> **Next:** finish D-108 seed 5; optionally pre-register the final-accuracy signal on fresh seeds; then the
+> phases of `docs/ROADMAP_v4.md` (proposed, D-107).
 > Tests: 521 passed, 1 skipped (POSIX-only) with the datasets downloaded (run 2026-11-01); CI rebuilds
 > the datasets and enforces 85% coverage.
 
@@ -299,6 +301,7 @@ test is not used. Greedy accuracy is reported alongside.
   matches Curator (+0.15 points, **R4 holds**). By D-103's own rule the story is the fallback: a rigorous
   negative result with its mechanism, and the pre-flight check and in-run audit as the contribution.
   Greedy accuracy points the other way for SEC and DUMP (+0.7 and +0.4).
+- **D-108 compute test (3 Nov; `../Curator-Nov-results/compute_analysis/`).** on fresh seeds 3-4 (six runs on three machines; seed 5 incomplete) Curator-Q ended above Uniform in 6 of 6 runs (+1.36 points final accuracy; Curator-lite +0.86, SEC +0.15, DUMP -0.57), starting behind and overtaking Uniform at about 0.8 GPU-hours; at matched compute the averages are small (Curator-Q +0.21, Curator-lite +0.44, SEC -0.14, DUMP -0.42). The pre-registered primary test is PENDING (seed 5), and Curator-Q tied Uniform on seeds 0-2, so this is a signal, not a result.
 - **D-103 session B (2 Nov).** SEC at the authors' default temperature still over-funds the broken reward (25%, simulator predicted 26%; tuned SEC 34%, Uniform 20%) and scores -1.1 against Uniform (1 seed); perfect junk removal (`clean_uniform`) ties Uniform (-0.00, 2 seeds); with a realistic buggy checker the pre-flight check flags it before training (junk reward 0.20) and Curator-Q caps it at 5.7% from round 1 against Uniform's 20%, but accuracy is +0.65 points (0.86 SE): D-102 H-C fails.
 - **Budget moves off the useless arms, but accuracy does not follow.** Mean delivered share under
   Curator: Countdown (no learning signal at 0.5B) 5% against Uniform's 20%, noisy 6–16% against 20%.
@@ -661,7 +664,9 @@ These rules are the reviewer in a one-person project. Every change is logged in
 | ✅ | Thesis changed to robustness; Curator-lite and confirmation runs pre-registered (D-103) | claim "Curator beats Uniform" dropped |
 | ✅ | **D-103 session A** (`confirm`, `lite`: sec, dump, uniform_q, curator_q, curator_nocal on seeds 1-2), analysed 2026-11-02 with the analysis fixed before the runs (`experiments/analysis/d103_confirm.py`) | R1, R2 fail; R3, R4 hold; fallback story by the pre-registered rule |
 | ✅ | **D-103 session B**: `clean`, the declared `sec_tau1` check and `stress` (D-102 H-C) | clean ties Uniform; SEC at the authors' default 25% on the broken reward; H-C fails (pre-flight catches the bug, accuracy +0.65, 0.86 SE) |
-| 2 | **D-108 compute test** (pre-registered 2 Nov): Uniform, Curator-Q, Curator-lite, SEC, DUMP on fresh seeds 3-5, evaluated every 3 rounds; does a method reach accuracy with less GPU (`experiments/analysis/compute_efficiency.py`) | primary: Curator-Q ahead of Uniform at matched compute |
+| ✅ | **D-108 compute test**, seeds 3-4 on three machines (analysed 3 Nov) | primary PENDING (seed 5); Curator-Q +1.36 final accuracy in 6 of 6 replicate runs (descriptive) |
+| 1 | **Finish D-108 seed 5** on account `compute_s5` (rerun the same step) | completes the pre-registered primary test |
+| 2 | Optional: pre-register Curator-Q final accuracy against Uniform on fresh seeds (6+) | turns the D-108 signal into a result or a null |
 | 2 | **Roadmap v4** (proposed, D-107): fault zoo and key-consistency audit, health-gated question allocation, gradient-sketch transfer and TAC-lite baseline, seed count from measured SD, second model, multi-turn tool-call arm, `curator-health` command | each phase gets its own pre-registration first |
 | 3 | Optional, fresh simulator seeds (>= 700): re-test gamma = 1 with a powered non-inferiority design; a harder S5 response than halving the weight | optional |
 

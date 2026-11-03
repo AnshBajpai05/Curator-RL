@@ -9,7 +9,7 @@ The rules tested here were fixed on 21 October 2026, before any of these runs ex
 |---|---|---|---|
 | A | `confirm`, `lite` | **done, analysed** | `../curator_results_november/` (every run, old and new) |
 | B | `clean`, `sec_tau1`, `stress` | **done, analysed**: clean ties Uniform; SEC at the authors' default 25% on the broken reward; D-102 H-C fails | `../curator_results_november/`, `raw/sec_tau1/`, `raw/stress/` |
-| C (D-108) | `compute_s3`, `compute_s4`, `compute_s5` (one account each): uniform, curator_q, curator_nocal, sec, dump on fresh seeds 3-5, evaluated every 3 rounds | to run (about 7.5 h in parallel) | - |
+| C (D-108) | each account ran seeds 3-5 (not one seed each); seeds 3-4 finished on all three, seed 5 cut by the 12-hour limit | **analysed**: primary PENDING (seed 5); Curator-Q +1.36 final accuracy in 6 of 6 replicate runs (descriptive) | `raw/compute_s3/`, `raw/compute_s4/`, `raw/compute_s5/`; analysis `compute_analysis/primary/`, `compute_analysis/replicates/` |
 
 **Outcome of session A** (`analysis/d103_report.md`):
 

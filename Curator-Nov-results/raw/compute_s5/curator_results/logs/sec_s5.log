@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/kaggle/working/curator/run.py", line 689, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/curator/run.py", line 684, in main
+    return {"setup": cmd_setup, "smoke": cmd_smoke, "compare": cmd_compare, "sysid": cmd_sysid, "loo": cmd_loo,
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            "train": cmd_train, "report": lambda a: cmd_report(a, quiet=a.quiet), "status": cmd_status}[args.command](args)
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/kaggle/working/curator/run.py", line 247, in cmd_train
+    summary = run_single(cfg, CODE, resume=not args.fresh, gradient_checkpointing=not args.no_grad_ckpt)
+  File "/kaggle/working/curator/curator-rl/src/curator_rl/trainer/runner.py", line 87, in run_single
+    raise RuntimeError("preflight failed: " + "; ".join(problems))
+RuntimeError: preflight failed: less than 15 minutes left before the session deadline

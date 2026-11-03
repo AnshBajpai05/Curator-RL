@@ -1,0 +1,25 @@
+{
+  "budget_gpu_hours": 1.5,
+  "charged_gpu_hours": 1.51173,
+  "eval_errors": 0,
+  "global_step": 72,
+  "label": "curator_nocal",
+  "last_checkpoint_round": 36,
+  "max_rounds": 60,
+  "method": "curator_nocal",
+  "round": 36,
+  "round_wall_seconds": 332.16033935546875,
+  "seed": 3,
+  "status": "finished",
+  "stop_reason": "budget",
+  "sync": {
+    "failed": 0,
+    "last_error": null,
+    "last_ok_utc": "2026-11-02T14:31:41Z",
+    "last_round": 36,
+    "ok": 20,
+    "target": "hf://AnshBajpai05/curator-runs/compute_s4"
+  },
+  "updated_utc": "2026-11-02T14:31:41Z",
+  "verifier_errors": 0
+}

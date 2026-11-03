@@ -1,0 +1,25 @@
+{
+  "budget_gpu_hours": 1.5,
+  "charged_gpu_hours": 0.4394,
+  "eval_errors": 0,
+  "global_step": 18,
+  "label": "uniform",
+  "last_checkpoint_round": 9,
+  "max_rounds": 60,
+  "method": "uniform",
+  "round": 9,
+  "round_wall_seconds": 370.1727981567383,
+  "seed": 5,
+  "status": "preempted",
+  "stop_reason": "session deadline in 8 min (one round takes 6.2 min)",
+  "sync": {
+    "failed": 7,
+    "last_error": "upload failed: BadRequestError('(Request ID: Root=1-6ae90554-15c4f102094a606e18e00d87;bd539c7a-46bc-4aa0-8913-2ef56f0b21c6)\\n\\nBad request for commit endpoint:\\nPrivate storage limit reached for user AnshBajpai05, please upgrade your plan to increase your private storage limit')",
+    "last_ok_utc": null,
+    "last_round": null,
+    "ok": 0,
+    "target": "hf://AnshBajpai05/curator-runs/compute_s3"
+  },
+  "updated_utc": "2026-11-02T21:49:09Z",
+  "verifier_errors": 0
+}

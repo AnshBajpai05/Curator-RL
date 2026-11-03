@@ -38,7 +38,10 @@ Companion documents:
    only 14–15 training rounds, and neither method moved it measurably.
 7. **Session B (2 Nov):** perfect junk removal ties Uniform; SEC at the authors' default temperature still
    over-funds the broken reward (25%); the pre-flight check catches a realistic buggy checker, but accuracy
-   gains only +0.65 points (D-102 H-C fails). **Next:** the D-108 compute test, then the write-up.
+   gains only +0.65 points (D-102 H-C fails).
+8. **D-108 compute test (3 Nov):** on fresh seeds 3–4 (six runs on three machines) Curator-Q ended above
+   Uniform in all six runs (+1.36 points), overtaking it after about 0.8 GPU-hours; the pre-registered primary
+   test is pending (seed 5), and Curator-Q tied Uniform on seeds 0–2. **Next:** seed 5, then the write-up.
 
 ---
 

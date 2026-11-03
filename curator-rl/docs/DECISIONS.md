@@ -799,6 +799,35 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
   five methods of a seed share one session and machine. Every account uses the same dataset version (same
   commit), GPU T4 x2 only. The design, measures and rules above are unchanged; the analysis takes the three
   run folders together (`--runs` once per folder).
+- Record (3 Nov, written after checking only run status and settings, before computing any accuracy or
+  delta): **what actually ran.** Each of the three accounts ran all of seeds 3, 4, 5 in its own namespace
+  (`compute_s3`, `compute_s4`, `compute_s5`) instead of one seed each. All three finished seeds 3 and 4 (10 runs
+  each, on budget, `report_every` 3, same model and settings) and were preempted early in seed 5 (Uniform and
+  Curator-Q at rounds 2-9; Curator-lite, SEC, DUMP not started). Same-seed runs on different machines diverge
+  (GPU non-determinism; e.g. Curator-lite seed 3 ran 33, 36, 34 rounds), so they are replicates, not copies.
+  Analysis fixed now:
+  - **Primary (as pre-registered, one block per seed):** the intended mapping, account `compute_s3` -> seed 3,
+    `compute_s4` -> seed 4, `compute_s5` -> seed 5; methods paired with Uniform inside the same account. Seed 5 is
+    incomplete, so H-C1 and the secondary rules stay **PENDING** until account `compute_s5` finishes seed 5
+    (rerun the same step: it resumes from its backup).
+  - **Descriptive, a declared deviation:** all six complete blocks (3 accounts x seeds 3-4), same measure,
+    reported as replicates with mean, SE, t-interval and the count of positive blocks; no verdict is attached.
+- Record (3 Nov): **outcome** (`../Curator-Nov-results/compute_analysis/`; data `raw/compute_s3..5/`).
+  - Primary: **PENDING** (2 of 3 blocks). acct3:s3 / acct4:s4 delta: Curator-Q -0.28, +0.71; Curator-lite +0.35,
+    +0.76; SEC +0.15, -0.12; DUMP -0.51, -0.69.
+  - Replicates (six blocks, descriptive): delta Curator-Q +0.21 (SE 0.25), Curator-lite +0.44 (0.25; 5 of 6
+    positive), SEC -0.14 (0.26), DUMP -0.42 (0.19; 5 of 6 negative). Final accuracy against Uniform (not the
+    pre-registered measure): Curator-Q +1.36 (SE 0.27, 6 of 6 above), Curator-lite +0.86 (5 of 6), SEC +0.15,
+    DUMP -0.57 (1 of 6 above); per domain for Curator-Q MBPP +3.4, GSM8K +1.2, MATH35 +0.8. Curator-Q starts
+    behind Uniform and overtakes it at about 0.8 GPU-hours. Estimated GPU-hours saved: Curator-Q 0.39,
+    Curator-lite 0.45, SEC 0.16, DUMP 0.09. Broken-reward question share: SEC 33.2%, DUMP 30.6%, Uniform 20%,
+    Curator-lite 10.6%, Curator-Q 6.3%. Useful-environment GPU-hours: Curator-Q 1.29, Curator-lite 1.22,
+    Uniform 0.88, SEC 0.85, DUMP 0.87.
+  - Reward checks: pre-flight gate 6 of 6 at round 1; in-run audit (Curator-lite) 5 of 6 (rounds 10-17), one
+    miss (dispersion 1.11, bound not tight; share still 11%); no real environment flagged. Over all GPU runs:
+    21 of 22 Curator runs flagged the broken reward.
+  - Caveats fixed now: the six blocks share two seeds, so their intervals are optimistic; Curator-Q tied Uniform
+    on seeds 0-2 (-0.25, +0.50, -0.69). A claim about final accuracy needs its own pre-registration on fresh seeds.
 
 ---
 

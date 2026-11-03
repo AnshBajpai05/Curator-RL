@@ -60,7 +60,7 @@
       "dot": "violet",
       "title": "3. Reward-aware",
       "items": [
-        "The reward audit flagged the random-reward arm in every GPU run",
+        "The reward checks flagged the random-reward arm in 21 of 22 GPU runs",
         "It never flagged a real environment; calibration added nothing measurable"
       ]
     }
