@@ -828,6 +828,14 @@ These were cited in code comments while Phase 5 was built but not logged. Dates 
     21 of 22 Curator runs flagged the broken reward.
   - Caveats fixed now: the six blocks share two seeds, so their intervals are optimistic; Curator-Q tied Uniform
     on seeds 0-2 (-0.25, +0.50, -0.69). A claim about final accuracy needs its own pre-registration on fresh seeds.
+- Record (3 Nov, before any seed-5 rerun): the seed-5 runs of account `compute_s5` were never synced to the
+  backup (its `status.md`: "synced: never"; several seed-3/4 runs only partly synced), so they cannot resume, and
+  reusing that namespace would restore half-synced copies of finished runs. **Seed 5 is therefore run fresh in
+  namespace `compute_s5_final`** (`compare --methods uniform,curator_q,curator_nocal,sec,dump --seeds 5
+  --report-every 3 --namespace compute_s5_final --no-base`, GPU T4 x2) and enters the primary analysis as the
+  seed-5 block (`--runs acct5f=<its runs> --keep-blocks acct3:3,acct4:4,acct5f:5`). Design, measures and rule
+  unchanged. A file sent on 3 Nov (`curator_results_CHECK_FOR_S5.zip`) was byte-identical to the earlier
+  `compute_s5` download and added nothing.
 
 ---
 

@@ -145,7 +145,7 @@ confidence interval excluding zero relative to uniform sampling."
 
 ## Pending
 
-- **D-108 primary:** seed 5 on account `compute_s5` (rerun the same step there; it resumes from its backup).
+- **D-108 primary:** seed 5, run fresh in namespace `compute_s5_final` (the first attempt was never backed up, so it cannot resume; D-108 record of 3 Nov).
 - **Optional:** a pre-registered confirmation of Curator-Q's final-accuracy signal on fresh seeds (6+).
 
 ## Living documents (linked, not copied)
