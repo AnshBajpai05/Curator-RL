@@ -53,7 +53,7 @@
       "title": "2. Status-aware",
       "items": [
         "Saturated, too-hard and spurious environments are capped",
-        "On GPU, Countdown fell from Uniform's 20% to about 5% of prompts"
+        "On GPU, Countdown fell from Uniform's 20% to 5-7% of prompts (21 runs)"
       ]
     },
     {

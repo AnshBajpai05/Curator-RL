@@ -56,7 +56,7 @@
       "title": "Blind spots",
       "items": [
         "The audit misses a reward that depends on the prompt but pays the wrong thing",
-        "The pre-flight check covers known junk, e.g. the hackable checker pays 1.00"
+        "The pre-flight check covers known junk: the buggy hackable checker paid 0.20 for junk and was flagged"
       ]
     }
   ]
